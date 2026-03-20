@@ -1,0 +1,1 @@
+ALTER TABLE "analysis_results" ADD CONSTRAINT "analysis_results_repository_id_unique" UNIQUE("repository_id");

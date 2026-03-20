@@ -174,7 +174,7 @@ export const analysisResults = pgTable("analysis_results", {
 	updatedAt: timestamp("updated_at")
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
-});
+}, (t) => [unique().on(t.repositoryId)]);
 
 export const analysisResultsRelations = relations(
 	analysisResults,

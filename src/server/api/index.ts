@@ -1,8 +1,10 @@
 import Elysia, { t } from "elysia";
+import { getExtension } from "~/lib/getExtension";
 import { getOwnerRepo } from "~/lib/getOwnerRepo";
 import { insertCommits } from "../dal/commit";
 import { insertFiles } from "../dal/files";
 import { insertRepositories } from "../dal/repositories";
+import { performBasicAnalysis } from "../logic/analysis";
 import { getRepoCommits, getRepoMetadata, getRepoTree } from "../octokit";
 
 export const apiHandler = new Elysia()
@@ -71,7 +73,10 @@ export const apiHandler = new Elysia()
 				size: item.size,
 				sha: item.sha,
 				isDirectory: item.type === "tree",
-				extension: item.path?.split(".").pop() ?? null,
+				extension:
+					item.type === "blob" && getExtension(item.path) !== "no-extension"
+						? getExtension(item.path)
+						: null,
 				depth: item.path?.split("/").length ?? 0,
 			}));
 
@@ -81,6 +86,14 @@ export const apiHandler = new Elysia()
 				insertFiles(mappedTree),
 			]);
 
+			// 6. Perform Basic Analysis (Phase 3)
+			const analysisResults = await performBasicAnalysis({
+				repoId,
+				fullTree: repoTree,
+				owner: parseResult.owner,
+				repo: parseResult.repo,
+			});
+
 			return {
 				success: true,
 				repoId,
@@ -88,6 +101,7 @@ export const apiHandler = new Elysia()
 				filesCount: limitedTree.length,
 				commitsCount: repoCommits.length,
 				totalFilesIgnored: Math.max(0, repoTree.length - 1000),
+				analysis: analysisResults,
 			};
 		},
 		{

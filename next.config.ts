@@ -8,6 +8,9 @@ import "~/env";
 /** @type {import("next").NextConfig} */
 const config = {
 	reactCompiler: true,
+	images: {
+		formats: ["image/avif", "image/webp"],
+	},
 };
 
 export default config;

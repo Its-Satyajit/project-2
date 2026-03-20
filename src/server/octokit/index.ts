@@ -50,3 +50,25 @@ export async function getRepoCommits({
 	});
 	return commits;
 }
+
+export async function getFileContent({
+	owner,
+	repo,
+	path,
+}: {
+	owner: string;
+	repo: string;
+	path: string;
+}) {
+	const { data: file } = await octokit.rest.repos.getContent({
+		owner,
+		repo,
+		path,
+	});
+
+	if (Array.isArray(file) || file.type !== "file") {
+		return null;
+	}
+
+	return Buffer.from(file.content, "base64").toString("utf8");
+}
