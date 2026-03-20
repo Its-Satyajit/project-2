@@ -16,6 +16,7 @@ export const env = createEnv({
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
+		GITHUB_PAT: z.string(),
 	},
 
 	/**
@@ -37,6 +38,7 @@ export const env = createEnv({
 		BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
+		GITHUB_PAT: process.env.GITHUB_PAT,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
