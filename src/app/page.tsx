@@ -1,5 +1,7 @@
 "use client";
 import { useForm } from "@tanstack/react-form-nextjs";
+import { redirect } from "next/navigation";
+import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -14,6 +16,11 @@ export default function Home() {
 
 		onSubmit: async ({ value }) => {
 			const res = await api.analyze.post({ githubUrl: value.githubUrl });
+			if (res.error || !res?.data?.repoId) {
+				toast.error("Failed to analyze repository");
+				return;
+			}
+			redirect(`/dashboard/${res.data.repoId}`);
 		},
 	});
 

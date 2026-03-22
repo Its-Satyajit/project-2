@@ -15,6 +15,20 @@
       "when": 1774031971689,
       "tag": "0001_nebulous_next_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1774092329424,
+      "tag": "0002_round_the_stranger",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1774094961880,
+      "tag": "0003_yellow_the_enforcers",
+      "breakpoints": true
     }
   ]
 }

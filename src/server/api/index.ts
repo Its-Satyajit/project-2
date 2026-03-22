@@ -1,11 +1,12 @@
 import Elysia, { t } from "elysia";
 import { getExtension } from "~/lib/getExtension";
 import { getOwnerRepo } from "~/lib/getOwnerRepo";
+import { type FileTreeItem, convertToFileTree } from "~/lib/treeUtils";
 import { insertCommits } from "../dal/commit";
 import { insertFiles } from "../dal/files";
-import { insertRepositories } from "../dal/repositories";
+import { getRepositoryData, insertRepositories } from "../dal/repositories";
 import { performBasicAnalysis } from "../logic/analysis";
-import { getRepoCommits, getRepoMetadata, getRepoTree } from "../octokit";
+import { getFileContent, getRepoCommits, getRepoMetadata, getRepoTree } from "../octokit";
 
 export const apiHandler = new Elysia()
 	.get(
@@ -44,6 +45,7 @@ export const apiHandler = new Elysia()
 				description: repoMetadata.description,
 				defaultBranch: repoMetadata.default_branch,
 				primaryLanguage: repoMetadata.language ?? "Unknown",
+				isPrivate: repoMetadata.private,
 				stars: repoMetadata.stargazers_count,
 				forks: repoMetadata.forks_count,
 			});
@@ -81,6 +83,14 @@ export const apiHandler = new Elysia()
 			}));
 
 			// 5. Batch insert the commits and files
+
+			const fileTree = convertToFileTree(
+				mappedTree.filter(
+					(f): f is typeof f & { path: string; isDirectory: boolean } =>
+						f.path !== null && f.isDirectory !== null,
+				),
+			);
+
 			await Promise.all([
 				insertCommits(mappedCommits),
 				insertFiles(mappedTree),
@@ -92,6 +102,7 @@ export const apiHandler = new Elysia()
 				fullTree: repoTree,
 				owner: parseResult.owner,
 				repo: parseResult.repo,
+				fileTree,
 			});
 
 			return {
@@ -107,6 +118,59 @@ export const apiHandler = new Elysia()
 		{
 			body: t.Object({
 				githubUrl: t.String(),
+			}),
+		},
+	)
+	.get(
+		"/dashboard/:repoId",
+		async ({ params, set }) => {
+			const data = await getRepositoryData(params.repoId);
+			if (!data) {
+				set.status = 404;
+				return { error: "Repository not found" };
+			}
+
+			// Use the stored fileTree from analysisResults if available
+			const fileTree =
+				(data.analysisResults[0]?.fileTreeJson as FileTreeItem[]) ?? [];
+
+			return {
+				...data,
+				fileTree,
+			};
+		},
+		{
+			params: t.Object({
+				repoId: t.String(),
+			}),
+		},
+	)
+	.get(
+		"/file-content",
+		async ({ query, set }) => {
+			const repoData = await getRepositoryData(query.repoId);
+			if (!repoData) {
+				set.status = 404;
+				return { error: "Repository not found" };
+			}
+
+			const content = await getFileContent({
+				owner: repoData.owner,
+				repo: repoData.name,
+				path: query.path,
+			});
+
+			if (content === null) {
+				set.status = 404;
+				return { error: "File not found or too large" };
+			}
+
+			return { content };
+		},
+		{
+			query: t.Object({
+				repoId: t.String(),
+				path: t.String(),
 			}),
 		},
 	);

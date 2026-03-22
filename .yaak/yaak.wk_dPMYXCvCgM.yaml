@@ -1,0 +1,15 @@
+type: workspace
+model: workspace
+id: wk_dPMYXCvCgM
+createdAt: 2026-03-20T14:00:45.354618769
+updatedAt: 2026-03-20T14:00:45.354619213
+authentication: {}
+authenticationType: null
+description: ''
+headers: []
+name: github app
+encryptionKeyChallenge: null
+settingValidateCertificates: true
+settingFollowRedirects: true
+settingRequestTimeout: 0
+settingDnsOverrides: []

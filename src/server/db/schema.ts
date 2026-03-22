@@ -98,6 +98,7 @@ export const repositories = pgTable(
 		description: text("description"),
 		defaultBranch: text("default_branch"),
 		primaryLanguage: text("primary_language"),
+		isPrivate: boolean("is_private").default(false),
 		stars: integer("stars"),
 		forks: integer("forks"),
 		createdAt: timestamp("created_at")
@@ -158,23 +159,28 @@ export const commitsRelations = relations(commits, ({ one, many }) => ({
 		references: [repositories.id],
 	}),
 }));
-export const analysisResults = pgTable("analysis_results", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	repositoryId: uuid("repository_id").references(() => repositories.id),
-	totalFiles: integer("total_files"),
-	totalDirectories: integer("total_directories"),
-	totalLines: integer("total_lines"),
-	fileTypeBreakdownJson: json("file_type_breakdown_json"),
-	hotSpotDataJson: json("hot_spot_data_json"),
-	dependencyGraphJson: json("dependency_graph_json"),
-	summaryText: text("summary_text"),
-	createdAt: timestamp("created_at")
-		.$defaultFn(() => /* @__PURE__ */ new Date())
-		.notNull(),
-	updatedAt: timestamp("updated_at")
-		.$defaultFn(() => /* @__PURE__ */ new Date())
-		.notNull(),
-}, (t) => [unique().on(t.repositoryId)]);
+export const analysisResults = pgTable(
+	"analysis_results",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		repositoryId: uuid("repository_id").references(() => repositories.id),
+		fileTreeJson: json("file_tree"),
+		totalFiles: integer("total_files"),
+		totalDirectories: integer("total_directories"),
+		totalLines: integer("total_lines"),
+		fileTypeBreakdownJson: json("file_type_breakdown_json"),
+		hotSpotDataJson: json("hot_spot_data_json"),
+		dependencyGraphJson: json("dependency_graph_json"),
+		summaryText: text("summary_text"),
+		createdAt: timestamp("created_at")
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		updatedAt: timestamp("updated_at")
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(t) => [unique().on(t.repositoryId)],
+);
 
 export const analysisResultsRelations = relations(
 	analysisResults,

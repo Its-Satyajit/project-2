@@ -1,4 +1,5 @@
 import { getExtension } from "~/lib/getExtension";
+import type { FileTreeItem } from "~/lib/treeUtils";
 import { insertAnalysisResults } from "../dal/analysis";
 import { getFileContent } from "../octokit";
 
@@ -37,11 +38,13 @@ export async function performBasicAnalysis({
 	fullTree,
 	owner,
 	repo,
+	fileTree,
 }: {
 	repoId: string;
 	fullTree: TreeItem[];
 	owner: string;
 	repo: string;
+	fileTree: FileTreeItem[];
 }) {
 	let totalFiles = 0;
 	let totalDirectories = 0;
@@ -100,6 +103,7 @@ export async function performBasicAnalysis({
 		totalLines,
 		fileTypeBreakdownJson: extensionBreakdown,
 		summaryText: `Analysis complete. Found ${totalFiles} files across ${totalDirectories} directories. Estimated ${totalLines} lines of code.`,
+		fileTreeJson: fileTree,
 	};
 
 	await insertAnalysisResults(analysisData);

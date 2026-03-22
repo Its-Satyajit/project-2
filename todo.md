@@ -20,12 +20,41 @@
 - [x] Define Analysis Trigger (**Decision: Synchronous in `/analyze` API**)
 - [x] Dataset Scope (**Decision: Full tree for counts, top 1000 for details**)
 - [x] LOC Strategy (**Decision: Hybrid - Top 10 files exact, others heuristic**)
-- [x] Persistence (**Decision: Structured columns in `analysis_results`**)
+- [x] Persistence (**Decision: Structured columns + JSON `fileTree` in `analysis_results`**)
 
 ## Implementation
-- [ ] Implement `getFileContent` in Octokit DAL
-- [ ] Create `analysis_results` DAL
-- [ ] Implement iterative `performBasicAnalysis` logic
-- [ ] Add Hybrid LOC counting (Top 10 extraction + heuristic)
-- [ ] Integrate analysis into `/analyze` endpoint
-- [ ] Verify results via script and manual API test
+- [x] Implement `getFileContent` in Octokit DAL
+- [x] Create `analysis_results` DAL
+- [x] Implement iterative `performBasicAnalysis` logic
+- [x] Add Hybrid LOC counting (Top 10 extraction + heuristic)
+- [x] Integrate analysis into `/analyze` endpoint
+- [x] Verify results via script and manual API test
+
+# Phase 4: Dashboard UI (Day 7-10)
+
+## Planning & Design (Grill-Me)
+- [x] Dashboard Data Flow (React Query vs Zustand) -> **Decision: React Query for fetching.**
+- [x] Routing & Initial State -> **Decision: `/dashboard/[repoId]` triggers analysis if missing.**
+- [x] Visualization Details (Pie vs Bar)
+- [x] File Explorer Interaction (Tree vs Flat) -> **Decision: Nested Collapsible Tree.**
+
+## Implementation
+- [x] Setup `shadcn/charts` and dependencies
+- [x] Implement `GET /api/dashboard/:repoId` (Optimized with JSON persistence)
+- [x] Create Dashboard Layout with Sidebar (Using `CollapsibleFileTree`)
+- [x] Build Stat Cards (Total Files, LOC, etc.)
+- [x] Build File Type Chart (Donut/Bar)
+- [x] Implement Virtualized File Explorer (`@tanstack/react-virtual`)
+- [x] Add Skeleton Loaders and Empty States
+
+# Phase 5: Search & Filtering (Day 10-12)
+
+## Planning & Design (Guided Learning)
+- [x] Search Strategy (Client vs Server) -> **Decision: Client-side for instant feedback.**
+- [ ] UI Placement -> **Decision: Inside `VirtualizedFileTree` header.**
+
+## Implementation
+- [/] Add `searchQuery` state to `VirtualizedFileTree`
+- [ ] Implement filtering logic in `visibleNodes` memo
+- [ ] UI: Add `Input` component and search icon
+- [ ] Add "No results found" empty state
