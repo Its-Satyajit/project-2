@@ -33,7 +33,7 @@ export interface DependencyGraph {
 }
 
 const MAX_FILE_SIZE = 1024 * 1024;
-const MAX_FILES = 500;
+const MAX_FILES = 1000;
 
 export interface FileContent {
 	path: string;

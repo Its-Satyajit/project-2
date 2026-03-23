@@ -117,7 +117,7 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 			})),
 		);
 
-		const limitedTree = repoTree.slice(0, 1000);
+		const limitedTree = repoTree.slice(0, 2000);
 		await insertFiles(
 			limitedTree.map((item) => ({
 				repositoryId: repoId,
@@ -177,7 +177,7 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 		console.log(`Found ${codeFiles.length} code files to analyze`);
 
 		const filesContent: FileContent[] = [];
-		for (const file of codeFiles.slice(0, 500)) {
+		for (const file of codeFiles.slice(0, 1000)) {
 			const content = await getFileContentFromRaw({
 				owner,
 				repo,
