@@ -1,5 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { Suspense, use } from "react";
 import type { FileTreeItem } from "~/components/CollapsibleFileTree";
 import { AnalysisProgress } from "~/components/dashboard/AnalysisProgress";
@@ -69,6 +71,16 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 			/>
 
 			<AnalysisProgress repoId={repoId} />
+
+			<div className="flex justify-end">
+				<Link
+					className="inline-flex items-center rounded-md bg-primary px-4 py-2 font-medium text-primary-foreground text-sm hover:bg-primary/90"
+					href={`/dashboard/${repoId}/summary`}
+				>
+					View Summary
+					<ArrowRight className="ml-2 h-4 w-4" />
+				</Link>
+			</div>
 
 			<div className="grid gap-8 lg:grid-cols-5">
 				<div className="lg:col-span-2">

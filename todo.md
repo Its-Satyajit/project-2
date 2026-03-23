@@ -199,19 +199,77 @@
 
 ## Implementation
 ### Core Logic
-- [ ] Create `src/server/logic/repoSummary.ts`
-- [ ] Implement `computeRepoSummary(analysisResults)` returning structured object
-- [ ] Integrate into status route (add `summary` field)
-- [ ] Update `useRepoStatus` hook to expose summary data
+- [x] Create `src/server/logic/repoSummary.ts`
+- [x] Implement `computeRepoSummary(analysisResults)` returning structured object
+- [x] Integrate into status route (add `summary` field)
+- [x] Update `useRepoStatus` hook to expose summary data
 
 ### Frontend
-- [ ] Create `src/app/dashboard/[repoId]/summary/page.tsx`
-- [ ] Create `RepoSummary` component with sections for each component
-- [ ] Add navigation link from dashboard page
-- [ ] Reuse file viewer dialog for clickable files
-- [ ] Add loading skeleton
+- [x] Create `src/app/dashboard/[repoId]/summary/page.tsx`
+- [x] Create `RepoSummary` component with sections for each component
+- [x] Add navigation link from dashboard page
+- [ ] Reuse file viewer dialog for clickable files (optional - deferred)
+- [x] Add loading skeleton
 
 ### Testing & Validation
-- [ ] Test with sample repositories
-- [ ] Verify summary matches actual repository characteristics
-- [ ] Ensure performance (no noticeable delay)
+- [x] Test with sample repositories (manual verification)
+- [x] Verify summary matches actual repository characteristics (via test script)
+- [x] Ensure performance (no noticeable delay)
+
+# Phase 8: Polish (Day 17–20)
+
+## Planning & Design (Grill‑Me)
+
+### UI Refinement
+- [x] **Treemap Visualization** -> **Decision: Squarified Treemap as default, toggle to Gradient Heat for hotspots.**
+- [x] **Treemap Cell Size** -> **Decision: LOC (lines of code).**
+- [x] **Treemap Cell Color** -> **Decision: Language color default, hotspot gradient toggle.**
+- [x] **External Packages** -> **Decision: Include with dashed border, gray background.**
+- [x] **Max Files** -> **Decision: 2000 files max, group rest as "other".**
+- [x] **Location** -> **Decision: New "Treemap" tab on dependencies page.**
+
+### Filters
+- [x] **File Type Filter** -> **Decision: Multi-select dropdown with search (50+ types).**
+- [x] **Hotspot Filter** -> **Decision: Threshold slider (0-100%) + "show hotspots only" toggle.**
+- [x] **Filter Logic** -> **Decision: Additive (AND) - file must match type AND hotspot threshold.**
+- [x] **Persistence** -> **Decision: State stored locally, not in URL.**
+
+### Animations
+- [x] **Page Transitions** -> **Decision: Framer Motion with fade + slight Y slide.**
+- [x] **Card Entrance** -> **Decision: Staggered animation on StatCards.**
+- [x] **Hover States** -> **Decision: Simple scale on interactive elements.**
+
+### Error UX
+- [x] **Error Types** -> **Decision: Rate limit, private repo, not found, network, analysis failed.**
+- [x] **UI** -> **Decision: Toast for transient errors, dedicated screens for blocking errors.**
+- [x] **Recovery** -> **Decision: Rate limit shows "Retry in Xs" with countdown.**
+
+## Implementation
+
+### Treemap
+- [x] Install `d3` for treemap computation
+- [x] Create `src/server/api/treemap.ts` endpoint
+- [x] Create `src/lib/languageColors.ts` for language → color mapping
+- [x] Create `src/components/dashboard/Treemap.tsx` with d3 treemap
+- [x] Add "Treemap" tab to dependencies page
+- [x] Toggle between "By Language" and "By Hotspot" color modes
+
+### Filters
+- [x] Create `src/components/dashboard/FilterBar.tsx`
+- [x] Multi-select extension dropdown with search
+- [x] Hotspot threshold slider
+- [x] Integrate with File Explorer tab
+
+### Animations
+- [x] Install `framer-motion`
+- [x] Add page transitions in `src/app/dashboard/[repoId]/layout.tsx`
+- [x] Add staggered card animation in `StatCards.tsx`
+
+### Error Handling
+- [x] Wrap layout in `<Suspense>` to fix Next.js 16 caching error
+- [x] Fix null safety bugs in Treemap component
+- [x] Fix LOC data source (use dependency graph LOC instead of files table)
+
+## Deferred
+- [ ] Increase worker file limits (currently 1000 tree, 500 content fetch)
+

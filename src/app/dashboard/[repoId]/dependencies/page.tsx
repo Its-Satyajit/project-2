@@ -25,6 +25,8 @@ import {
 	XAxis,
 	YAxis,
 } from "recharts";
+import { FilterBar, type FilterState } from "~/components/dashboard/FilterBar";
+import { Treemap } from "~/components/dashboard/Treemap";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -66,17 +68,37 @@ function DependenciesContent() {
 
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-	const [activeTab, setActiveTab] = useState<"files" | "charts" | "hotspots">(
-		"files",
-	);
+	const [activeTab, setActiveTab] = useState<
+		"files" | "charts" | "treemap" | "hotspots"
+	>("files");
 	const [selectedHotspotFile, setSelectedHotspotFile] = useState<string | null>(
 		null,
 	);
 	const [copied, setCopied] = useState(false);
+	const [treemapColorMode, setTreemapColorMode] = useState<
+		"language" | "hotspot"
+	>("language");
+	const [filters, setFilters] = useState<FilterState>({
+		selectedExtensions: [],
+		showHotspotsOnly: false,
+		hotspotThreshold: 0,
+	});
 
 	const graph = status?.analysis?.dependencyGraph;
 	const hotSpotData = status?.analysis?.hotSpotData;
 	const { metadata } = status ?? {};
+
+	// Get all unique extensions from the file tree
+	const allExtensions = useMemo(() => {
+		if (!graph?.nodes) return [];
+		const exts = new Set<string>();
+		for (const node of graph.nodes) {
+			const path = node.path;
+			const ext = path.split(".").pop() ?? "";
+			if (ext) exts.add(ext);
+		}
+		return Array.from(exts).sort();
+	}, [graph?.nodes]);
 
 	const { data: hotspotFileContent, isLoading: isHotspotContentLoading } =
 		useQuery({
@@ -120,9 +142,23 @@ function DependenciesContent() {
 		if (!graph?.nodes) return [];
 		const query = searchQuery.toLowerCase();
 		return graph.nodes
-			.filter((node) => node.path.toLowerCase().includes(query))
+			.filter((node) => {
+				// Text search
+				if (query && !node.path.toLowerCase().includes(query)) return false;
+
+				// Extension filter
+				const ext = node.path.split(".").pop() ?? "";
+				if (
+					filters.selectedExtensions.length > 0 &&
+					!filters.selectedExtensions.includes(ext)
+				) {
+					return false;
+				}
+
+				return true;
+			})
 			.sort((a, b) => b.imports - a.imports);
-	}, [graph?.nodes, searchQuery]);
+	}, [graph?.nodes, searchQuery, filters.selectedExtensions]);
 
 	const topImportedFiles = useMemo(() => {
 		if (!graph?.nodes) return [];
@@ -271,6 +307,17 @@ function DependenciesContent() {
 						</button>
 						<button
 							className={`rounded-lg px-4 py-2 font-medium text-sm transition-colors ${
+								activeTab === "treemap"
+									? "bg-primary text-primary-foreground"
+									: "bg-muted text-muted-foreground hover:text-foreground"
+							}`}
+							onClick={() => setActiveTab("treemap")}
+							type="button"
+						>
+							Treemap
+						</button>
+						<button
+							className={`rounded-lg px-4 py-2 font-medium text-sm transition-colors ${
 								activeTab === "hotspots"
 									? "bg-primary text-primary-foreground"
 									: "bg-muted text-muted-foreground hover:text-foreground"
@@ -308,6 +355,11 @@ function DependenciesContent() {
 								)}
 							</div>
 						</div>
+
+						<FilterBar
+							availableExtensions={allExtensions}
+							onFilterChange={setFilters}
+						/>
 
 						<div className="p-2">
 							{filteredNodes.map((node) => {
@@ -598,6 +650,43 @@ function DependenciesContent() {
 								<p className="text-muted-foreground text-sm">Languages</p>
 							</div>
 						</div>
+					</div>
+				</div>
+			) : activeTab === "treemap" ? (
+				<div className="mx-auto max-w-7xl p-6">
+					<div className="mb-4 flex items-center justify-between">
+						<h3 className="font-semibold">File Treemap</h3>
+						<div className="flex gap-2">
+							<button
+								className={`rounded-lg px-3 py-1.5 font-medium text-xs transition-colors ${
+									treemapColorMode === "language"
+										? "bg-primary text-primary-foreground"
+										: "bg-muted text-muted-foreground hover:text-foreground"
+								}`}
+								onClick={() => setTreemapColorMode("language")}
+								type="button"
+							>
+								By Language
+							</button>
+							<button
+								className={`rounded-lg px-3 py-1.5 font-medium text-xs transition-colors ${
+									treemapColorMode === "hotspot"
+										? "bg-primary text-primary-foreground"
+										: "bg-muted text-muted-foreground hover:text-foreground"
+								}`}
+								onClick={() => setTreemapColorMode("hotspot")}
+								type="button"
+							>
+								By Hotspot
+							</button>
+						</div>
+					</div>
+					<div className="h-[calc(100vh-240px)]">
+						<Treemap
+							colorMode={treemapColorMode}
+							onFileClick={(file) => setSelectedHotspotFile(file.path)}
+							repoId={repoId}
+						/>
 					</div>
 				</div>
 			) : (

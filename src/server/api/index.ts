@@ -3,7 +3,9 @@ import { analyzeRoute } from "./ analyze";
 import { dashboardRoute } from "./dashboard";
 import { debugRoute } from "./debug";
 import { fileContentRoute } from "./file-content";
+import { reposRoute } from "./repos";
 import { statusRoute } from "./status";
+import { treemapRoute } from "./treemap";
 
 export const apiHandler = new Elysia()
 	.get(
@@ -17,4 +19,6 @@ export const apiHandler = new Elysia()
 	.use(dashboardRoute)
 	.use(debugRoute)
 	.use(fileContentRoute)
-	.use(statusRoute);
+	.use(reposRoute)
+	.use(statusRoute)
+	.use(treemapRoute);

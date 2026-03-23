@@ -1,5 +1,6 @@
 import Elysia, { t } from "elysia";
 import { getRepositoryData } from "../dal/repositories";
+import { type AnalysisData, computeRepoSummary } from "../logic/repoSummary";
 
 export const statusRoute = new Elysia().get(
 	"/dashboard/:repoId/status",
@@ -35,6 +36,9 @@ export const statusRoute = new Elysia().get(
 							repoData.analysisResults[0].fileTypeBreakdownJson,
 						dependencyGraph: repoData.analysisResults[0].dependencyGraphJson,
 						hotSpotData: repoData.analysisResults[0].hotSpotDataJson,
+						summary: computeRepoSummary(
+							repoData.analysisResults[0] as AnalysisData,
+						),
 					}
 				: null,
 		};

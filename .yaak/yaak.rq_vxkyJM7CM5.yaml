@@ -1,0 +1,39 @@
+type: http_request
+model: http_request
+id: rq_vxkyJM7CM5
+createdAt: 2026-03-23T15:49:33.205198868
+updatedAt: 2026-03-23T15:57:54.173605025
+workspaceId: wk_dPMYXCvCgM
+folderId: null
+authentication: {}
+authenticationType: null
+body:
+  form:
+  - enabled: true
+    id: MwZNIN98ak
+    name: githubUrl
+    value: https://github.com/Its-Satyajit/nextjs_template_tanstack_query_drizzle_Eeysia_better-auth_shadcn-ui
+  - enabled: true
+    id: PZwVnN39sg
+    name: ''
+    value: ''
+bodyType: multipart/form-data
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: multipart/form-data
+  id: KQ5hICRpAQ
+method: GET
+name: localhost:3000/api/analyze Copy 3
+sortPriority: -1774015248234.997
+url: http://localhost:3000/api/dashboard/c565c3f7-3bbb-40b6-ba2f-3e187b7529a1/treemap
+urlParameters:
+- enabled: true
+  name: ''
+  value: ''
+  id: M6xWRPMh4F
+- enabled: true
+  name: ''
+  value: ''
+  id: Xy9PcF5NCq

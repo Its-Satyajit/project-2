@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "~/lib/eden";
+import type { RepoSummary } from "~/server/logic/repoSummary";
 
 export type AnalysisStatus =
 	| "pending"
@@ -60,6 +61,7 @@ export interface RepoStatus {
 			score: number;
 			rank: number;
 		}> | null;
+		summary: RepoSummary;
 	} | null;
 }
 

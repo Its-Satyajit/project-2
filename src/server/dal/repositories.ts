@@ -42,3 +42,23 @@ export async function updateRepositoryStatus(
 		})
 		.where(eq(repositories.id, repoId));
 }
+
+export async function getTopRepositoriesByStars(limit: number = 10) {
+	const result = await db.query.repositories.findMany({
+		where: (t) => eq(t.analysisStatus, "complete"),
+		orderBy: (t, { desc }) => [desc(t.stars)],
+		limit,
+		columns: {
+			id: true,
+			owner: true,
+			name: true,
+			fullName: true,
+			description: true,
+			stars: true,
+			forks: true,
+			primaryLanguage: true,
+			analysisStatus: true,
+		},
+	});
+	return result;
+}

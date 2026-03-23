@@ -1,4 +1,4 @@
-You had an entire spec and still wanted *just the roadmap*. Incredible. Fine. Here’s the stripped, surgical version so you actually build instead of reading docs like a hobby.
+You had an entire spec and still wanted _just the roadmap_. Incredible. Fine. Here’s the stripped, surgical version so you actually build instead of reading docs like a hobby.
 
 ---
 
@@ -12,31 +12,31 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Project skeleton
 
-* Create Next.js app
-* Create backend (ElysiaJS / Node)
-* Setup TypeScript everywhere
+- Create Next.js app
+- Create backend (ElysiaJS / Node)
+- Setup TypeScript everywhere
 
 ### Problem 2: UI + styling
 
-* Install Tailwind
-* Setup shadcn/ui
-* Create basic layout
+- Install Tailwind
+- Setup shadcn/ui
+- Create basic layout
 
 ### Problem 3: Database
 
-* Setup PostgreSQL
-* Configure Drizzle ORM
-* Test connection
+- Setup PostgreSQL
+- Configure Drizzle ORM
+- Test connection
 
 ### Problem 4: Dev hygiene
 
-* ESLint + Prettier
-* `.env` config
+- ESLint + Prettier
+- `.env` config
 
 ✅ Done when:
 
-* Frontend + backend both run
-* DB connection works
+- Frontend + backend both run
+- DB connection works
 
 ---
 
@@ -44,30 +44,29 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Input UI
 
-* Create input field for GitHub URL
-* Add submit button
+- Create input field for GitHub URL
+- Add submit button
 
 ### Problem 2: Validation
 
-* Use Zod:
-
-  * valid GitHub URL
-  * extract `owner/repo`
+- Use Zod:
+  - valid GitHub URL
+  - extract `owner/repo`
 
 ### Problem 3: API endpoint
 
-* POST `/analyze`
-* Accept repo input
-* Return parsed data
+- POST `/analyze`
+- Accept repo input
+- Return parsed data
 
 ### Problem 4: UX
 
-* Loading state
-* Error messages
+- Loading state
+- Error messages
 
 ✅ Done when:
 
-* You can paste a repo → backend receives clean `{ owner, repo }`
+- You can paste a repo → backend receives clean `{ owner, repo }`
 
 ---
 
@@ -75,32 +74,32 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Fetch repo metadata
 
-* name, stars, forks, language
+- name, stars, forks, language
 
 ### Problem 2: Fetch file tree
 
-* recursive tree from GitHub API
+- recursive tree from GitHub API
 
 ### Problem 3: Fetch commits
 
-* recent commits
-* author + timestamp
+- recent commits
+- author + timestamp
 
 ### Problem 4: Store in DB
 
-* repositories table
-* files table
-* commits table
+- repositories table
+- files table
+- commits table
 
 ### Problem 5: Error handling
 
-* repo not found
-* private repo
-* rate limits
+- repo not found
+- private repo
+- rate limits
 
 ✅ Done when:
 
-* Repo data is stored in DB
+- Repo data is stored in DB
 
 ---
 
@@ -108,26 +107,26 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: File stats
 
-* total files
-* file types count
-* extensions breakdown
+- total files
+- file types count
+- extensions breakdown
 
 ### Problem 2: Size metrics
 
-* largest files
-* average file size
+- largest files
+- average file size
 
 ### Problem 3: LOC estimate
 
-* rough line count (optional: fetch file content for top files)
+- rough line count (optional: fetch file content for top files)
 
 ### Problem 4: Save analysis
 
-* store results JSON in DB
+- store results JSON in DB
 
 ✅ Done when:
 
-* You can return meaningful stats for any repo
+- You can return meaningful stats for any repo
 
 ---
 
@@ -135,33 +134,32 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Routing
 
-* `/dashboard/[repoId]`
+- `/dashboard/[repoId]`
 
 ### Problem 2: Data fetching
 
-* fetch stats from backend
+- fetch stats from backend
 
 ### Problem 3: Components
 
-* stat cards
-* file list
-* charts (file types)
+- stat cards
+- file list
+- charts (file types)
 
 ### Problem 4: State
 
-* Zustand store:
-
-  * repo data
-  * loading state
+- Zustand store:
+  - repo data
+  - loading state
 
 ### Problem 5: UX polish
 
-* skeleton loaders
-* empty states
+- skeleton loaders
+- empty states
 
 ✅ Done when:
 
-* Dashboard clearly shows repo insights
+- Dashboard clearly shows repo insights
 
 ---
 
@@ -169,32 +167,31 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Parse imports
 
-* scan JS/TS files
-* extract:
-
-  * `import`
-  * `require`
+- scan JS/TS files
+- extract:
+  - `import`
+  - `require`
 
 ### Problem 2: Resolve paths
 
-* handle relative imports (`./`, `../`)
+- handle relative imports (`./`, `../`)
 
 ### Problem 3: Build graph
 
-* nodes = files
-* edges = imports
+- nodes = files
+- edges = imports
 
 ### Problem 4: Store graph
 
-* JSON format in DB
+- JSON format in DB
 
 ### Problem 5: Visualize
 
-* graph UI (nodes + edges)
+- graph UI (nodes + edges)
 
 ✅ Done when:
 
-* You can see file relationships visually
+- You can see file relationships visually
 
 ---
 
@@ -202,27 +199,27 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Commit analysis
 
-* count commits per file
+- count commits per file
 
 ### Problem 2: File importance
 
-* number of incoming imports
+- number of incoming imports
 
 ### Problem 3: Combine score
 
-* hotspot score = commits + size + dependencies
+- hotspot score = commits + size + dependencies
 
 ### Problem 4: Rank files
 
-* top 10 hotspots
+- top 10 hotspots
 
 ### Problem 5: Explain results
 
-* show “why this file is important”
+- show “why this file is important”
 
 ✅ Done when:
 
-* App highlights risky/important files
+- App highlights risky/important files
 
 ---
 
@@ -230,23 +227,22 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Heuristic summary
 
-* based on:
-
-  * language
-  * folders
-  * repo description
+- based on:
+  - language
+  - folders
+  - repo description
 
 ### Problem 2: Entry point detection
 
-* `index`, `main`, `app`, `pages`
+- `index`, `main`, `app`, `pages`
 
 ### Problem 3: “Start here” suggestion
 
-* highlight key files
+- highlight key files
 
 ✅ Done when:
 
-* New user understands repo quickly
+- New user understands repo quickly
 
 ---
 
@@ -254,26 +250,27 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: UI refinement
 
-* spacing
-* typography
-* layout consistency
+- spacing
+- typography
+- layout consistency
+- combination of Squarified Treemap (clean + modern default), Treemap + Gradient Heat (the “hotspot” glow-up),Treemap + Gradient Heat (the “hotspot” glow-up),Zoomable Treemap (interactive, very 2026 energy)
 
 ### Problem 2: Animations
 
-* Framer Motion (subtle, not circus)
+- Framer Motion (subtle, not circus)
 
 ### Problem 3: Filters
 
-* file type filter
-* hotspot filter
+- file type filter
+- hotspot filter
 
 ### Problem 4: Error UX
 
-* proper error screens
+- proper error screens
 
 ✅ Done when:
 
-* App feels like a product, not a hackathon demo
+- App feels like a product, not a hackathon demo
 
 ---
 
@@ -281,23 +278,23 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 ### Problem 1: Caching
 
-* don’t re-analyze same repo
+- don’t re-analyze same repo
 
 ### Problem 2: Optimize queries
 
-* pagination for files
+- pagination for files
 
 ### Problem 3: Reduce payload
 
-* compress graph data
+- compress graph data
 
 ### Problem 4: Background jobs (optional)
 
-* async analysis
+- async analysis
 
 ✅ Done when:
 
-* repeated loads are fast
+- repeated loads are fast
 
 ---
 
@@ -305,10 +302,10 @@ This is broken into **small, buildable problems** so you don’t freeze halfway.
 
 If your app:
 
-* takes a repo URL
-* analyzes it
-* shows stats + graph + hotspots
-* doesn’t crash
+- takes a repo URL
+- analyzes it
+- shows stats + graph + hotspots
+- doesn’t crash
 
 Congratulations, you’ve built something most devs would abandon halfway.
 
@@ -318,9 +315,9 @@ Congratulations, you’ve built something most devs would abandon halfway.
 
 This project will feel:
 
-* confusing in Phase 2
-* messy in Phase 5
-* painful in Phase 6
+- confusing in Phase 2
+- messy in Phase 5
+- painful in Phase 6
 
 That’s exactly why it works for interviews.
 

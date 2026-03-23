@@ -1,3 +1,4 @@
+import { motion } from "framer-motion";
 import { FileCodeIcon, FolderIcon, HashIcon, TerminalIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -71,23 +72,38 @@ export function StatCards({
 
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-			{stats.map((stat) => (
-				<Card key={stat.title}>
-					<CardHeader
-						className={cn(
-							"flex flex-row items-center justify-between space-y-0",
-							"pb-2",
-							"text-muted-foreground",
-						)}
-					>
-						<CardTitle className="font-medium text-sm">{stat.title}</CardTitle>
-						<stat.icon className="h-4 w-4" />
-					</CardHeader>
-					<CardContent>
-						<div className="font-bold text-2xl">{stat.value}</div>
-						<p className="text-muted-foreground text-xs">{stat.description}</p>
-					</CardContent>
-				</Card>
+			{stats.map((stat, index) => (
+				<motion.div
+					animate={{ opacity: 1, y: 0 }}
+					initial={{ opacity: 0, y: 16 }}
+					key={stat.title}
+					transition={{
+						delay: index * 0.05,
+						duration: 0.3,
+						ease: "easeOut",
+					}}
+				>
+					<Card>
+						<CardHeader
+							className={cn(
+								"flex flex-row items-center justify-between space-y-0",
+								"pb-2",
+								"text-muted-foreground",
+							)}
+						>
+							<CardTitle className="font-medium text-sm">
+								{stat.title}
+							</CardTitle>
+							<stat.icon className="h-4 w-4" />
+						</CardHeader>
+						<CardContent>
+							<div className="font-bold text-2xl">{stat.value}</div>
+							<p className="text-muted-foreground text-xs">
+								{stat.description}
+							</p>
+						</CardContent>
+					</Card>
+				</motion.div>
 			))}
 		</div>
 	);
