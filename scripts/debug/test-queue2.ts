@@ -1,10 +1,10 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-const envFile = fs.readFileSync(path.join(__dirname, ".env"), "utf-8");
+const envFile = fs.readFileSync(path.join(__dirname, "../../.env"), "utf-8");
 envFile.split("\n").forEach((line) => {
 	const match = line.match(/^([^=]+)=(.*)$/);
-	if (match) {
+	if (match && match[1] && match[2]) {
 		const key = match[1].trim();
 		let value = match[2].trim();
 		if (value.startsWith('"') && value.endsWith('"')) {
@@ -14,7 +14,7 @@ envFile.split("\n").forEach((line) => {
 	}
 });
 
-import { analysisQueue } from "./src/server/queue/index";
+import { analysisQueue } from "../../src/server/queue/index";
 
 async function test() {
 	console.log("Queue connection:", analysisQueue.opts.connection);

@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const envFile = fs.readFileSync(path.join(__dirname, ".env"), "utf-8");
+const envFile = fs.readFileSync(path.join(__dirname, "../../.env"), "utf-8");
 envFile.split("\n").forEach((line) => {
 	const match = line.match(/^([^=]+)=(.*)$/);
 	if (match) {
@@ -18,7 +18,7 @@ envFile.split("\n").forEach((line) => {
 	}
 });
 
-const { analysisQueue } = await import("./src/server/queue/index");
+const { analysisQueue } = await import("../../src/server/queue/index");
 
 async function obliterate() {
 	console.log("Obliterating queue...");

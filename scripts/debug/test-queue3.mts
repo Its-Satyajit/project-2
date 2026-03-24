@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load .env manually
-const envFile = fs.readFileSync(path.join(__dirname, ".env"), "utf-8");
+const envFile = fs.readFileSync(path.join(__dirname, "../../.env"), "utf-8");
 envFile.split("\n").forEach((line) => {
 	const match = line.match(/^([^=]+)=(.*)$/);
 	if (match) {
@@ -20,7 +20,7 @@ envFile.split("\n").forEach((line) => {
 });
 
 // Now import the queue
-const { analysisQueue } = await import("./src/server/queue/index");
+const { analysisQueue } = await import("../../src/server/queue/index");
 
 async function test() {
 	console.log("Queue connection:", analysisQueue.opts.connection);

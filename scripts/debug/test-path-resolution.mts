@@ -1,4 +1,4 @@
-import { resolveImport } from "./src/server/logic/parsers/pathResolver.js";
+import { resolveImport } from "../../src/server/logic/parsers/pathResolver.js";
 
 const testCases = [
 	{

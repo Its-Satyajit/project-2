@@ -1,14 +1,14 @@
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const envFile = fs.readFileSync(path.join(__dirname, ".env"), "utf-8");
+const envFile = fs.readFileSync(path.join(__dirname, "../../.env"), "utf-8");
 envFile.split("\n").forEach((line) => {
 	const match = line.match(/^([^=]+)=(.*)$/);
-	if (match) {
+	if (match && match[1] && match[2]) {
 		const key = match[1].trim();
 		let value = match[2].trim();
 		if (value.startsWith('"') && value.endsWith('"')) {
@@ -18,7 +18,7 @@ envFile.split("\n").forEach((line) => {
 	}
 });
 
-const { analysisQueue } = await import("./src/server/queue/index");
+const { analysisQueue } = await import("../../src/server/queue/index");
 
 async function check() {
 	const counts = await analysisQueue.getJobCounts();
@@ -32,7 +32,7 @@ async function check() {
 	]);
 	console.log(
 		"Jobs:",
-		jobs.map((j) => ({
+		jobs.map((j: any) => ({
 			id: j.id,
 			name: j.name,
 			processedOn: j.processedOn,

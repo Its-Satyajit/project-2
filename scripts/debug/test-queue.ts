@@ -1,4 +1,4 @@
-import { analysisQueue } from "./src/server/queue/index";
+import { analysisQueue } from "../../src/server/queue/index";
 
 async function test() {
 	console.log("Queue connection:", analysisQueue.opts.connection);
