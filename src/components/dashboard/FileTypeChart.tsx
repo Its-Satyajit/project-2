@@ -43,10 +43,12 @@ export const FileTypeChart = memo(function FileTypeChart({
 	const totalFiles = Object.values(data).reduce((acc, curr) => acc + curr, 0);
 
 	return (
-		<Card className="flex flex-col border-white/10 bg-white/[0.02] shadow-sm">
+		<Card className="flex flex-col border-border bg-card shadow-sm">
 			<CardHeader className="items-center pb-0">
-				<CardTitle className="text-white">File Type Distribution</CardTitle>
-				<CardDescription className="text-white/50">
+				<CardTitle className="text-foreground">
+					File Type Distribution
+				</CardTitle>
+				<CardDescription className="text-muted-foreground">
 					Breakdown by extension
 				</CardDescription>
 			</CardHeader>
@@ -58,7 +60,7 @@ export const FileTypeChart = memo(function FileTypeChart({
 					<PieChart>
 						<ChartTooltip
 							content={
-								<ChartTooltipContent className="border-zinc-700 bg-zinc-900" />
+								<ChartTooltipContent className="border-border bg-card" />
 							}
 							cursor={false}
 						/>

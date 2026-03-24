@@ -81,6 +81,7 @@ const geist = Geist({
 	variable: "--font-geist-sans",
 });
 
+import { ThemeProvider } from "~/components/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
 
@@ -88,17 +89,19 @@ export default function RootLayout({
 	children,
 }: Readonly<{ children: React.ReactNode }>) {
 	return (
-		<html className={`${geist.variable}`} lang="en">
+		<html className={`${geist.variable}`} lang="en" suppressHydrationWarning>
 			<body>
-				<QueryProvider>
-					<TooltipProvider>
-						<Suspense>
-							<Navigation />
-						</Suspense>
-						<main className="min-h-[calc(100vh-64px)]">{children}</main>
-					</TooltipProvider>
-					<Toaster />
-				</QueryProvider>
+				<ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+					<QueryProvider>
+						<TooltipProvider>
+							<Suspense>
+								<Navigation />
+							</Suspense>
+							<main className="min-h-[calc(100vh-64px)]">{children}</main>
+						</TooltipProvider>
+						<Toaster />
+					</QueryProvider>
+				</ThemeProvider>
 			</body>
 		</html>
 	);

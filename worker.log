@@ -1,7 +1,0 @@
-
-> kanban-board@0.1.0 worker
-> tsx scripts/start-worker.ts
-
-Starting analysis worker...
-[Worker] Connecting to Redis at localhost:6379
-Worker is running. Press Ctrl+C to stop.

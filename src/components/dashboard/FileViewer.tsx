@@ -1,6 +1,9 @@
 "use client";
 
+import { escape as htmlEscape } from "es-toolkit";
 import { Copy, FileCode, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { codeToHtml } from "shiki";
 import { Button } from "~/components/ui/button";
@@ -10,6 +13,12 @@ interface FileViewerProps {
 	content: string | null;
 	isLoading: boolean;
 	error: Error | null;
+	repo?: {
+		owner: string;
+		name: string;
+		branch: string;
+		isPrivate: boolean;
+	};
 }
 
 const languageMap: Record<string, string> = {
@@ -40,16 +49,22 @@ const languageMap: Record<string, string> = {
 	astro: "astro",
 };
 
-async function highlightLine(line: string, lang: string): Promise<string> {
+async function highlightLine(
+	line: string,
+	lang: string,
+	isDark: boolean,
+): Promise<string> {
 	if (!line) return " ";
 	try {
 		const html = await codeToHtml(line, {
 			lang,
-			theme: "github-dark",
+			theme: isDark ? "github-dark" : "github-light",
 		});
-		return html;
+		// Extract just the inner code spans, ignoring the pre and code wrappers that add background colors and block layout
+		const match = html.match(/<code[^>]*>([\s\S]*?)<\/code>/);
+		return match?.[1] ?? html;
 	} catch {
-		return line;
+		return htmlEscape(line);
 	}
 }
 
@@ -58,26 +73,39 @@ export function FileViewer({
 	content,
 	isLoading,
 	error,
+	repo,
 }: FileViewerProps) {
 	const [copied, setCopied] = useState(false);
 	const [highlightedLines, setHighlightedLines] = useState<string[]>([]);
+	const { resolvedTheme } = useTheme();
+
+	// Keep track of mounting to avoid hydration mismatches
+	const [mounted, setMounted] = useState(false);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	const isDark = mounted && resolvedTheme === "dark";
 
 	const fileName = filePath.split("/").pop() || filePath;
 	const extension = fileName.split(".").pop()?.toLowerCase() || "";
 	const language = languageMap[extension] || "text";
+	const isImage = ["png", "jpg", "jpeg", "gif", "svg", "webp", "ico"].includes(
+		extension,
+	);
 
 	const lines = content ? content.split("\n") : [];
 
 	useEffect(() => {
-		if (!content) {
+		if (!content || !mounted || isImage) {
 			setHighlightedLines([]);
 			return;
 		}
 
-		Promise.all(lines.map((line) => highlightLine(line, language))).then(
-			setHighlightedLines,
-		);
-	}, [content, language, lines]);
+		Promise.all(
+			lines.map((line) => highlightLine(line, language, isDark)),
+		).then(setHighlightedLines);
+	}, [content, language, lines, isDark, mounted, isImage]);
 
 	const handleCopy = () => {
 		if (content) {
@@ -107,14 +135,16 @@ export function FileViewer({
 			yml: "text-pink-400",
 			md: "text-gray-400",
 		};
-		return colors[ext] || "text-white/60";
+		return colors[ext] || "text-foreground/60";
 	};
 
 	if (isLoading) {
 		return (
 			<div className="flex h-full min-h-[400px] flex-col items-center justify-center">
 				<Loader2 className="mb-4 h-8 w-8 animate-spin text-cyan-400" />
-				<p className="font-mono text-sm text-white/40">Loading file...</p>
+				<p className="font-mono text-muted-foreground text-sm">
+					Loading file...
+				</p>
 			</div>
 		);
 	}
@@ -134,7 +164,9 @@ export function FileViewer({
 	if (!content) {
 		return (
 			<div className="flex h-full min-h-[400px] flex-col items-center justify-center">
-				<p className="font-mono text-sm text-white/40">No file selected</p>
+				<p className="font-mono text-muted-foreground text-sm">
+					No file selected
+				</p>
 			</div>
 		);
 	}
@@ -143,55 +175,81 @@ export function FileViewer({
 
 	return (
 		<div className="flex h-full min-h-[400px] flex-col">
-			<div className="flex items-center justify-between border-white/5 border-b px-4 py-2">
+			<div className="flex items-center justify-between border-border border-b px-4 py-2">
 				<div className="flex items-center gap-3">
 					<FileCode className="h-4 w-4 text-cyan-400" />
 					<span className={`font-mono text-sm ${getLanguageColor(extension)}`}>
 						{fileName}
 					</span>
-					<span className="font-mono text-white/30 text-xs">
+					<span className="font-mono text-muted-foreground text-xs">
 						{extension.toUpperCase()}
 					</span>
 				</div>
-				<Button
-					className="h-7 px-2 font-mono text-xs"
-					onClick={handleCopy}
-					size="sm"
-					variant="ghost"
-				>
-					{copied ? (
-						<span className="text-green-400">Copied!</span>
-					) : (
-						<Copy className="mr-1 h-3 w-3" />
-					)}
-				</Button>
+				{!isImage && (
+					<Button
+						className="h-7 px-2 font-mono text-xs"
+						onClick={handleCopy}
+						size="sm"
+						variant="ghost"
+					>
+						{copied ? (
+							<span className="text-green-400">Copied!</span>
+						) : (
+							<Copy className="mr-1 h-3 w-3" />
+						)}
+					</Button>
+				)}
 			</div>
-			<div className="flex h-full min-h-0 overflow-auto bg-[#0d0d0d]">
-				<div className="shrink-0 select-none border-white/5 border-r bg-[#0d0d0d] py-2 text-right font-mono text-white/20 text-xs">
-					{lines.map((_, i) => (
-						<div className="px-3 leading-6" key={i}>
-							{i + 1}
-						</div>
-					))}
-				</div>
-				<div className="flex-1 font-mono text-sm leading-6">
-					{isHighlighted
-						? highlightedLines.map((html, i) => (
-								<div
-									className="flex min-h-[1.5rem] items-stretch whitespace-pre-wrap break-all px-3 py-0.5 hover:bg-white/[0.02]"
-									dangerouslySetInnerHTML={{ __html: html }}
-									key={i}
-								/>
-							))
-						: lines.map((line, i) => (
-								<div
-									className="flex min-h-[1.5rem] items-stretch whitespace-pre-wrap break-all px-3 py-0.5 hover:bg-white/[0.02]"
-									key={i}
-								>
-									{line}
-								</div>
-							))}
-				</div>
+			<div className="flex h-full min-h-0 overflow-auto bg-card">
+				{isImage ? (
+					<div className="relative flex h-full min-h-[400px] w-full items-center justify-center bg-card/50 p-8">
+						{repo && !repo.isPrivate ? (
+							<Image
+								alt={fileName}
+								className="rounded-md object-contain"
+								fill
+								src={`https://raw.githubusercontent.com/${repo.owner}/${repo.name}/refs/heads/${repo.branch}/${filePath}`}
+								unoptimized
+							/>
+						) : (
+							<p className="font-mono text-muted-foreground text-sm">
+								Image preview not available for private repositories.
+							</p>
+						)}
+					</div>
+				) : (
+					<div className="w-full py-2">
+						{isHighlighted
+							? highlightedLines.map((html, i) => (
+									<div
+										className="flex transition-colors hover:bg-muted/50"
+										key={`l-${i}-${filePath}`}
+									>
+										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
+											{i + 1}
+										</div>
+										<div
+											className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6 [&>span]:bg-transparent!"
+											// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for Shiki
+											dangerouslySetInnerHTML={{ __html: html }}
+										/>
+									</div>
+								))
+							: lines.map((line, i) => (
+									<div
+										className="flex transition-colors hover:bg-muted/50"
+										key={`n-${i}-${filePath}`}
+									>
+										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
+											{i + 1}
+										</div>
+										<div className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6">
+											{line}
+										</div>
+									</div>
+								))}
+					</div>
+				)}
 			</div>
 		</div>
 	);

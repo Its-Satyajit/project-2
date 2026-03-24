@@ -66,8 +66,8 @@ export function rateLimit(config: RateLimitConfig) {
 			// Debug logging
 			console.log(
 				`[RateLimit] ${endpoint} | id: ${identifier} | ` +
-				`${result.currentCount}/${limit} | ` +
-				`allowed: ${result.allowed} | remaining: ${result.remaining}`,
+					`${result.currentCount}/${limit} | ` +
+					`allowed: ${result.allowed} | remaining: ${result.remaining}`,
 			);
 
 			const headers: RateLimitHeaders = {

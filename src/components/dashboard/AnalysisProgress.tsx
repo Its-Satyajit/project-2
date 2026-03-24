@@ -45,15 +45,15 @@ const PhaseItem = React.memo(function PhaseItem({
 			) : isActive ? (
 				<Loader2 className="h-5 w-5 animate-spin text-blue-400" />
 			) : (
-				<Circle className="h-5 w-5 text-white/20" />
+				<Circle className="h-5 w-5 text-foreground/20" />
 			)}
 			<span
 				className={`text-sm ${
 					isActive
-						? "font-medium text-white"
+						? "font-medium text-foreground"
 						: isComplete
 							? "text-emerald-400"
-							: "text-white/40"
+							: "text-muted-foreground"
 				}`}
 			>
 				{phase.label}
@@ -111,20 +111,20 @@ export const AnalysisProgress = React.memo(function AnalysisProgress({
 				{status.analysis && (
 					<div className="mt-2 grid grid-cols-3 gap-4 text-sm">
 						<div>
-							<span className="text-white/40">Files</span>
-							<p className="font-medium text-white">
+							<span className="text-muted-foreground">Files</span>
+							<p className="font-medium text-foreground">
 								{status.analysis.totalFiles?.toLocaleString()}
 							</p>
 						</div>
 						<div>
-							<span className="text-white/40">Directories</span>
-							<p className="font-medium text-white">
+							<span className="text-muted-foreground">Directories</span>
+							<p className="font-medium text-foreground">
 								{status.analysis.totalDirectories?.toLocaleString()}
 							</p>
 						</div>
 						<div>
-							<span className="text-white/40">Lines</span>
-							<p className="font-medium text-white">
+							<span className="text-muted-foreground">Lines</span>
+							<p className="font-medium text-foreground">
 								{status.analysis.totalLines?.toLocaleString()}
 							</p>
 						</div>

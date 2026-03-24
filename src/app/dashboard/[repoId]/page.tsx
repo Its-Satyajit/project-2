@@ -30,9 +30,9 @@ export default function RepoPage({
 	params: Promise<{ repoId: string }>;
 }) {
 	return (
-		<main className="relative min-h-screen overflow-hidden bg-[#050505] pt-14">
+		<main className="relative min-h-screen overflow-hidden bg-background pt-14">
 			<div className="absolute inset-0 -z-10">
-				<div className="absolute inset-0 bg-[linear-gradient(rgba(20,20,20,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.4)_1px,transparent_1px)] bg-[size:30px_30px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+				<div className="mask-[radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] absolute inset-0 bg-[linear-gradient(rgba(100,100,100,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(100,100,100,0.1)_1px,transparent_1px)] bg-size-[30px_30px] dark:bg-[linear-gradient(rgba(20,20,20,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.4)_1px,transparent_1px)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(245,158,11,0.06),transparent_40%)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(6,182,212,0.05),transparent_40%)]" />
 				<div
@@ -60,7 +60,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["repo-dashboard", repoId],
 		queryFn: async () => {
-			const res = await api.dashboard({ repoId: repoId as any }).get();
+			const res = await api.dashboard({ repoId }).get();
 			return res;
 		},
 		enabled: !!repoId,
@@ -82,6 +82,20 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 				defaultBranch: string;
 				isPrivate: boolean;
 			};
+
+			const ext = selectedFile.split(".").pop()?.toLowerCase();
+			const isImage = [
+				"png",
+				"jpg",
+				"jpeg",
+				"gif",
+				"svg",
+				"webp",
+				"ico",
+			].includes(ext || "");
+			if (isImage) {
+				return "IMAGE_PLACEHOLDER";
+			}
 
 			if (!data.isPrivate) {
 				const branch = data.defaultBranch || "main";
@@ -116,7 +130,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					<Loader2 className="h-5 w-5 animate-spin" />
 					<span className="text-sm tracking-wider">INITIALIZING_DASHBOARD</span>
 				</div>
-				<div className="h-1 w-48 overflow-hidden rounded-full bg-white/10">
+				<div className="h-1 w-48 overflow-hidden rounded-full bg-secondary">
 					<div
 						className="h-full animate-pulse bg-amber-500"
 						style={{ width: "60%" }}
@@ -184,10 +198,10 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 									<GitBranch className="h-4 w-4 text-amber-400" />
 								</div>
 							)}
-							<h1 className="font-bold font-mono text-2xl text-white tracking-tight">
+							<h1 className="font-bold font-mono text-2xl text-foreground tracking-tight">
 								<span className="text-amber-400">{data.owner}</span>
-								<span className="text-white/50">/</span>
-								<span className="text-white">{data.name}</span>
+								<span className="text-muted-foreground">/</span>
+								<span className="text-foreground">{data.name}</span>
 							</h1>
 							{data.isPrivate && (
 								<span className="rounded border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 font-mono text-orange-400 text-xs">
@@ -196,7 +210,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 							)}
 						</div>
 						{data.description && (
-							<p className="max-w-2xl font-mono text-sm text-white/40 leading-relaxed">
+							<p className="max-w-2xl font-mono text-muted-foreground text-sm leading-relaxed">
 								{data.description}
 							</p>
 						)}
@@ -210,10 +224,11 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					</Link>
 				</div>
 			</header>
-
 			<section>
 				<div className="mb-4 flex items-center gap-2">
-					<span className="font-mono text-white/30 text-xs">{"//"}</span>
+					<span className="font-mono text-muted-foreground text-xs">
+						{"//"}
+					</span>
 					<span className="font-mono text-sky-400 text-xs tracking-wider">
 						REPO_STATS
 					</span>
@@ -245,22 +260,24 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					/>
 				</div>
 			</section>
-
 			<section>
 				<div className="mb-4 flex items-center gap-2">
-					<span className="font-mono text-white/30 text-xs">{"//"}</span>
+					<span className="font-mono text-muted-foreground text-xs">
+						{"//"}
+					</span>
 					<span className="font-mono text-emerald-400 text-xs tracking-wider">
 						ANALYSIS_STATUS
 					</span>
 				</div>
-				<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] p-4">
+				<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/3 p-4">
 					<AnalysisProgress repoId={repoId} />
 				</div>
 			</section>
-
 			<section>
 				<div className="mb-4 flex items-center gap-2">
-					<span className="font-mono text-white/30 text-xs">{"//"}</span>
+					<span className="font-mono text-muted-foreground text-xs">
+						{"//"}
+					</span>
 					<span className="font-mono text-blue-400 text-xs tracking-wider">
 						EXPLORER
 					</span>
@@ -290,7 +307,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 						className="grid gap-4 lg:grid-cols-[350px_1fr]"
 						style={{ height: "calc(100vh - 380px)" }}
 					>
-						<div className="overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">
+						<div className="overflow-hidden rounded-lg border border-border bg-card">
 							<VirtualizedFileTree
 								defaultBranch={data.defaultBranch}
 								fileTree={data.fileTree ?? []}
@@ -301,16 +318,22 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 								repoId={data.id}
 							/>
 						</div>
-						<div className="overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">
+						<div className="overflow-hidden rounded-lg border border-border bg-card">
 							{selectedFile ? (
 								<FileViewer
 									content={fileContent ?? null}
 									error={fileError ?? null}
 									filePath={selectedFile}
 									isLoading={isFileLoading ?? false}
+									repo={{
+										owner: data.owner,
+										name: data.name,
+										branch: data.defaultBranch || "main",
+										isPrivate: data.isPrivate,
+									}}
 								/>
 							) : (
-								<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-white/30">
+								<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-muted-foreground">
 									<Code2 className="mb-4 h-12 w-12 opacity-30" />
 									<p className="font-mono text-sm">
 										Select a file to view its contents
@@ -320,22 +343,23 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 						</div>
 					</div>
 				) : analysis?.fileTypeBreakdownJson ? (
-					<div className="rounded-lg border border-white/5 bg-white/[0.02] p-6">
+					<div className="rounded-lg border border-border bg-card p-6">
 						<FileTypeChart
 							data={analysis.fileTypeBreakdownJson as Record<string, number>}
 						/>
 					</div>
 				) : null}
 			</section>
-
-			<footer className="mt-4 flex items-center justify-between border-white/5 border-t pt-6">
-				<div className="font-mono text-white/20 text-xs">
-					<span className="text-amber-400">branch:</span> {data.defaultBranch}
+			<footer className="mt-4 flex items-center justify-between border-border border-t pt-6">
+				<div className="font-mono text-muted-foreground text-xs">
+					<span className="text-amber-600 dark:text-amber-400">branch:</span>{" "}
+					{data.defaultBranch}
 				</div>
-				<div className="font-mono text-white/20 text-xs">
-					<span className="text-green-400">status:</span> analyzed
+				<div className="font-mono text-muted-foreground text-xs">
+					<span className="text-green-600 dark:text-green-400">status:</span>{" "}
+					analyzed
 				</div>
-			</footer>
+			</footer>{" "}
 		</div>
 	);
 }
@@ -371,10 +395,12 @@ function StatCard({
 		>
 			<div className="flex items-start justify-between">
 				<div>
-					<p className="mb-1 font-mono text-white/50 text-xs tracking-wider">
+					<p className="mb-1 font-mono text-muted-foreground text-xs tracking-wider">
 						{label}
 					</p>
-					<p className="font-bold font-mono text-2xl text-white">{value}</p>
+					<p className="font-bold font-mono text-2xl text-foreground">
+						{value}
+					</p>
 				</div>
 				<div
 					className={`flex h-10 w-10 items-center justify-center rounded ${iconBgClasses[color]}`}

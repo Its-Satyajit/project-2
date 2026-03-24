@@ -103,9 +103,9 @@ export default function HomeClient() {
 	});
 
 	return (
-		<main className="relative min-h-screen overflow-hidden bg-[#050505]">
+		<main className="relative min-h-screen overflow-hidden bg-background">
 			<div className="absolute inset-0 -z-10">
-				<div className="absolute inset-0 bg-[linear-gradient(rgba(20,20,20,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.3)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
+				<div className="absolute inset-0 bg-[linear-gradient(rgba(100,100,100,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(100,100,100,0.1)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] dark:bg-[linear-gradient(rgba(20,20,20,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.3)_1px,transparent_1px)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,180,50,0.08),transparent_50%)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(50,200,255,0.06),transparent_50%)]" />
 				<div
@@ -123,26 +123,26 @@ export default function HomeClient() {
 				variants={containerVariants}
 			>
 				<motion.div className="mb-10" variants={itemVariants}>
-					<div className="mb-6 inline-flex items-center gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3.5 py-1.5 font-mono text-amber-400/90 text-xs tracking-wide">
+					<div className="mb-6 inline-flex items-center gap-2.5 rounded-md border border-amber-500/20 bg-amber-500/5 px-3.5 py-1.5 font-mono text-amber-500/90 text-xs tracking-wide dark:text-amber-400/90">
 						<span className="relative flex h-2 w-2">
 							<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
 							<span className="relative inline-flex h-2 w-2 rounded-full bg-amber-500" />
 						</span>
 						<span className="tracking-wider">git://analyze</span>
 					</div>
-					<h1 className="mb-5 font-[family-name:var(--font-geist-sans)] font-bold text-5xl text-white tracking-tight md:text-6xl lg:text-7xl">
+					<h1 className="mb-5 font-[family-name:var(--font-geist-sans)] font-bold text-5xl text-foreground tracking-tight md:text-6xl lg:text-7xl">
 						<span className="text-[#f59e0b]">Repository</span>{" "}
-						<span className="text-white/90">Analyzer</span>
+						<span className="text-foreground/90">Analyzer</span>
 					</h1>
-					<p className="max-w-xl font-mono text-base text-white/50 leading-relaxed">
-						<span className="text-white/70">$</span> analyze --target=github
-						--depth=full{" "}
-						<span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-cyan-400 align-middle" />
+					<p className="max-w-xl font-mono text-base text-muted-foreground leading-relaxed">
+						<span className="text-muted-foreground/70">$</span> analyze
+						--target=github --depth=full{" "}
+						<span className="ml-0.5 inline-block h-4 w-2 animate-pulse bg-cyan-500 align-middle dark:bg-cyan-400" />
 					</p>
 				</motion.div>
 
 				<motion.div className="mb-16" variants={itemVariants}>
-					<div className="relative rounded-lg border border-white/10 bg-black/60 p-1 backdrop-blur-xl">
+					<div className="relative rounded-lg border border-border bg-card/60 p-1 backdrop-blur-xl">
 						<div className="absolute inset-0 rounded-lg bg-gradient-to-r from-amber-500/5 via-transparent to-cyan-500/5" />
 						<form
 							className="relative flex items-center gap-2"
@@ -152,7 +152,7 @@ export default function HomeClient() {
 								form.handleSubmit();
 							}}
 						>
-							<div className="flex items-center px-3 text-white/30">
+							<div className="flex items-center px-3 text-muted-foreground/50">
 								<Search className="h-4 w-4" />
 							</div>
 							<form.Field name="githubUrl">
@@ -162,7 +162,7 @@ export default function HomeClient() {
 											GitHub URL
 										</Label>
 										<Input
-											className="h-14 border-0 bg-transparent font-mono text-white placeholder:text-white/20 focus-visible:ring-0 focus-visible:ring-offset-0"
+											className="h-14 border-0 bg-transparent font-mono text-foreground placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
 											id={field.name}
 											name={field.name}
 											onBlur={field.handleBlur}
@@ -178,7 +178,7 @@ export default function HomeClient() {
 							>
 								{([canSubmit, isSubmitting]) => (
 									<Button
-										className="mr-1 h-10 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 px-6 font-medium font-mono text-black text-sm transition-all hover:from-amber-400 hover:to-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
+										className="mr-1 h-10 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 px-6 font-medium font-mono text-foreground text-sm transition-all hover:from-amber-400 hover:to-amber-500 hover:shadow-amber-500/20 hover:shadow-lg dark:text-black"
 										disabled={!canSubmit}
 										type="submit"
 									>
@@ -217,36 +217,38 @@ export default function HomeClient() {
 							</form.Subscribe>
 						</form>
 					</div>
-					<p className="mt-3 font-mono text-white/30 text-xs">
+					<p className="mt-3 font-mono text-muted-foreground/60 text-xs">
 						Supported: github.com, gist.github.com
 					</p>
 				</motion.div>
 
 				<motion.div className="mb-16" variants={itemVariants}>
 					<div className="mb-8 flex items-center gap-3">
-						<div className="flex h-8 w-8 items-center justify-center rounded border border-white/10 bg-white/5">
-							<span className="font-mono text-cyan-400 text-xs">01</span>
+						<div className="flex h-8 w-8 items-center justify-center rounded border border-border bg-secondary/50">
+							<span className="font-mono text-cyan-500 text-xs dark:text-cyan-400">
+								01
+							</span>
 						</div>
-						<h2 className="font-mono font-semibold text-white text-xl tracking-wide">
+						<h2 className="font-mono font-semibold text-foreground text-xl tracking-wide">
 							MODULES
 						</h2>
 					</div>
 					<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 						{FEATURES.map((feature) => (
 							<motion.div
-								className="group relative rounded-lg border border-white/5 bg-white/[0.02] p-5 transition-all hover:border-cyan-500/30 hover:bg-white/[0.04]"
+								className="group relative rounded-lg border border-border bg-card/50 p-5 transition-all hover:border-cyan-500/30 hover:bg-card/80"
 								key={feature.title}
 								variants={itemVariants}
 								whileHover={{ y: -2 }}
 							>
 								<div className="absolute inset-0 rounded-lg bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-								<div className="relative mb-4 flex h-10 w-10 items-center justify-center rounded border border-white/10 bg-white/[0.02]">
-									<feature.icon className="h-5 w-5 text-cyan-400" />
+								<div className="relative mb-4 flex h-10 w-10 items-center justify-center rounded border border-border bg-secondary/50">
+									<feature.icon className="h-5 w-5 text-cyan-500 dark:text-cyan-400" />
 								</div>
-								<h3 className="mb-2 font-medium font-mono text-sm text-white">
+								<h3 className="mb-2 font-medium font-mono text-foreground text-sm">
 									{feature.title}
 								</h3>
-								<p className="font-mono text-white/40 text-xs leading-relaxed">
+								<p className="font-mono text-muted-foreground text-xs leading-relaxed">
 									{feature.description}
 								</p>
 							</motion.div>
@@ -256,10 +258,12 @@ export default function HomeClient() {
 
 				<motion.div variants={itemVariants}>
 					<div className="mb-8 flex items-center gap-3">
-						<div className="flex h-8 w-8 items-center justify-center rounded border border-white/10 bg-white/5">
-							<span className="font-mono text-amber-400 text-xs">02</span>
+						<div className="flex h-8 w-8 items-center justify-center rounded border border-border bg-secondary/50">
+							<span className="font-mono text-amber-500 text-xs dark:text-amber-400">
+								02
+							</span>
 						</div>
-						<h2 className="font-mono font-semibold text-white text-xl tracking-wide">
+						<h2 className="font-mono font-semibold text-foreground text-xl tracking-wide">
 							RECENT_ANALYSES
 						</h2>
 					</div>
@@ -267,15 +271,15 @@ export default function HomeClient() {
 						<div className="grid gap-3 md:grid-cols-2">
 							{Array.from({ length: 4 }).map((_, i) => (
 								<Card
-									className="border-white/5 bg-white/[0.02]"
+									className="border-border bg-card/50"
 									key={`skeleton-${i}`}
 								>
 									<CardHeader>
-										<Skeleton className="h-4 w-3/4 bg-white/10" />
-										<Skeleton className="mt-2 h-3 w-1/2 bg-white/10" />
+										<Skeleton className="h-4 w-3/4 bg-muted" />
+										<Skeleton className="mt-2 h-3 w-1/2 bg-muted" />
 									</CardHeader>
 									<CardContent>
-										<Skeleton className="h-3 w-full bg-white/10" />
+										<Skeleton className="h-3 w-full bg-muted" />
 									</CardContent>
 								</Card>
 							))}
@@ -289,7 +293,7 @@ export default function HomeClient() {
 									whileHover={{ scale: 1.01 }}
 								>
 									<a href={`/dashboard/${repo.id}`}>
-										<Card className="group cursor-pointer border-white/5 bg-white/[0.02] transition-all hover:border-amber-500/30 hover:bg-white/[0.04]">
+										<Card className="group cursor-pointer border-border bg-card/50 transition-all hover:border-amber-500/30 hover:bg-card/80">
 											<CardHeader className="pb-2">
 												<div className="flex items-start justify-between">
 													<div className="flex items-center gap-2">
@@ -302,33 +306,33 @@ export default function HomeClient() {
 																width={24}
 															/>
 														) : (
-															<div className="flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-white/5">
-																<GitBranch className="h-3 w-3 text-white/50" />
+															<div className="flex h-6 w-6 items-center justify-center rounded border border-border bg-secondary/50">
+																<GitBranch className="h-3 w-3 text-muted-foreground" />
 															</div>
 														)}
-														<CardTitle className="font-medium font-mono text-sm text-white group-hover:text-amber-400">
+														<CardTitle className="font-medium font-mono text-foreground text-sm group-hover:text-amber-500 dark:group-hover:text-amber-400">
 															{repo.fullName}
 														</CardTitle>
 													</div>
 												</div>
 												{repo.description && (
-													<p className="mt-2 line-clamp-2 font-mono text-white/40 text-xs leading-relaxed">
+													<p className="mt-2 line-clamp-2 font-mono text-muted-foreground text-xs leading-relaxed">
 														{repo.description}
 													</p>
 												)}
 											</CardHeader>
 											<CardContent>
 												<div className="flex items-center gap-4 font-mono text-xs">
-													<div className="flex items-center gap-1.5 text-amber-400">
-														<Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+													<div className="flex items-center gap-1.5 text-amber-500 dark:text-amber-400">
+														<Star className="h-3 w-3 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
 														<span>{repo.stars?.toLocaleString()}</span>
 													</div>
-													<div className="flex items-center gap-1.5 text-white/30">
+													<div className="flex items-center gap-1.5 text-muted-foreground">
 														<GitFork className="h-3 w-3" />
 														<span>{repo.forks?.toLocaleString()}</span>
 													</div>
 													{repo.primaryLanguage && (
-														<span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-cyan-400 text-xs">
+														<span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-mono text-cyan-600 text-xs dark:text-cyan-400">
 															{repo.primaryLanguage}
 														</span>
 													)}
@@ -343,18 +347,21 @@ export default function HomeClient() {
 				</motion.div>
 
 				<motion.footer
-					className="mt-20 flex items-center justify-between border-white/5 border-t pt-8"
+					className="mt-20 flex items-center justify-between border-border border-t pt-8"
 					variants={itemVariants}
 				>
-					<div className="font-mono text-white/20 text-xs">
-						<span className="text-amber-400">▲</span> repo-analyzer v1.0.0
+					<div className="font-mono text-muted-foreground text-xs">
+						<span className="text-amber-500 dark:text-amber-400">▲</span>{" "}
+						repo-analyzer v1.0.0
 					</div>
-					<div className="flex items-center gap-4 font-mono text-white/20 text-xs">
+					<div className="flex items-center gap-4 font-mono text-muted-foreground text-xs">
 						<span>
-							status: <span className="text-green-400">online</span>
+							status:{" "}
+							<span className="text-green-600 dark:text-green-400">online</span>
 						</span>
 						<span>
-							latency: <span className="text-cyan-400">12ms</span>
+							latency:{" "}
+							<span className="text-cyan-600 dark:text-cyan-400">12ms</span>
 						</span>
 					</div>
 				</motion.footer>

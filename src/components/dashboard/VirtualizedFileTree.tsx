@@ -164,13 +164,13 @@ export function VirtualizedFileTree({
 		<>
 			<Card className="flex h-full flex-col border-none bg-transparent shadow-none">
 				<CardHeader className="shrink-0 px-4 py-3">
-					<CardTitle className="text-base text-white">
+					<CardTitle className="text-base text-foreground">
 						Repository Explorer
 					</CardTitle>
 					<div className="relative mt-2">
-						<SearchIcon className="absolute top-2 left-2 h-4 w-4 text-white/30" />
+						<SearchIcon className="absolute top-2 left-2 h-4 w-4 text-muted-foreground" />
 						<Input
-							className="h-8 border-white/10 bg-white/5 pl-8 text-white placeholder:text-white/30"
+							className="h-8 border-border bg-secondary/50 pl-8 text-foreground placeholder:text-muted-foreground"
 							onChange={(e) => setSearchQuery(e.target.value)}
 							placeholder="Search files..."
 							value={searchQuery}
@@ -204,7 +204,7 @@ export function VirtualizedFileTree({
 									>
 										<div
 											className={cn(
-												"group flex items-center px-2 hover:bg-white/5",
+												"group flex items-center px-2 hover:bg-secondary/50",
 											)}
 											style={{ paddingLeft: `${node.depth * 1.25}rem` }}
 										>
@@ -217,12 +217,12 @@ export function VirtualizedFileTree({
 												>
 													<ChevronRightIcon
 														className={cn(
-															"h-4 w-4 text-white/40 transition-transform",
+															"h-4 w-4 text-muted-foreground transition-transform",
 															expandedPaths.has(node.id) && "rotate-90",
 														)}
 													/>
 													<FolderIcon className="h-4 w-4 fill-blue-500/20 text-blue-400" />
-													<span className="truncate font-medium text-sm text-white/80">
+													<span className="truncate font-medium text-foreground/80 text-sm">
 														{node.name}
 													</span>
 												</Button>
@@ -233,8 +233,8 @@ export function VirtualizedFileTree({
 													size="sm"
 													variant="ghost"
 												>
-													<FileIcon className="h-4 w-4 text-white/40" />
-													<span className="truncate font-normal text-sm text-white/60">
+													<FileIcon className="h-4 w-4 text-muted-foreground" />
+													<span className="truncate font-normal text-foreground/60 text-sm">
 														{node.name}
 													</span>
 												</Button>
@@ -246,7 +246,7 @@ export function VirtualizedFileTree({
 						</div>
 					</div>
 					{visibleNodes.length === 0 && (
-						<div className="absolute inset-0 flex items-center justify-center text-white/30">
+						<div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
 							No files found.
 						</div>
 					)}
