@@ -1,4 +1,5 @@
 import { Queue } from "bullmq";
+import Redis from "ioredis";
 import { env } from "~/env";
 
 export interface AnalysisJob {
@@ -9,11 +10,16 @@ export interface AnalysisJob {
 	githubUrl: string;
 }
 
+export const connection = (env.REDIS_URL 
+	? new Redis(env.REDIS_URL, { maxRetriesPerRequest: null })
+	: { 
+			host: env.REDIS_HOST || "localhost", 
+			port: env.REDIS_PORT ? parseInt(env.REDIS_PORT, 10) : 6379,
+			password: env.REDIS_PASSWORD
+	  }) as any;
+
 export const analysisQueue = new Queue<AnalysisJob>("analysis", {
-	connection: {
-		host: env.REDIS_HOST || "localhost",
-		port: env.REDIS_PORT ? parseInt(env.REDIS_PORT, 10) : 6379,
-	},
+	connection,
 	defaultJobOptions: {
 		attempts: 3,
 		backoff: {

@@ -263,20 +263,17 @@ export async function runAnalysisDirect(data: {
 	return processAnalysisJob(mockJob as unknown as Job<AnalysisJob>);
 }
 
+import { connection } from "./index";
+
 let worker: Worker | null = null;
 
 export function startAnalysisWorker() {
 	if (worker) return worker;
 
-	console.log(
-		`[Worker] Connecting to Redis at ${env.REDIS_HOST}:${env.REDIS_PORT}`,
-	);
+	console.log(`[Worker] Connecting to Redis...`);
 
 	worker = new Worker<AnalysisJob>("analysis", processAnalysisJob, {
-		connection: {
-			host: env.REDIS_HOST || "localhost",
-			port: env.REDIS_PORT ? parseInt(env.REDIS_PORT, 10) : 6379,
-		},
+		connection,
 		concurrency: 2,
 	});
 

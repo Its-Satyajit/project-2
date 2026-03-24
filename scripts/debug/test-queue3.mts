@@ -30,9 +30,9 @@ async function test() {
 			{
 				repoId: "556ea516-457f-4916-8912-12170a26d1cf",
 				owner: "Its-Satyajit",
-				repo: "project-2",
+				repo: "git-insights-analyzer",
 				branch: "main",
-				githubUrl: "https://github.com/Its-Satyajit/project-2",
+				githubUrl: "https://github.com/Its-Satyajit/git-insights-analyzer",
 			},
 			{ jobId: "556ea516-457f-4916-8912-12170a26d1cf" },
 		);

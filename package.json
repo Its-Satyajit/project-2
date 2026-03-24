@@ -3,6 +3,13 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Its-Satyajit/git-insights-analyzer.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Its-Satyajit/git-insights-analyzer/issues"
+	},
 	"scripts": {
 		"build": "next build",
 		"check": "biome check .",

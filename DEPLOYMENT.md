@@ -44,7 +44,7 @@ Because Vercel Serverless Functions have execution time limits (10s-90s), the ba
 ---
 
 ## 3. WASM Support
-The project uses `tree-sitter` WASM files for code analysis. These are bundled automatically in `src/server/logic/parsers/wasm/` to ensure they work in Vercel's serverless environment.
+The project uses `tree-sitter` WASM files for code analysis. These are bundled automatically from `node_modules` during Vercel's build step (thanks to `outputFileTracingIncludes` in `next.config.ts`) to ensure they work in a serverless environment.
 
 ## 4. Rate Limiting
 Rate limiting is handled via Redis. If Redis is unavailable or the circuit breaker trips, the system will fail-open (allow requests) to ensure availability.

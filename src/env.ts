@@ -17,8 +17,10 @@ export const env = createEnv({
 			.enum(["development", "test", "production"])
 			.default("development"),
 		GITHUB_PAT: z.string(),
+		REDIS_URL: z.string().url().optional(),
 		REDIS_HOST: z.string().default("localhost"),
 		REDIS_PORT: z.string().default("6379"),
+		REDIS_PASSWORD: z.string().optional(),
 	},
 
 	/**
@@ -41,8 +43,10 @@ export const env = createEnv({
 		DATABASE_URL: process.env.DATABASE_URL,
 		NODE_ENV: process.env.NODE_ENV,
 		GITHUB_PAT: process.env.GITHUB_PAT,
+		REDIS_URL: process.env.REDIS_URL,
 		REDIS_HOST: process.env.REDIS_HOST,
 		REDIS_PORT: process.env.REDIS_PORT,
+		REDIS_PASSWORD: process.env.REDIS_PASSWORD,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
