@@ -58,6 +58,7 @@ export async function getTopRepositoriesByStars(limit: number = 10) {
 			forks: true,
 			primaryLanguage: true,
 			analysisStatus: true,
+			avatarUrl: true,
 		},
 	});
 	return result;

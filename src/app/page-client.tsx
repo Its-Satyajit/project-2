@@ -12,6 +12,7 @@ import {
 	Workflow,
 	Zap,
 } from "lucide-react";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { toast } from "sonner";
 
@@ -292,9 +293,19 @@ export default function HomeClient() {
 											<CardHeader className="pb-2">
 												<div className="flex items-start justify-between">
 													<div className="flex items-center gap-2">
-														<div className="flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-white/5">
-															<GitBranch className="h-3 w-3 text-white/50" />
-														</div>
+														{repo.avatarUrl ? (
+															<Image
+																alt={repo.owner}
+																className="rounded"
+																height={24}
+																src={repo.avatarUrl}
+																width={24}
+															/>
+														) : (
+															<div className="flex h-6 w-6 items-center justify-center rounded border border-white/10 bg-white/5">
+																<GitBranch className="h-3 w-3 text-white/50" />
+															</div>
+														)}
 														<CardTitle className="font-medium font-mono text-sm text-white group-hover:text-amber-400">
 															{repo.fullName}
 														</CardTitle>

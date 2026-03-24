@@ -34,12 +34,37 @@ const EXTERNAL_PATTERNS = [
 ];
 
 function isExternal(source: string): boolean {
-	return EXTERNAL_PATTERNS.some((pattern) => pattern.test(source));
+	// Clean the source first - remove quotes
+	const cleaned = cleanSource(source);
+	return EXTERNAL_PATTERNS.some((pattern) => pattern.test(cleaned));
 }
 
 function normalizePath(p: string): string {
-	// Use POSIX normalization to resolve . and ..
-	return path.posix.normalize(p);
+	// Resolve . and .. manually since path.posix.normalize doesn't fully resolve them
+	const parts = p.split("/");
+	const resolved: string[] = [];
+
+	for (const part of parts) {
+		if (part === "..") {
+			resolved.pop();
+		} else if (part !== "." && part !== "") {
+			resolved.push(part);
+		}
+	}
+
+	return resolved.join("/");
+}
+
+function cleanSource(source: string): string {
+	// Remove surrounding quotes (single or double) if present
+	let cleaned = source.trim();
+	if (
+		(cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+		(cleaned.startsWith("'") && cleaned.endsWith("'"))
+	) {
+		cleaned = cleaned.slice(1, -1);
+	}
+	return cleaned;
 }
 
 function hasKnownExtension(source: string): boolean {
@@ -72,7 +97,10 @@ export function resolveImport(
 ): ResolvedImport {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 
-	if (isExternal(source)) {
+	// Clean the source - remove quotes and whitespace
+	const cleanedSource = cleanSource(source);
+
+	if (isExternal(cleanedSource)) {
 		return {
 			original: source,
 			resolved: null,
@@ -81,12 +109,12 @@ export function resolveImport(
 	}
 
 	let resolved: string | null = null;
-	const sourceHasExt = hasKnownExtension(source);
+	const sourceHasExt = hasKnownExtension(cleanedSource);
 
 	// Handle alias imports (e.g., @/components/Button or ~/components/Button)
-	if (source.startsWith("~/") || source.startsWith("@/")) {
-		const prefix = source.startsWith("~/") ? "~/" : "@/";
-		const withoutAlias = source.slice(prefix.length);
+	if (cleanedSource.startsWith("~/") || cleanedSource.startsWith("@/")) {
+		const prefix = cleanedSource.startsWith("~/") ? "~/" : "@/";
+		const withoutAlias = cleanedSource.slice(prefix.length);
 		const basePath = opts.baseDir
 			? `${opts.baseDir}/${opts.aliasBase}/${withoutAlias}`
 			: `${opts.aliasBase}/${withoutAlias}`;

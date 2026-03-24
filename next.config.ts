@@ -7,6 +7,11 @@ const config: NextConfig = {
 	cacheComponents: true,
 	images: {
 		formats: ["image/avif", "image/webp"],
+		remotePatterns: [
+			{
+				hostname: "avatars.githubusercontent.com",
+			},
+		],
 	},
 	async headers() {
 		return [

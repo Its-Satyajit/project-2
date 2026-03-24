@@ -27,6 +27,7 @@ export interface RepoStatus {
 		isPrivate: boolean;
 		stars: number | null;
 		forks: number | null;
+		avatarUrl?: string;
 	};
 	analysis: {
 		totalFiles: number | null;

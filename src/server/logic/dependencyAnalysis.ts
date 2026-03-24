@@ -195,7 +195,14 @@ export async function performDependencyAnalysis(
 	const errorFiles: string[] = [];
 	const unresolvedImports: string[] = [];
 
-	const filePathSet = new Set(codeFiles.map((f) => f.path));
+	// Normalize all file paths to POSIX format for consistent matching
+	const normalizedFilePaths = codeFiles.map((f) => f.path.replace(/\\/g, "/"));
+	const filePathSet = new Set(normalizedFilePaths);
+
+	console.log(
+		`[DependencyAnalysis] File path set (sample):`,
+		Array.from(filePathSet).slice(0, 5),
+	);
 
 	for (const file of codeFiles) {
 		const language = detectLanguage(file.path) || "typescript";
@@ -227,40 +234,49 @@ export async function performDependencyAnalysis(
 
 		const fileEdges: GraphEdge[] = [];
 
+		// Normalize source path to match format in filePathSet
+		const normalizedSource = file.path.replace(/\\/g, "/");
+
 		for (const imp of parsed.imports) {
 			const resolved = resolveImport(imp.source, file.path);
 
 			if (resolved.isExternal) {
 				// External package - skip
 			} else if (resolved.resolved) {
-				const normalizedTarget = resolved.resolved;
+				// Normalize the target path to match the format in filePathSet
+				const normalizedTarget = resolved.resolved.replace(/\\/g, "/");
+
+				// Debug: log the resolution
+				console.log(
+					`[DependencyAnalysis] "${normalizedSource}" → "${imp.source}" resolved to "${normalizedTarget}" (in set: ${filePathSet.has(normalizedTarget)})`,
+				);
 
 				if (filePathSet.has(normalizedTarget)) {
-					if (file.path !== normalizedTarget) {
+					if (normalizedSource !== normalizedTarget) {
 						fileEdges.push({
-							source: file.path,
+							source: normalizedSource,
 							target: normalizedTarget,
 						});
 						console.log(
-							`[DependencyAnalysis]   Edge: ${file.path} → ${normalizedTarget}`,
+							`[DependencyAnalysis]   Edge created: ${normalizedSource} → ${normalizedTarget}`,
 						);
 					}
 				} else {
 					console.log(
-						`[DependencyAnalysis]   Unresolved: ${file.path} → ${imp.source} (resolved to ${normalizedTarget})`,
+						`[DependencyAnalysis]   Not in filePathSet: ${normalizedTarget}`,
 					);
-					unresolvedImports.push(`${file.path} → ${imp.source}`);
+					unresolvedImports.push(`${normalizedSource} → ${imp.source}`);
 				}
 			} else {
 				console.log(
-					`[DependencyAnalysis]   No resolution: ${file.path} → ${imp.source} (isExternal: ${resolved.isExternal})`,
+					`[DependencyAnalysis]   No resolution: ${normalizedSource} → ${imp.source} (isExternal: ${resolved.isExternal})`,
 				);
 			}
 		}
 
 		nodes.push({
-			id: file.path,
-			path: file.path,
+			id: normalizedSource,
+			path: normalizedSource,
 			language,
 			imports: parsed.imports.length,
 			loc: countLoc(file.content),

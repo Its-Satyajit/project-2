@@ -4,14 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
 	ArrowLeft,
-	ArrowLeftFromLine,
-	ArrowRight,
 	BarChart3,
 	Check,
 	Copy,
 	FileCode,
 	FileType,
 	FolderTree,
+	GitBranch,
 	Layers,
 	Loader2,
 	Network,
@@ -19,6 +18,7 @@ import {
 	Target,
 	X,
 } from "lucide-react";
+import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import React, { Activity, Suspense, useMemo, useState } from "react";
 import {
@@ -28,9 +28,12 @@ import {
 	Pie,
 	PieChart,
 	ResponsiveContainer,
+	Scatter,
+	ScatterChart,
 	Tooltip,
 	XAxis,
 	YAxis,
+	ZAxis,
 } from "recharts";
 import { FilterBar, type FilterState } from "~/components/dashboard/FilterBar";
 import { Treemap } from "~/components/dashboard/Treemap";
@@ -46,6 +49,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useRepoStatus } from "~/hooks/useRepoStatus";
 import { api } from "~/lib/eden";
+import "~/styles/analysis.css";
 
 type Node = {
 	id: string;
@@ -55,24 +59,32 @@ type Node = {
 	loc?: number;
 };
 
-const COLORS = [
-	"#3b82f6",
-	"#64748b",
-	"#93c5fd",
-	"#cbd5e1",
-	"#1e3a8a",
-	"#94a3b8",
-	"#e2e8f0",
-	"#8b9dbf",
-	"#8ab4f8",
-	"#c7d2fe",
+type HotspotDataPoint = {
+	path: string;
+	language: string;
+	fanIn: number;
+	fanOut: number;
+	loc: number;
+	score: number;
+	rank: number;
+};
+
+const CHART_COLORS = [
+	"#f59e0b",
+	"#10b981",
+	"#0ea5e9",
+	"#f43f5e",
+	"#8b5cf6",
+	"#ec4899",
+	"#06b6d4",
+	"#84cc16",
 ];
 
 const containerVariants = {
 	hidden: { opacity: 0 },
 	visible: {
 		opacity: 1,
-		transition: { staggerChildren: 0.08 },
+		transition: { staggerChildren: 0.06 },
 	},
 };
 
@@ -80,6 +92,8 @@ const itemVariants = {
 	hidden: { opacity: 0, y: 16 },
 	visible: { opacity: 1, y: 0 },
 };
+
+const staggerDelays = [0, 0.1, 0.2, 0.3, 0.4, 0.5];
 
 function AnalysisContent() {
 	const params = useParams();
@@ -91,7 +105,7 @@ function AnalysisContent() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 	const [activeTab, setActiveTab] = useState<
-		"overview" | "files" | "charts" | "treemap" | "hotspots"
+		"overview" | "charts" | "treemap" | "hotspots"
 	>("overview");
 	const [selectedHotspotFile, setSelectedHotspotFile] = useState<string | null>(
 		null,
@@ -100,6 +114,9 @@ function AnalysisContent() {
 	const [treemapColorMode, setTreemapColorMode] = useState<
 		"language" | "hotspot"
 	>("language");
+	const [hotspotViewMode, setHotspotViewMode] = useState<"scatter" | "table">(
+		"scatter",
+	);
 	const [filters, setFilters] = useState<FilterState>({
 		selectedExtensions: [],
 		showHotspotsOnly: false,
@@ -220,26 +237,48 @@ function AnalysisContent() {
 
 	if (isLoading) {
 		return (
-			<div className="flex h-screen items-center justify-center">
-				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+			<div className="flex min-h-screen flex-col items-center justify-center bg-mesh pt-14">
+				<div className="flex flex-col items-center gap-6">
+					<div className="relative">
+						<div className="absolute inset-0 animate-pulse rounded-full bg-amber-500/20 blur-xl" />
+						<Loader2 className="relative h-12 w-12 animate-spin text-amber-500" />
+					</div>
+					<div className="text-center">
+						<p className="font-mono text-neutral-400 text-sm uppercase tracking-widest">
+							Analyzing Repository
+						</p>
+						<p className="mt-1 font-mono text-neutral-600 text-xs">
+							Scanning dependencies...
+						</p>
+					</div>
+				</div>
 			</div>
 		);
 	}
 
 	if (error || !status) {
 		return (
-			<div className="flex h-screen flex-col items-center justify-center gap-4">
-				<p className="text-red-500">
-					Unable to load repository. The repository may not exist or may be
-					private.
-				</p>
-				<button
-					className="text-muted-foreground text-sm hover:text-foreground"
-					onClick={() => router.push("/")}
-					type="button"
-				>
-					Go back home
-				</button>
+			<div className="flex min-h-screen flex-col items-center justify-center bg-mesh pt-14">
+				<div className="card-glass rounded-lg p-8 text-center">
+					<div className="mb-4 flex justify-center">
+						<div className="icon-box border-rose-500/30">
+							<X className="h-6 w-6 text-rose-500" />
+						</div>
+					</div>
+					<h2 className="mb-2 font-mono font-semibold text-lg tracking-tight">
+						Unable to Load Repository
+					</h2>
+					<p className="mb-6 font-mono text-neutral-500 text-sm">
+						The repository may not exist or may be private.
+					</p>
+					<button
+						className="btn-primary"
+						onClick={() => router.push("/")}
+						type="button"
+					>
+						Go Back Home
+					</button>
+				</div>
 			</div>
 		);
 	}
@@ -262,53 +301,70 @@ function AnalysisContent() {
 	return (
 		<motion.div
 			animate="visible"
-			className="min-h-screen bg-background"
+			className="min-h-screen bg-grid-pattern bg-mesh pt-14"
 			initial="hidden"
 			variants={containerVariants}
 		>
-			<div className="border-b p-4">
-				<div className="mx-auto max-w-7xl">
-					<motion.div className="mb-4" variants={itemVariants}>
-						<div className="mb-4 flex items-center justify-between">
-							<div>
+			<div className="border-neutral-800 border-b bg-black/50 backdrop-blur-xl">
+				<div className="mx-auto max-w-7xl px-6 py-5">
+					<motion.div variants={itemVariants}>
+						<div className="mb-5 flex items-start justify-between">
+							<div className="flex flex-col gap-1">
 								<button
-									className="mb-2 flex items-center gap-2 text-muted-foreground text-sm hover:text-foreground"
+									className="group mb-3 flex w-fit items-center gap-2 text-left font-mono text-neutral-500 text-xs uppercase tracking-wider transition-colors hover:text-amber-500"
 									onClick={() => router.push(`/dashboard/${repoId}`)}
 									type="button"
 								>
-									<ArrowLeft className="h-4 w-4" />
+									<ArrowLeft className="h-3 w-3 transition-transform group-hover:-translate-x-1" />
 									Back to Dashboard
 								</button>
-								<h1 className="font-bold text-xl">
-									{metadata?.fullName ?? "..."}
-								</h1>
-								<p className="text-muted-foreground text-sm">
-									{status?.analysis?.summary
-										? "Comprehensive Analysis"
-										: "Dependency Analysis"}
-								</p>
+								<div className="flex items-center gap-3">
+									{metadata?.avatarUrl ? (
+										<Image
+											alt={metadata.owner}
+											className="rounded-full"
+											height={40}
+											src={metadata.avatarUrl}
+											width={40}
+										/>
+									) : (
+										<div className="flex h-10 w-10 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
+											<GitBranch className="h-5 w-5 text-amber-400" />
+										</div>
+									)}
+									<div>
+										<h1 className="font-bold font-mono text-2xl text-neutral-100 tracking-tight">
+											{metadata?.fullName ?? "..."}
+										</h1>
+										<p className="font-mono text-neutral-500 text-xs uppercase tracking-widest">
+											{status?.analysis?.summary
+												? "Comprehensive Analysis"
+												: "Dependency Analysis"}
+										</p>
+									</div>
+								</div>
 							</div>
-							<div className="flex gap-6 text-sm">
-								<div className="rounded-lg border bg-card p-4 text-center">
-									<p className="font-bold text-2xl">
+							<div className="flex gap-3">
+								<div className="stat-card">
+									<p className="stat-value">
 										{graph?.metadata.totalNodes ?? 0}
 									</p>
-									<p className="text-muted-foreground text-xs">Files</p>
+									<p className="stat-label">Files</p>
 								</div>
-								<div className="rounded-lg border bg-card p-4 text-center">
-									<p className="font-bold text-2xl">
+								<div className="stat-card">
+									<p className="stat-value">
 										{graph?.metadata.totalEdges ?? 0}
 									</p>
-									<p className="text-muted-foreground text-xs">Connections</p>
+									<p className="stat-label">Connections</p>
 								</div>
-								<div className="rounded-lg border bg-card p-4 text-center">
-									<p className="font-bold text-2xl">
+								<div className="stat-card">
+									<p className="stat-value">
 										{
 											Object.keys(graph?.metadata.languageBreakdown ?? {})
 												.length
 										}
 									</p>
-									<p className="text-muted-foreground text-xs">Languages</p>
+									<p className="stat-label">Languages</p>
 								</div>
 							</div>
 						</div>
@@ -318,151 +374,183 @@ function AnalysisContent() {
 							onValueChange={(v) => setActiveTab(v as typeof activeTab)}
 							value={activeTab}
 						>
-							<TabsList>
-								<TabsTrigger value="overview">Overview</TabsTrigger>
-								<TabsTrigger value="files">File Explorer</TabsTrigger>
-								<TabsTrigger value="charts">Charts</TabsTrigger>
-								<TabsTrigger value="treemap">Treemap</TabsTrigger>
-								<TabsTrigger value="hotspots">Hotspots</TabsTrigger>
+							<TabsList className="flex gap-1 bg-transparent p-0">
+								<TabsTrigger className="tab-pill" value="overview">
+									Overview
+								</TabsTrigger>
+								<TabsTrigger className="tab-pill" value="charts">
+									Charts
+								</TabsTrigger>
+								<TabsTrigger className="tab-pill" value="treemap">
+									Treemap
+								</TabsTrigger>
+								<TabsTrigger className="tab-pill" value="hotspots">
+									Hotspots
+								</TabsTrigger>
 							</TabsList>
 						</Tabs>
 					</motion.div>
 				</div>
 			</div>
 
-			{activeTab === "overview" ? (
-				<motion.div className="mx-auto max-w-7xl p-6" variants={itemVariants}>
-					<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+			<div className="mx-auto max-w-7xl p-6">
+				{activeTab === "overview" ? (
+					<motion.div variants={itemVariants}>
 						{summary ? (
-							<>
-								<Card>
-									<CardHeader className="flex flex-row items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-											<BarChart3 className="h-5 w-5 text-blue-600" />
+							<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+								<motion.div
+									className="card-glass animate-fade-in-up rounded-lg p-5"
+									style={{ animationDelay: "0.1s" }}
+								>
+									<div className="mb-4 flex items-center gap-3">
+										<div className="icon-box border-amber-500/30">
+											<BarChart3 className="h-4 w-4 text-amber-500" />
 										</div>
-										<CardTitle className="text-lg">Basic Statistics</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-3">
-										<div className="flex justify-between border-b py-2">
-											<span className="text-muted-foreground">Total Files</span>
-											<span className="font-medium font-mono">
+										<CardTitle className="font-mono font-semibold text-sm uppercase tracking-wider">
+											Basic Statistics
+										</CardTitle>
+									</div>
+									<div className="space-y-3">
+										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
+											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+												Total Files
+											</span>
+											<span className="font-data font-medium text-neutral-200 text-sm">
 												{summary.basic.totalFiles}
 											</span>
 										</div>
-										<div className="flex justify-between border-b py-2">
-											<span className="text-muted-foreground">Directories</span>
-											<span className="font-medium font-mono">
+										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
+											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+												Directories
+											</span>
+											<span className="font-data font-medium text-neutral-200 text-sm">
 												{summary.basic.totalDirectories}
 											</span>
 										</div>
-										<div className="flex justify-between py-2">
-											<span className="text-muted-foreground">
+										<div className="flex items-center justify-between pb-2">
+											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
 												Lines of Code
 											</span>
-											<span className="font-medium font-mono">
+											<span className="font-data font-medium text-neutral-200 text-sm">
 												{summary.basic.totalLines.toLocaleString()}
 											</span>
 										</div>
-									</CardContent>
-								</Card>
+									</div>
+								</motion.div>
 
-								<Card>
-									<CardHeader className="flex flex-row items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-											<Layers className="h-5 w-5 text-blue-600" />
+								<motion.div
+									className="card-glass animate-fade-in-up rounded-lg p-5"
+									style={{ animationDelay: "0.15s" }}
+								>
+									<div className="mb-4 flex items-center gap-3">
+										<div className="icon-box border-emerald-500/30">
+											<Layers className="h-4 w-4 text-emerald-500" />
 										</div>
-										<CardTitle className="text-lg">Languages</CardTitle>
-									</CardHeader>
-									<CardContent>
-										<div className="mb-4 flex items-center gap-2">
-											<span className="font-semibold text-lg">
-												{summary.languages.primaryLanguage}
-											</span>
-											<span className="text-muted-foreground text-sm">
-												(Primary)
-											</span>
-										</div>
-										<div className="space-y-2">
-											{summary.languages.topLanguages.map((lang) => (
-												<div
-													className="flex items-center justify-between"
-													key={lang.name}
-												>
-													<span className="text-sm">{lang.name}</span>
-													<div className="flex items-center gap-2">
-														<div className="h-2 w-20 overflow-hidden rounded-full bg-muted">
-															<div
-																className="h-full rounded-full bg-blue-500"
-																style={{ width: `${lang.percentage}%` }}
-															/>
-														</div>
-														<span className="w-12 text-right font-mono text-sm">
-															{lang.percentage.toFixed(1)}%
-														</span>
+										<CardTitle className="font-mono font-semibold text-sm uppercase tracking-wider">
+											Languages
+										</CardTitle>
+									</div>
+									<div className="mb-4 flex items-baseline gap-2">
+										<span className="font-bold font-mono text-neutral-100 text-xl">
+											{summary.languages.primaryLanguage}
+										</span>
+										<span className="font-mono text-neutral-500 text-xs uppercase">
+											(Primary)
+										</span>
+									</div>
+									<div className="space-y-2.5">
+										{summary.languages.topLanguages.map((lang) => (
+											<div
+												className="flex items-center justify-between"
+												key={lang.name}
+											>
+												<span className="font-data text-neutral-400 text-xs">
+													{lang.name}
+												</span>
+												<div className="flex items-center gap-2">
+													<div className="progress-bar w-16">
+														<div
+															className="progress-fill"
+															style={{ width: `${lang.percentage}%` }}
+														/>
 													</div>
+													<span className="w-10 text-right font-data text-neutral-400 text-xs">
+														{lang.percentage.toFixed(1)}%
+													</span>
 												</div>
-											))}
-										</div>
-									</CardContent>
-								</Card>
+											</div>
+										))}
+									</div>
+								</motion.div>
 
-								<Card>
-									<CardHeader className="flex flex-row items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-											<FolderTree className="h-5 w-5 text-blue-600" />
+								<motion.div
+									className="card-glass animate-fade-in-up rounded-lg p-5"
+									style={{ animationDelay: "0.2s" }}
+								>
+									<div className="mb-4 flex items-center gap-3">
+										<div className="icon-box border-sky-500/30">
+											<FolderTree className="h-4 w-4 text-sky-500" />
 										</div>
-										<CardTitle className="text-lg">Structure</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-4">
-										<div className="flex justify-between border-b py-2">
-											<span className="text-muted-foreground">
-												Maximum Depth
+										<CardTitle className="font-mono font-semibold text-sm uppercase tracking-wider">
+											Structure
+										</CardTitle>
+									</div>
+									<div className="space-y-3">
+										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
+											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+												Max Depth
 											</span>
-											<span className="font-medium font-mono">
+											<span className="font-data font-medium text-neutral-200 text-sm">
 												{summary.structure.maxDepth}
 											</span>
 										</div>
 										<div>
-											<span className="text-muted-foreground text-sm">
+											<span className="mb-2 block font-mono text-neutral-500 text-xs uppercase tracking-wider">
 												Top-level Directories
 											</span>
-											<div className="mt-2 flex flex-wrap gap-1.5">
+											<div className="flex flex-wrap gap-1.5">
 												{summary.structure.topLevelDirectories.map((dir) => (
-													<span
-														className="rounded-full bg-gray-100 px-3 py-1 font-medium text-xs dark:bg-gray-800"
-														key={dir}
-													>
+													<span className="badge" key={dir}>
 														{dir}
 													</span>
 												))}
 											</div>
 										</div>
-									</CardContent>
-								</Card>
+									</div>
+								</motion.div>
 
-								<Card>
-									<CardHeader className="flex flex-row items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-											<Network className="h-5 w-5 text-blue-600" />
+								<motion.div
+									className="card-glass animate-fade-in-up rounded-lg p-5"
+									style={{ animationDelay: "0.25s" }}
+								>
+									<div className="mb-4 flex items-center gap-3">
+										<div className="icon-box border-violet-500/30">
+											<Network className="h-4 w-4 text-violet-500" />
 										</div>
-										<CardTitle className="text-lg">Dependencies</CardTitle>
-									</CardHeader>
-									<CardContent className="space-y-4">
-										<div className="flex justify-between border-b py-2">
-											<span className="text-muted-foreground">Total Files</span>
-											<span className="font-medium font-mono">
+										<CardTitle className="font-mono font-semibold text-sm uppercase tracking-wider">
+											Dependencies
+										</CardTitle>
+									</div>
+									<div className="space-y-3">
+										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
+											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+												Total Files
+											</span>
+											<span className="font-data font-medium text-neutral-200 text-sm">
 												{summary.dependencies.totalNodes}
 											</span>
 										</div>
-										<div className="flex justify-between border-b py-2">
-											<span className="text-muted-foreground">Connections</span>
-											<span className="font-medium font-mono">
+										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
+											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+												Connections
+											</span>
+											<span className="font-data font-medium text-neutral-200 text-sm">
 												{summary.dependencies.totalEdges}
 											</span>
 										</div>
 										{summary.dependencies.mostDependedUpon.length > 0 && (
 											<div>
-												<h4 className="mb-2 font-medium text-sm">
+												<h4 className="mb-2 font-medium font-mono text-neutral-500 text-xs uppercase tracking-wider">
 													Most Depended Upon
 												</h4>
 												<div className="space-y-1.5">
@@ -470,13 +558,13 @@ function AnalysisContent() {
 														.slice(0, 5)
 														.map((item) => (
 															<div
-																className="flex items-center justify-between text-sm"
+																className="flex items-center justify-between"
 																key={item.path}
 															>
-																<span className="max-w-[180px] truncate font-mono text-xs">
+																<span className="max-w-[180px] truncate font-data text-neutral-400 text-xs">
 																	{item.path.split("/").pop()}
 																</span>
-																<span className="font-mono text-blue-600">
+																<span className="font-data text-amber-500">
 																	{item.fanIn}
 																</span>
 															</div>
@@ -484,616 +572,827 @@ function AnalysisContent() {
 												</div>
 											</div>
 										)}
-									</CardContent>
-								</Card>
+									</div>
+								</motion.div>
 
-								<Card>
-									<CardHeader className="flex flex-row items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-											<Target className="h-5 w-5 text-blue-600" />
+								<motion.div
+									className="card-glass animate-fade-in-up rounded-lg p-5"
+									style={{ animationDelay: "0.3s" }}
+								>
+									<div className="mb-4 flex items-center gap-3">
+										<div className="icon-box border-rose-500/30">
+											<Target className="h-4 w-4 text-rose-500" />
 										</div>
-										<CardTitle className="text-lg">Hotspots</CardTitle>
-									</CardHeader>
-									<CardContent>
-										{summary.hotspots.topHotspots.length > 0 ? (
-											<div className="space-y-2">
-												{summary.hotspots.topHotspots
-													.slice(0, 5)
-													.map((hotspot) => (
-														<div
-															className="flex items-center justify-between rounded-lg border p-2.5"
-															key={hotspot.path}
-														>
-															<div className="min-w-0 flex-1">
-																<p className="truncate font-mono text-sm">
-																	{hotspot.path.split("/").pop()}
-																</p>
-																<p className="text-muted-foreground text-xs">
-																	Score: {hotspot.score.toFixed(2)}
-																</p>
-															</div>
-															<span className="ml-2 rounded-full bg-blue-100 px-2.5 py-0.5 font-medium text-blue-700 text-xs dark:bg-blue-900 dark:text-blue-300">
-																#{hotspot.rank}
-															</span>
-														</div>
-													))}
-											</div>
-										) : (
-											<p className="text-muted-foreground">
-												No hotspots detected.
-											</p>
-										)}
-									</CardContent>
-								</Card>
-
-								<Card>
-									<CardHeader className="flex flex-row items-center gap-3">
-										<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
-											<FileType className="h-5 w-5 text-blue-600" />
-										</div>
-										<CardTitle className="text-lg">File Types</CardTitle>
-									</CardHeader>
-									<CardContent>
+										<CardTitle className="font-mono font-semibold text-sm uppercase tracking-wider">
+											Hotspots
+										</CardTitle>
+									</div>
+									{summary.hotspots.topHotspots.length > 0 ? (
 										<div className="space-y-2">
-											{summary.fileTypes.topExtensions.map((ext) => (
-												<div
-													className="flex items-center justify-between border-b py-1.5 last:border-0"
-													key={ext.extension}
-												>
-													<div className="flex items-center gap-2">
-														<span className="font-mono text-sm">
-															.{ext.extension}
+											{summary.hotspots.topHotspots
+												.slice(0, 5)
+												.map((hotspot) => (
+													<div
+														className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900/50 p-2.5 transition-colors hover:border-neutral-700"
+														key={hotspot.path}
+													>
+														<div className="min-w-0 flex-1">
+															<p className="truncate font-data text-neutral-300 text-xs">
+																{hotspot.path.split("/").pop()}
+															</p>
+															<p className="font-mono text-neutral-600 text-xs">
+																Score: {hotspot.score.toFixed(2)}
+															</p>
+														</div>
+														<span className="badge-amber ml-2">
+															#{hotspot.rank}
 														</span>
 													</div>
-													<span className="font-mono text-sm">{ext.count}</span>
-												</div>
-											))}
+												))}
 										</div>
-									</CardContent>
-								</Card>
-							</>
-						) : (
-							<Card className="col-span-full">
-								<CardContent className="flex flex-col items-center justify-center py-12">
-									<BarChart3 className="mb-4 h-12 w-12 text-muted-foreground" />
-									<p className="text-muted-foreground">
-										Analysis in progress...
-									</p>
-									<p className="text-muted-foreground text-sm">
-										Summary data will appear once analysis completes.
-									</p>
-								</CardContent>
-							</Card>
-						)}
-					</div>
-				</motion.div>
-			) : activeTab === "files" ? (
-				<div className="flex h-[calc(100vh-180px)]">
-					<div className="w-1/2 overflow-auto border-r">
-						<div className="sticky top-0 z-10 border-b bg-background p-4">
-							<div className="relative">
-								<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-								<input
-									className="w-full rounded-md border bg-background py-2 pr-4 pl-9 text-sm"
-									onChange={(e) => setSearchQuery(e.target.value)}
-									placeholder="Search files..."
-									type="text"
-									value={searchQuery}
-								/>
-								{searchQuery && (
-									<button
-										className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-										onClick={() => setSearchQuery("")}
-										type="button"
-									>
-										<X className="h-4 w-4" />
-									</button>
-								)}
-							</div>
-						</div>
-
-						<FilterBar
-							availableExtensions={allExtensions}
-							onFilterChange={setFilters}
-						/>
-
-						<div className="p-2">
-							{filteredNodes.map((node) => {
-								const isSelected = selectedNode?.id === node.id;
-								const { imports, importedBy } = getConnections(node.id);
-
-								return (
-									<button
-										className={`mb-1 w-full rounded-lg p-3 text-left transition-colors ${
-											isSelected
-												? "bg-primary/10 ring-1 ring-primary"
-												: "hover:bg-muted"
-										}`}
-										key={node.id}
-										onClick={() => setSelectedNode(isSelected ? null : node)}
-										type="button"
-									>
-										<div className="flex items-start justify-between gap-2">
-											<div className="min-w-0 flex-1">
-												<p className="truncate font-mono text-sm">
-													{node.path}
-												</p>
-												<div className="mt-1 flex items-center gap-2">
-													<span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700 text-xs dark:bg-blue-900 dark:text-blue-300">
-														{node.language}
-													</span>
-													<span className="text-muted-foreground text-xs">
-														{node.loc} lines
-													</span>
-												</div>
-											</div>
-											<div className="flex gap-2 text-xs">
-												{importedBy.length > 0 && (
-													<span className="flex items-center gap-1 rounded bg-orange-100 px-1.5 py-0.5 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
-														<ArrowLeftFromLine className="h-3 w-3" />
-														{importedBy.length}
-													</span>
-												)}
-												{imports.length > 0 && (
-													<span className="flex items-center gap-1 rounded bg-green-100 px-1.5 py-0.5 text-green-700 dark:bg-green-900 dark:text-green-300">
-														{imports.length}
-														<ArrowRight className="h-3 w-3" />
-													</span>
-												)}
-											</div>
-										</div>
-									</button>
-								);
-							})}
-
-							{filteredNodes.length === 0 && (
-								<div className="p-8 text-center text-muted-foreground">
-									No files found
-								</div>
-							)}
-						</div>
-					</div>
-
-					<div className="w-1/2 overflow-auto p-6">
-						{selectedNode ? (
-							<div>
-								<div className="mb-6">
-									<h2 className="mb-2 font-mono font-semibold text-lg">
-										{selectedNode.path}
-									</h2>
-									<div className="flex gap-4 text-muted-foreground text-sm">
-										<span>{selectedNode.language}</span>
-										<span>{selectedNode.loc} lines</span>
-										<span>{selectedNode.imports} imports</span>
-									</div>
-								</div>
-
-								{connections && connections.imports.length > 0 && (
-									<div className="mb-6">
-										<h3 className="mb-3 flex items-center gap-2 font-medium text-green-700 text-sm dark:text-green-400">
-											<ArrowRight className="h-4 w-4" />
-											Imports ({connections.imports.length})
-										</h3>
-										<div className="space-y-2">
-											{connections.imports.map((n) => (
-												<button
-													className="flex w-full items-center gap-2 rounded-lg bg-green-50 p-3 text-left transition-colors hover:bg-green-100 dark:bg-green-950 dark:hover:bg-green-900"
-													key={n.id}
-													onClick={() => setSelectedNode(n)}
-													type="button"
-												>
-													<FileCode className="h-4 w-4 text-green-600 dark:text-green-400" />
-													<span className="flex-1 truncate font-mono text-sm">
-														{n.path}
-													</span>
-												</button>
-											))}
-										</div>
-									</div>
-								)}
-
-								{connections && connections.importedBy.length > 0 && (
-									<div>
-										<h3 className="mb-3 flex items-center gap-2 font-medium text-orange-700 text-sm dark:text-orange-400">
-											<ArrowLeftFromLine className="h-4 w-4" />
-											Imported By ({connections.importedBy.length})
-										</h3>
-										<div className="space-y-2">
-											{connections.importedBy.map((n) => (
-												<button
-													className="flex w-full items-center gap-2 rounded-lg bg-orange-50 p-3 text-left transition-colors hover:bg-orange-100 dark:bg-orange-950 dark:hover:bg-orange-900"
-													key={n.id}
-													onClick={() => setSelectedNode(n)}
-													type="button"
-												>
-													<FileCode className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-													<span className="flex-1 truncate font-mono text-sm">
-														{n.path}
-													</span>
-												</button>
-											))}
-										</div>
-									</div>
-								)}
-
-								{connections &&
-									connections.imports.length === 0 &&
-									connections.importedBy.length === 0 && (
-										<div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-											<FileCode className="mx-auto mb-2 h-8 w-8 opacity-50" />
-											<p>No internal connections found</p>
-											<p className="text-sm">
-												This file only imports external packages
-											</p>
-										</div>
+									) : (
+										<p className="font-mono text-neutral-500 text-xs">
+											No hotspots detected.
+										</p>
 									)}
+								</motion.div>
+
+								<motion.div
+									className="card-glass animate-fade-in-up rounded-lg p-5"
+									style={{ animationDelay: "0.35s" }}
+								>
+									<div className="mb-4 flex items-center gap-3">
+										<div className="icon-box border-cyan-500/30">
+											<FileType className="h-4 w-4 text-cyan-500" />
+										</div>
+										<CardTitle className="font-mono font-semibold text-sm uppercase tracking-wider">
+											File Types
+										</CardTitle>
+									</div>
+									<div className="space-y-2">
+										{summary.fileTypes.topExtensions.map((ext) => (
+											<div
+												className="flex items-center justify-between border-neutral-800 border-b py-1.5 last:border-0"
+												key={ext.extension}
+											>
+												<div className="flex items-center gap-2">
+													<span className="font-data text-neutral-400 text-xs">
+														.{ext.extension}
+													</span>
+												</div>
+												<span className="font-data text-neutral-400 text-xs">
+													{ext.count}
+												</span>
+											</div>
+										))}
+									</div>
+								</motion.div>
 							</div>
 						) : (
-							<div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-								<FileCode className="mb-4 h-16 w-16 opacity-20" />
-								<p className="text-lg">Select a file</p>
-								<p className="text-sm">
-									Click on a file to see its connections
+							<div className="card-glass flex flex-col items-center justify-center rounded-lg py-16">
+								<div className="relative mb-6">
+									<div className="absolute inset-0 animate-pulse rounded-full bg-amber-500/10 blur-xl" />
+									<BarChart3 className="relative h-12 w-12 text-neutral-600" />
+								</div>
+								<p className="font-mono text-neutral-400 text-sm">
+									Analysis in progress...
+								</p>
+								<p className="mt-1 font-mono text-neutral-600 text-xs">
+									Summary data will appear once analysis completes.
 								</p>
 							</div>
 						)}
-					</div>
-				</div>
-			) : activeTab === "charts" ? (
-				<div className="mx-auto max-w-7xl p-6">
-					<div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-						<div className="rounded-lg border bg-card p-4">
-							<h3 className="mb-4 font-semibold">Top Imported Files</h3>
-							<ResponsiveContainer height={300}>
-								<BarChart data={topImportedFiles} layout="vertical">
-									<XAxis type="number" />
-									<YAxis
-										dataKey="name"
-										tick={{ fontSize: 11 }}
-										type="category"
-										width={100}
-									/>
-									<Tooltip
-										content={({ active, payload }) => {
-											if (active && payload && payload.length && payload[0]) {
-												const data = payload[0];
-												return (
-													<div className="rounded-lg border bg-background p-2 shadow-lg">
-														<p className="font-mono text-sm">
-															{data.payload.path}
-														</p>
-														<p className="text-muted-foreground text-xs">
-															{data.value} imports
-														</p>
-													</div>
-												);
-											}
-											return null;
-										}}
-									/>
-									<Bar dataKey="imports" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-
-						<div className="rounded-lg border bg-card p-4">
-							<h3 className="mb-4 font-semibold">Language Distribution</h3>
-							<ResponsiveContainer height={300}>
-								<PieChart>
-									<Pie
-										cx="50%"
-										cy="50%"
-										data={languageData}
-										dataKey="value"
-										innerRadius={60}
-										label={({ name, percent = 0 }) =>
-											`${name} (${(percent * 100).toFixed(0)}%)`
-										}
-										outerRadius={100}
-										paddingAngle={2}
-									>
-										{languageData.map((entry, index) => (
-											<Cell
-												fill={COLORS[index % COLORS.length]}
-												key={`cell-${entry.name}`}
-											/>
-										))}
-									</Pie>
-									<Tooltip />
-								</PieChart>
-							</ResponsiveContainer>
-						</div>
-
-						<div className="rounded-lg border bg-card p-4">
-							<h3 className="mb-4 font-semibold">Files by Language</h3>
-							<ResponsiveContainer height={300}>
-								<BarChart data={filesByLanguage}>
-									<XAxis dataKey="name" tick={{ fontSize: 11 }} />
-									<YAxis />
-									<Tooltip />
-									<Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]}>
-										{filesByLanguage.map((entry, index) => (
-											<Cell
-												fill={COLORS[index % COLORS.length]}
-												key={`cell-${entry.name}`}
-											/>
-										))}
-									</Bar>
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-
-						<div className="rounded-lg border bg-card p-4">
-							<h3 className="mb-4 font-semibold">Lines of Code by Language</h3>
-							<ResponsiveContainer height={300}>
-								<BarChart data={locByLanguage}>
-									<XAxis dataKey="name" tick={{ fontSize: 11 }} />
-									<YAxis />
-									<Tooltip
-										content={({ active, payload }) => {
-											if (active && payload && payload.length && payload[0]) {
-												const data = payload[0];
-												if (!data?.payload || !data?.value) return null;
-												return (
-													<div className="rounded-lg border bg-background p-2 shadow-lg">
-														<p className="font-medium text-sm">
-															{data.payload.name}
-														</p>
-														<p className="text-muted-foreground text-xs">
-															{Number(data.value).toLocaleString()} lines
-														</p>
-													</div>
-												);
-											}
-											return null;
-										}}
-									/>
-									<Bar dataKey="loc" fill="#f59e0b" radius={[4, 4, 0, 0]}>
-										{locByLanguage.map((entry, index) => (
-											<Cell
-												fill={COLORS[index % COLORS.length]}
-												key={`cell-${entry.name}`}
-											/>
-										))}
-									</Bar>
-								</BarChart>
-							</ResponsiveContainer>
-						</div>
-					</div>
-
-					<div className="mt-6 rounded-lg border bg-card p-4">
-						<h3 className="mb-4 font-semibold">Dependency Overview</h3>
-						<div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-							<div className="rounded-lg bg-blue-50 p-4 text-center dark:bg-blue-950">
-								<p className="font-bold text-2xl text-blue-600 dark:text-blue-400">
-									{graph?.metadata.totalNodes ?? 0}
-								</p>
-								<p className="text-muted-foreground text-sm">Total Files</p>
-							</div>
-							<div className="rounded-lg bg-green-50 p-4 text-center dark:bg-green-950">
-								<p className="font-bold text-2xl text-green-600 dark:text-green-400">
-									{graph?.metadata.totalEdges ?? 0}
-								</p>
-								<p className="text-muted-foreground text-sm">Dependencies</p>
-							</div>
-							<div className="rounded-lg bg-orange-50 p-4 text-center dark:bg-orange-950">
-								<p className="font-bold text-2xl text-orange-600 dark:text-orange-400">
-									{graph?.metadata.unresolvedImports ?? 0}
-								</p>
-								<p className="text-muted-foreground text-sm">Unresolved</p>
-							</div>
-							<div className="rounded-lg bg-purple-50 p-4 text-center dark:bg-purple-950">
-								<p className="font-bold text-2xl text-purple-600 dark:text-purple-400">
-									{Object.keys(graph?.metadata.languageBreakdown ?? {}).length}
-								</p>
-								<p className="text-muted-foreground text-sm">Languages</p>
-							</div>
-						</div>
-					</div>
-				</div>
-			) : activeTab === "treemap" ? (
-				<div className="mx-auto max-w-7xl p-6">
-					<div className="mb-4 flex items-center justify-between">
-						<h3 className="font-semibold">File Treemap</h3>
-						<div className="flex gap-2">
-							<button
-								className={`rounded-lg px-3 py-1.5 font-medium text-xs transition-colors ${
-									treemapColorMode === "language"
-										? "bg-primary text-primary-foreground"
-										: "bg-muted text-muted-foreground hover:text-foreground"
-								}`}
-								onClick={() => setTreemapColorMode("language")}
-								type="button"
+					</motion.div>
+				) : activeTab === "charts" ? (
+					<div className="space-y-4">
+						<div className="grid gap-4 lg:grid-cols-2">
+							<motion.div
+								className="card-glass animate-fade-in-up rounded-lg p-5"
+								style={{ animationDelay: "0.1s" }}
 							>
-								By Language
-							</button>
-							<button
-								className={`rounded-lg px-3 py-1.5 font-medium text-xs transition-colors ${
-									treemapColorMode === "hotspot"
-										? "bg-primary text-primary-foreground"
-										: "bg-muted text-muted-foreground hover:text-foreground"
-								}`}
-								onClick={() => setTreemapColorMode("hotspot")}
-								type="button"
+								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+									Top Imported Files
+								</h3>
+								<ResponsiveContainer height={280}>
+									<BarChart data={topImportedFiles} layout="vertical">
+										<XAxis
+											axisLine={{ stroke: "#262626" }}
+											tick={{ fill: "#525252", fontSize: 11 }}
+											type="number"
+										/>
+										<YAxis
+											axisLine={{ stroke: "#262626" }}
+											dataKey="name"
+											tick={{ fill: "#525252", fontSize: 10 }}
+											type="category"
+											width={90}
+										/>
+										<Tooltip
+											content={({ active, payload }) => {
+												if (active && payload && payload.length && payload[0]) {
+													const data = payload[0];
+													return (
+														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
+															<p className="font-data text-neutral-200 text-xs">
+																{data.payload.path}
+															</p>
+															<p className="mt-1 font-mono text-neutral-500 text-xs">
+																{data.value} imports
+															</p>
+														</div>
+													);
+												}
+												return null;
+											}}
+										/>
+										<Bar
+											dataKey="imports"
+											fill="#f59e0b"
+											radius={[0, 4, 4, 0]}
+										/>
+									</BarChart>
+								</ResponsiveContainer>
+							</motion.div>
+
+							<motion.div
+								className="card-glass animate-fade-in-up rounded-lg p-5"
+								style={{ animationDelay: "0.15s" }}
 							>
-								By Hotspot
-							</button>
-						</div>
-					</div>
-					<div className="h-[calc(100vh-240px)]">
-						<Activity mode={activeTab === "treemap" ? "visible" : "hidden"}>
-							<Treemap
-								colorMode={treemapColorMode}
-								onFileClick={(file) => setSelectedHotspotFile(file.path)}
-								repoId={repoId}
-							/>
-						</Activity>
-					</div>
-				</div>
-			) : (
-				<div className="mx-auto max-w-7xl p-6">
-					<h3 className="mb-4 font-semibold">Hotspots</h3>
-					{isLoading ? (
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b">
-										<th className="px-4 py-2 text-left">Rank</th>
-										<th className="px-4 py-2 text-left">File</th>
-										<th className="px-4 py-2 text-left">Language</th>
-										<th className="px-4 py-2 text-right">Fan-in</th>
-										<th className="px-4 py-2 text-right">Fan-out</th>
-										<th className="px-4 py-2 text-right">LOC</th>
-										<th className="px-4 py-2 text-right">Score</th>
-									</tr>
-								</thead>
-								<tbody>
-									{Array.from({ length: 5 }).map((_, idx) => (
-										<tr className="border-b" key={`hotspot-loading-${idx}`}>
-											<td className="px-4 py-2">
-												<Skeleton className="h-4 w-8" />
-											</td>
-											<td className="px-4 py-2">
-												<Skeleton className="h-4 w-48" />
-											</td>
-											<td className="px-4 py-2">
-												<Skeleton className="h-4 w-16" />
-											</td>
-											<td className="px-4 py-2">
-												<Skeleton className="ml-auto h-4 w-12" />
-											</td>
-											<td className="px-4 py-2">
-												<Skeleton className="ml-auto h-4 w-12" />
-											</td>
-											<td className="px-4 py-2">
-												<Skeleton className="ml-auto h-4 w-12" />
-											</td>
-											<td className="px-4 py-2">
-												<Skeleton className="ml-auto h-4 w-16" />
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					) : hotSpotData && hotSpotData.length > 0 ? (
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b">
-										<th className="px-4 py-2 text-left">Rank</th>
-										<th className="px-4 py-2 text-left">File</th>
-										<th className="px-4 py-2 text-left">Language</th>
-										<th className="px-4 py-2 text-right">Fan-in</th>
-										<th className="px-4 py-2 text-right">Fan-out</th>
-										<th className="px-4 py-2 text-right">LOC</th>
-										<th className="px-4 py-2 text-right">Score</th>
-									</tr>
-								</thead>
-								<tbody>
-									{hotSpotData.map((hotspot) => (
-										<tr
-											className="cursor-pointer border-b hover:bg-muted/50"
-											key={hotspot.path}
-											onClick={() => setSelectedHotspotFile(hotspot.path)}
+								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+									Language Distribution
+								</h3>
+								<ResponsiveContainer height={280}>
+									<PieChart>
+										<Pie
+											cx="50%"
+											cy="50%"
+											data={languageData}
+											dataKey="value"
+											innerRadius={50}
+											label={({ name, percent = 0 }) =>
+												`${name} ${(percent * 100).toFixed(0)}%`
+											}
+											labelLine={false}
+											outerRadius={90}
+											paddingAngle={2}
 										>
-											<td className="px-4 py-2 font-mono">{hotspot.rank}</td>
-											<td className="px-4 py-2 font-mono">{hotspot.path}</td>
-											<td className="px-4 py-2">
-												<span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700 text-xs dark:bg-blue-900 dark:text-blue-300">
-													{hotspot.language}
-												</span>
-											</td>
-											<td className="px-4 py-2 text-right">{hotspot.fanIn}</td>
-											<td className="px-4 py-2 text-right">{hotspot.fanOut}</td>
-											<td className="px-4 py-2 text-right">{hotspot.loc}</td>
-											<td className="px-4 py-2 text-right font-mono">
-												{hotspot.score.toFixed(3)}
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					) : (
-						<div className="p-8 text-center text-muted-foreground">
-							No hotspot data available.
-						</div>
-					)}
+											{languageData.map((entry, index) => (
+												<Cell
+													fill={CHART_COLORS[index % CHART_COLORS.length]}
+													key={`cell-${entry.name}`}
+												/>
+											))}
+										</Pie>
+										<Tooltip
+											content={({ active, payload }) => {
+												if (active && payload && payload.length && payload[0]) {
+													return (
+														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
+															<p className="font-mono text-neutral-200 text-xs">
+																{payload[0].name}
+															</p>
+															<p className="font-data text-neutral-500 text-xs">
+																{payload[0].value?.toLocaleString()} files
+															</p>
+														</div>
+													);
+												}
+												return null;
+											}}
+										/>
+									</PieChart>
+								</ResponsiveContainer>
+							</motion.div>
 
-					<Dialog
-						onOpenChange={(open) => !open && setSelectedHotspotFile(null)}
-						open={!!selectedHotspotFile}
-					>
-						<DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden p-0">
-							<DialogHeader className="border-b p-4">
-								<div className="flex items-center justify-between">
-									<DialogTitle className="flex items-center gap-2 font-mono text-base">
-										<FileCode className="h-4 w-4" />
-										{selectedHotspotFile?.split("/").pop()}
-									</DialogTitle>
-									<div className="flex items-center gap-2">
-										<span className="rounded bg-blue-100 px-2 py-0.5 text-blue-700 text-xs dark:bg-blue-900 dark:text-blue-300">
-											{selectedHotspotFile?.split(".").pop()?.toLowerCase() ||
-												"text"}
-										</span>
-										<Button
-											className="h-8 px-2"
-											onClick={() => {
-												if (hotspotFileContent) {
-													navigator.clipboard.writeText(hotspotFileContent);
-													setCopied(true);
-													setTimeout(() => setCopied(false), 2000);
+							<motion.div
+								className="card-glass animate-fade-in-up rounded-lg p-5"
+								style={{ animationDelay: "0.2s" }}
+							>
+								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+									Files by Language
+								</h3>
+								<ResponsiveContainer height={280}>
+									<BarChart data={filesByLanguage}>
+										<XAxis
+											axisLine={{ stroke: "#262626" }}
+											dataKey="name"
+											tick={{ fill: "#525252", fontSize: 10 }}
+										/>
+										<YAxis
+											axisLine={{ stroke: "#262626" }}
+											tick={{ fill: "#525252", fontSize: 11 }}
+										/>
+										<Tooltip
+											content={({ active, payload }) => {
+												if (
+													active &&
+													payload &&
+													payload.length &&
+													payload[0] &&
+													payload[0].payload
+												) {
+													return (
+														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
+															<p className="font-mono text-neutral-200 text-xs">
+																{payload[0].payload.name}
+															</p>
+															<p className="font-data text-neutral-500 text-xs">
+																{payload[0].value} files
+															</p>
+														</div>
+													);
+												}
+												return null;
+											}}
+										/>
+										<Bar dataKey="count" radius={[4, 4, 0, 0]}>
+											{filesByLanguage.map((entry) => (
+												<Cell
+													fill={
+														CHART_COLORS[
+															filesByLanguage.indexOf(entry) %
+																CHART_COLORS.length
+														]
+													}
+													key={`cell-${entry.name}`}
+												/>
+											))}
+										</Bar>
+									</BarChart>
+								</ResponsiveContainer>
+							</motion.div>
+
+							<motion.div
+								className="card-glass animate-fade-in-up rounded-lg p-5"
+								style={{ animationDelay: "0.25s" }}
+							>
+								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+									Lines of Code by Language
+								</h3>
+								<ResponsiveContainer height={280}>
+									<BarChart data={locByLanguage}>
+										<XAxis
+											axisLine={{ stroke: "#262626" }}
+											dataKey="name"
+											tick={{ fill: "#525252", fontSize: 10 }}
+										/>
+										<YAxis
+											axisLine={{ stroke: "#262626" }}
+											tick={{ fill: "#525252", fontSize: 11 }}
+										/>
+										<Tooltip
+											content={({ active, payload }) => {
+												if (
+													active &&
+													payload &&
+													payload.length &&
+													payload[0] &&
+													payload[0].payload
+												) {
+													return (
+														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
+															<p className="font-mono text-neutral-200 text-xs">
+																{payload[0].payload.name}
+															</p>
+															<p className="font-data text-neutral-500 text-xs">
+																{Number(payload[0].value).toLocaleString()}{" "}
+																lines
+															</p>
+														</div>
+													);
+												}
+												return null;
+											}}
+										/>
+										<Bar dataKey="loc" radius={[4, 4, 0, 0]}>
+											{locByLanguage.map((entry) => (
+												<Cell
+													fill={
+														CHART_COLORS[
+															locByLanguage.indexOf(entry) % CHART_COLORS.length
+														]
+													}
+													key={`cell-${entry.name}`}
+												/>
+											))}
+										</Bar>
+									</BarChart>
+								</ResponsiveContainer>
+							</motion.div>
+						</div>
+
+						<motion.div
+							className="card-glass animate-fade-in-up rounded-lg p-5"
+							style={{ animationDelay: "0.3s" }}
+						>
+							<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								Dependency Overview
+							</h3>
+							<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+								<div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+									<p className="font-data font-semibold text-2xl text-amber-500">
+										{graph?.metadata.totalNodes ?? 0}
+									</p>
+									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										Total Files
+									</p>
+								</div>
+								<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 text-center">
+									<p className="font-data font-semibold text-2xl text-emerald-500">
+										{graph?.metadata.totalEdges ?? 0}
+									</p>
+									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										Dependencies
+									</p>
+								</div>
+								<div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-4 text-center">
+									<p className="font-data font-semibold text-2xl text-orange-500">
+										{graph?.metadata.unresolvedImports ?? 0}
+									</p>
+									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										Unresolved
+									</p>
+								</div>
+								<div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4 text-center">
+									<p className="font-data font-semibold text-2xl text-violet-500">
+										{
+											Object.keys(graph?.metadata.languageBreakdown ?? {})
+												.length
+										}
+									</p>
+									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										Languages
+									</p>
+								</div>
+							</div>
+						</motion.div>
+					</div>
+				) : activeTab === "treemap" ? (
+					<motion.div variants={itemVariants}>
+						<div className="mb-4 flex items-center justify-between">
+							<h3 className="font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								File Treemap
+							</h3>
+							<div className="flex gap-2">
+								<button
+									className={`tab-pill ${
+										treemapColorMode === "language" ? "active" : ""
+									}`}
+									onClick={() => setTreemapColorMode("language")}
+									type="button"
+								>
+									By Language
+								</button>
+								<button
+									className={`tab-pill ${
+										treemapColorMode === "hotspot" ? "active" : ""
+									}`}
+									onClick={() => setTreemapColorMode("hotspot")}
+									type="button"
+								>
+									By Hotspot
+								</button>
+							</div>
+						</div>
+						<div className="h-[calc(100vh-240px)]">
+							<Activity mode={activeTab === "treemap" ? "visible" : "hidden"}>
+								<Treemap
+									colorMode={treemapColorMode}
+									onFileClick={(file) => setSelectedHotspotFile(file.path)}
+									repoId={repoId}
+								/>
+							</Activity>
+						</div>
+					</motion.div>
+				) : (
+					<motion.div variants={itemVariants}>
+						<div className="mb-4 flex items-center justify-between">
+							<h3 className="font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								Hotspots
+							</h3>
+							<div className="flex gap-2">
+								<button
+									className={`tab-pill ${hotspotViewMode === "scatter" ? "active" : ""}`}
+									onClick={() => setHotspotViewMode("scatter")}
+									type="button"
+								>
+									Scatter
+								</button>
+								<button
+									className={`tab-pill ${hotspotViewMode === "table" ? "active" : ""}`}
+									onClick={() => setHotspotViewMode("table")}
+									type="button"
+								>
+									Table
+								</button>
+							</div>
+						</div>
+
+						{hotspotViewMode === "scatter" ? (
+							<div className="card-glass rounded-lg p-5">
+								<h4 className="mb-4 font-medium font-mono text-neutral-500 text-xs uppercase tracking-wider">
+									Complexity vs. Connectivity
+								</h4>
+								<ResponsiveContainer height={450}>
+									<ScatterChart
+										margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+									>
+										<XAxis
+											axisLine={{ stroke: "#262626" }}
+											dataKey="fanIn"
+											label={{
+												value: "Fan-in (Dependencies)",
+												position: "bottom",
+												fill: "#525252",
+												fontSize: 11,
+												fontFamily: "IBM Plex Mono",
+											}}
+											name="Fan-in"
+											tick={{ fill: "#525252", fontSize: 11 }}
+											type="number"
+										/>
+										<YAxis
+											axisLine={{ stroke: "#262626" }}
+											dataKey="fanOut"
+											label={{
+												value: "Fan-out (Imports)",
+												angle: -90,
+												position: "insideLeft",
+												fill: "#525252",
+												fontSize: 11,
+												fontFamily: "IBM Plex Mono",
+											}}
+											name="Fan-out"
+											tick={{ fill: "#525252", fontSize: 11 }}
+											type="number"
+										/>
+										<ZAxis
+											dataKey="loc"
+											domain={[0, "auto"]}
+											name="LOC"
+											range={[100, 600]}
+										/>
+										<Tooltip
+											content={({ active, payload }) => {
+												if (active && payload && payload.length && payload[0]) {
+													const data = payload[0].payload;
+													return (
+														<div
+															className="rounded-lg border border-neutral-700 bg-neutral-900 p-3 shadow-xl"
+															style={{ minWidth: 200 }}
+														>
+															<p className="truncate font-data font-medium text-neutral-200 text-sm">
+																{data.path?.split("/").pop()}
+															</p>
+															<p className="mb-2 truncate font-mono text-neutral-500 text-xs">
+																{data.path}
+															</p>
+															<div className="space-y-1">
+																<div className="flex justify-between gap-4">
+																	<span className="font-mono text-neutral-500 text-xs">
+																		Fan-in:
+																	</span>
+																	<span className="font-data text-neutral-300 text-xs">
+																		{data.fanIn}
+																	</span>
+																</div>
+																<div className="flex justify-between gap-4">
+																	<span className="font-mono text-neutral-500 text-xs">
+																		Fan-out:
+																	</span>
+																	<span className="font-data text-neutral-300 text-xs">
+																		{data.fanOut}
+																	</span>
+																</div>
+																<div className="flex justify-between gap-4">
+																	<span className="font-mono text-neutral-500 text-xs">
+																		LOC:
+																	</span>
+																	<span className="font-data text-neutral-300 text-xs">
+																		{data.loc?.toLocaleString()}
+																	</span>
+																</div>
+																<div className="mt-1 flex justify-between gap-4 border-neutral-800 border-t pt-1">
+																	<span className="font-mono text-neutral-500 text-xs">
+																		Score:
+																	</span>
+																	<span
+																		className={`font-data font-semibold text-xs ${
+																			data.score >= 8
+																				? "text-rose-500"
+																				: data.score >= 5
+																					? "text-amber-500"
+																					: "text-emerald-500"
+																		}`}
+																	>
+																		{data.score?.toFixed(3)}
+																	</span>
+																</div>
+															</div>
+															<div className="mt-2 border-neutral-800 border-t pt-2">
+																<button
+																	className="font-mono text-amber-500 text-xs uppercase tracking-wider transition-colors hover:text-amber-400"
+																	onClick={() =>
+																		setSelectedHotspotFile(data.path)
+																	}
+																	type="button"
+																>
+																	View Code →
+																</button>
+															</div>
+														</div>
+													);
+												}
+												return null;
+											}}
+											cursor={{ strokeDasharray: "3 3" }}
+										/>
+										<Scatter
+											data={hotSpotData ?? undefined}
+											fill="#f59e0b"
+											onClick={(data) => {
+												if (data && "path" in data) {
+													setSelectedHotspotFile(
+														(data as unknown as HotspotDataPoint).path,
+													);
 												}
 											}}
-											size="sm"
-											variant="ghost"
-										>
-											{copied ? (
-												<Check className="h-4 w-4 text-green-500" />
-											) : (
-												<Copy className="h-4 w-4" />
-											)}
-										</Button>
+											shape={(props: {
+												cx?: number;
+												cy?: number;
+												payload?: HotspotDataPoint;
+											}) => {
+												const { cx, cy, payload } = props;
+												if (!cx || !cy || !payload) return null;
+
+												const radius = Math.max(
+													6,
+													Math.min(20, Math.sqrt(payload.loc || 100) / 3),
+												);
+												const severity =
+													payload.score >= 8
+														? "critical"
+														: payload.score >= 5
+															? "warning"
+															: "normal";
+												const color =
+													severity === "critical"
+														? "#f43f5e"
+														: severity === "warning"
+															? "#f59e0b"
+															: "#10b981";
+
+												return (
+													<g>
+														<circle
+															cx={cx}
+															cy={cy}
+															fill={color}
+															fillOpacity={0.7}
+															r={radius}
+															stroke={color}
+															strokeOpacity={0.9}
+															strokeWidth={2}
+															style={{ cursor: "pointer" }}
+														/>
+														<text
+															dominantBaseline="middle"
+															fill="#fff"
+															fontFamily="JetBrains Mono"
+															fontSize={Math.max(8, radius - 2)}
+															fontWeight={500}
+															pointerEvents="none"
+															textAnchor="middle"
+															x={cx}
+															y={cy}
+														>
+															{payload.rank}
+														</text>
+													</g>
+												);
+											}}
+										/>
+									</ScatterChart>
+								</ResponsiveContainer>
+
+								<div className="mt-4 flex items-center justify-center gap-6">
+									<div className="flex items-center gap-2">
+										<div className="h-3 w-3 rounded-full border border-rose-500 bg-rose-500/70" />
+										<span className="font-mono text-neutral-500 text-xs uppercase">
+											Critical (8+)
+										</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="h-3 w-3 rounded-full border border-amber-500 bg-amber-500/70" />
+										<span className="font-mono text-neutral-500 text-xs uppercase">
+											Warning (5-8)
+										</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<div className="h-3 w-3 rounded-full border border-emerald-500 bg-emerald-500/70" />
+										<span className="font-mono text-neutral-500 text-xs uppercase">
+											Normal (&lt;5)
+										</span>
+									</div>
+									<div className="ml-4 flex items-center gap-2">
+										<span className="font-mono text-neutral-600 text-xs">
+											●
+										</span>
+										<span className="font-mono text-neutral-500 text-xs">
+											Circle size = LOC
+										</span>
+									</div>
+									<div className="flex items-center gap-2">
+										<span className="font-mono text-neutral-600 text-xs">
+											#
+										</span>
+										<span className="font-mono text-neutral-500 text-xs">
+											Number = Rank
+										</span>
 									</div>
 								</div>
-							</DialogHeader>
-							<div className="flex-1 overflow-auto bg-slate-950">
-								{isHotspotContentLoading ? (
-									<div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
-										<Loader2 className="h-8 w-8 animate-spin" />
-										<p className="text-sm">Fetching content...</p>
-									</div>
-								) : (
-									<div className="flex">
-										<div className="select-none border-slate-800 border-r bg-slate-950 py-4 text-right text-slate-500">
-											{hotspotFileContent?.split("\n").map((_, i) => (
-												<div
-													className="px-4 font-mono text-xs"
-													key={`line-${i}-${hotspotFileContent?.split("\n")[i]?.slice(0, 8) ?? i}`}
-												>
-													{i + 1}
-												</div>
-											))}
-										</div>
-										<pre className="flex-1 whitespace-pre-wrap py-4 pr-4 pl-4 font-mono text-slate-50 text-sm">
-											<code>{hotspotFileContent}</code>
-										</pre>
-									</div>
-								)}
 							</div>
-						</DialogContent>
-					</Dialog>
-				</div>
-			)}
+						) : isLoading ? (
+							<div className="card-glass overflow-hidden rounded-lg">
+								<table className="data-table">
+									<thead>
+										<tr>
+											<th className="w-16">Rank</th>
+											<th>File</th>
+											<th className="w-24">Language</th>
+											<th className="w-20 text-right">Fan-in</th>
+											<th className="w-20 text-right">Fan-out</th>
+											<th className="w-20 text-right">LOC</th>
+											<th className="w-24 text-right">Score</th>
+										</tr>
+									</thead>
+									<tbody>
+										{Array.from({ length: 5 }).map((__, idx) => (
+											<tr
+												key={`skeleton-row-${idx.toString().padStart(2, "0")}`}
+											>
+												<td>
+													<Skeleton className="h-4 w-8" />
+												</td>
+												<td>
+													<Skeleton className="h-4 w-48" />
+												</td>
+												<td>
+													<Skeleton className="h-4 w-16" />
+												</td>
+												<td className="text-right">
+													<Skeleton className="ml-auto h-4 w-12" />
+												</td>
+												<td className="text-right">
+													<Skeleton className="ml-auto h-4 w-12" />
+												</td>
+												<td className="text-right">
+													<Skeleton className="ml-auto h-4 w-12" />
+												</td>
+												<td className="text-right">
+													<Skeleton className="ml-auto h-4 w-16" />
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						) : hotSpotData && hotSpotData.length > 0 ? (
+							<div className="card-glass overflow-hidden rounded-lg">
+								<table className="data-table">
+									<thead>
+										<tr>
+											<th className="w-16">Rank</th>
+											<th>File</th>
+											<th className="w-24">Language</th>
+											<th className="w-20 text-right">Fan-in</th>
+											<th className="w-20 text-right">Fan-out</th>
+											<th className="w-20 text-right">LOC</th>
+											<th className="w-24 text-right">Score</th>
+										</tr>
+									</thead>
+									<tbody>
+										{hotSpotData.map((hotspot) => (
+											<tr
+												className="cursor-pointer"
+												key={hotspot.path}
+												onClick={() => setSelectedHotspotFile(hotspot.path)}
+											>
+												<td className="font-data text-amber-500">
+													{hotspot.rank}
+												</td>
+												<td className="font-data text-neutral-300">
+													{hotspot.path}
+												</td>
+												<td>
+													<span className="badge-sky">{hotspot.language}</span>
+												</td>
+												<td className="text-right">{hotspot.fanIn}</td>
+												<td className="text-right">{hotspot.fanOut}</td>
+												<td className="text-right">{hotspot.loc}</td>
+												<td className="text-right font-data text-neutral-300">
+													{hotspot.score.toFixed(3)}
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						) : (
+							<div className="card-glass flex flex-col items-center justify-center rounded-lg py-16">
+								<p className="font-mono text-neutral-500 text-sm">
+									No hotspot data available.
+								</p>
+							</div>
+						)}
+
+						<Dialog
+							onOpenChange={(open) => !open && setSelectedHotspotFile(null)}
+							open={!!selectedHotspotFile}
+						>
+							<DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden border-neutral-800 bg-neutral-950 p-0">
+								<DialogHeader className="border-neutral-800 border-b p-4">
+									<div className="flex items-center justify-between">
+										<DialogTitle className="flex items-center gap-2 font-data text-sm">
+											<FileCode className="h-4 w-4 text-amber-500" />
+											{selectedHotspotFile?.split("/").pop()}
+										</DialogTitle>
+										<div className="flex items-center gap-2">
+											<span className="badge">
+												{selectedHotspotFile?.split(".").pop()?.toLowerCase() ||
+													"text"}
+											</span>
+											<Button
+												className="h-8 bg-neutral-900 px-2 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
+												onClick={() => {
+													if (hotspotFileContent) {
+														navigator.clipboard.writeText(hotspotFileContent);
+														setCopied(true);
+														setTimeout(() => setCopied(false), 2000);
+													}
+												}}
+												size="sm"
+												variant="ghost"
+											>
+												{copied ? (
+													<Check className="h-4 w-4 text-emerald-500" />
+												) : (
+													<Copy className="h-4 w-4" />
+												)}
+											</Button>
+										</div>
+									</div>
+								</DialogHeader>
+								<div className="flex-1 overflow-auto bg-[#0a0a0a]">
+									{isHotspotContentLoading ? (
+										<div className="flex h-full flex-col items-center justify-center gap-4">
+											<Loader2 className="h-8 w-8 animate-spin text-neutral-600" />
+											<p className="font-mono text-neutral-500 text-xs">
+												Fetching content...
+											</p>
+										</div>
+									) : (
+										<div className="flex">
+											<div className="select-none border-neutral-800 border-r bg-[#0a0a0a] py-4 text-right text-neutral-700">
+												{hotspotFileContent?.split("\n").map((line, i) => {
+													const lineNum = i + 1;
+													return (
+														<div
+															className="px-4 font-data text-xs"
+															key={`line-${lineNum}-${line.slice(0, 4)}`}
+														>
+															{lineNum}
+														</div>
+													);
+												})}
+											</div>
+											<pre className="flex-1 whitespace-pre-wrap py-4 pr-4 pl-4 font-data text-neutral-300 text-xs leading-relaxed">
+												<code>{hotspotFileContent}</code>
+											</pre>
+										</div>
+									)}
+								</div>
+							</DialogContent>
+						</Dialog>
+					</motion.div>
+				)}
+			</div>
 		</motion.div>
 	);
 }
 
 function LoadingFallback() {
 	return (
-		<div className="flex h-screen items-center justify-center">
-			<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+		<div className="flex min-h-screen items-center justify-center bg-mesh pt-14">
+			<div className="flex flex-col items-center gap-6">
+				<div className="relative">
+					<div className="absolute inset-0 animate-pulse rounded-full bg-amber-500/20 blur-xl" />
+					<Loader2 className="relative h-12 w-12 animate-spin text-amber-500" />
+				</div>
+				<p className="font-mono text-neutral-400 text-sm uppercase tracking-widest">
+					Loading Analysis
+				</p>
+			</div>
 		</div>
 	);
 }

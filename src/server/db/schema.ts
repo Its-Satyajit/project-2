@@ -101,6 +101,7 @@ export const repositories = pgTable(
 		isPrivate: boolean("is_private").default(false),
 		stars: integer("stars"),
 		forks: integer("forks"),
+		avatarUrl: text("avatar_url"),
 		analysisStatus: text("analysis_status").default("pending"),
 		analysisPhase: text("analysis_phase"),
 		createdAt: timestamp("created_at")

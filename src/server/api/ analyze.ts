@@ -26,6 +26,7 @@ export const analyzeRoute = new Elysia().post(
 			isPrivate: repoMetadata.private,
 			stars: repoMetadata.stargazers_count,
 			forks: repoMetadata.forks_count,
+			avatarUrl: repoMetadata.owner.avatar_url,
 			analysisStatus: "queued",
 		});
 

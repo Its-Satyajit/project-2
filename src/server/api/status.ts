@@ -26,6 +26,7 @@ export const statusRoute = new Elysia().get(
 				isPrivate: repoData.isPrivate,
 				stars: repoData.stars,
 				forks: repoData.forks,
+				avatarUrl: repoData.avatarUrl,
 			},
 			analysis: repoData.analysisResults?.[0]
 				? {

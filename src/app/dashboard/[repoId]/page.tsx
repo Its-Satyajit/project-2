@@ -1,6 +1,5 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import {
 	ArrowRight,
 	BarChart3,
@@ -11,6 +10,7 @@ import {
 	GitBranch,
 	Loader2,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type React from "react";
 import { Suspense, use, useState } from "react";
@@ -21,27 +21,8 @@ import { FileViewer } from "~/components/dashboard/FileViewer";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
 import { VirtualizedFileTree } from "~/components/dashboard/VirtualizedFileTree";
 import { Button } from "~/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 import { api } from "~/lib/eden";
-
-const containerVariants = {
-	hidden: { opacity: 0 },
-	visible: {
-		opacity: 1,
-		transition: { staggerChildren: 0.06, delayChildren: 0.1 },
-	},
-};
-
-const itemVariants = {
-	hidden: { opacity: 0, y: 12, scale: 0.98 },
-	visible: {
-		opacity: 1,
-		y: 0,
-		scale: 1,
-		transition: { type: "spring" as const, stiffness: 180, damping: 18 },
-	},
-};
 
 export default function RepoPage({
 	params,
@@ -49,7 +30,7 @@ export default function RepoPage({
 	params: Promise<{ repoId: string }>;
 }) {
 	return (
-		<main className="relative min-h-screen overflow-hidden bg-[#050505]">
+		<main className="relative min-h-screen overflow-hidden bg-[#050505] pt-14">
 			<div className="absolute inset-0 -z-10">
 				<div className="absolute inset-0 bg-[linear-gradient(rgba(20,20,20,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.4)_1px,transparent_1px)] bg-[size:30px_30px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(245,158,11,0.06),transparent_40%)]" />
@@ -74,6 +55,7 @@ export default function RepoPage({
 function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	const { repoId } = use(params);
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
+	const [explorerTab, setExplorerTab] = useState<"code" | "files">("code");
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["repo-dashboard", repoId],
@@ -168,6 +150,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 		isPrivate: boolean;
 		primaryLanguage: string;
 		description?: string;
+		avatarUrl?: string;
 		fileTree: FileTreeItem[];
 		analysisResults: Array<{
 			totalFiles: number;
@@ -183,19 +166,24 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	};
 
 	return (
-		<motion.div
-			animate="visible"
-			className="flex flex-col gap-8"
-			initial="hidden"
-			variants={containerVariants}
-		>
-			<motion.div className="mb-2" variants={itemVariants}>
+		<div className="flex flex-col gap-8">
+			<header className="mb-2">
 				<div className="flex items-start justify-between">
 					<div>
 						<div className="mb-3 flex items-center gap-3">
-							<div className="flex h-8 w-8 items-center justify-center rounded border border-amber-500/30 bg-amber-500/10">
-								<GitBranch className="h-4 w-4 text-amber-400" />
-							</div>
+							{data.avatarUrl ? (
+								<Image
+									alt={data.owner}
+									className="rounded-full border border-amber-500/30"
+									height={36}
+									src={data.avatarUrl}
+									width={36}
+								/>
+							) : (
+								<div className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
+									<GitBranch className="h-4 w-4 text-amber-400" />
+								</div>
+							)}
 							<h1 className="font-bold font-mono text-2xl text-white tracking-tight">
 								<span className="text-amber-400">{data.owner}</span>
 								<span className="text-white/50">/</span>
@@ -221,139 +209,134 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 						</Button>
 					</Link>
 				</div>
-			</motion.div>
+			</header>
 
-			<motion.div variants={itemVariants}>
+			<section>
 				<div className="mb-4 flex items-center gap-2">
 					<span className="font-mono text-white/30 text-xs">{"//"}</span>
-					<span className="font-mono text-cyan-400 text-xs tracking-wider">
+					<span className="font-mono text-sky-400 text-xs tracking-wider">
 						REPO_STATS
 					</span>
 				</div>
 				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 					<StatCard
-						color="amber"
+						color="sky"
 						icon={FileCode}
 						label="TOTAL_FILES"
 						value={analysis?.totalFiles ?? 0}
 					/>
 					<StatCard
-						color="cyan"
+						color="blue"
 						icon={FolderTree}
 						label="DIRECTORIES"
 						value={analysis?.totalDirectories ?? 0}
 					/>
 					<StatCard
-						color="green"
+						color="emerald"
 						icon={Database}
 						label="LINES_OF_CODE"
 						value={(analysis?.totalLines ?? 0).toLocaleString()}
 					/>
 					<StatCard
-						color="purple"
+						color="violet"
 						icon={Code2}
 						label="PRIMARY_LANG"
 						value={data.primaryLanguage || "N/A"}
 					/>
 				</div>
-			</motion.div>
+			</section>
 
-			<motion.div variants={itemVariants}>
+			<section>
 				<div className="mb-4 flex items-center gap-2">
 					<span className="font-mono text-white/30 text-xs">{"//"}</span>
-					<span className="font-mono text-amber-400 text-xs tracking-wider">
+					<span className="font-mono text-emerald-400 text-xs tracking-wider">
 						ANALYSIS_STATUS
 					</span>
 				</div>
-				<div className="rounded-lg border border-white/5 bg-white/[0.02] p-4">
+				<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.03] p-4">
 					<AnalysisProgress repoId={repoId} />
 				</div>
-			</motion.div>
+			</section>
 
-			<motion.div variants={itemVariants}>
-				<Tabs className="w-full" defaultValue="code">
-					<div className="mb-4 flex items-center gap-2">
-						<span className="font-mono text-white/30 text-xs">{"//"}</span>
-						<span className="font-mono text-purple-400 text-xs tracking-wider">
-							EXPLORER
-						</span>
-					</div>
-					<TabsList className="mb-4 bg-white/[0.02]">
-						<TabsTrigger
-							className="font-mono text-sm data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400"
-							value="code"
-						>
-							<Code2 className="mr-2 h-4 w-4" />
-							Code
-						</TabsTrigger>
-						<TabsTrigger
-							className="font-mono text-sm data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400"
-							value="files"
-						>
-							<BarChart3 className="mr-2 h-4 w-4" />
-							File Distribution
-						</TabsTrigger>
-					</TabsList>
+			<section>
+				<div className="mb-4 flex items-center gap-2">
+					<span className="font-mono text-white/30 text-xs">{"//"}</span>
+					<span className="font-mono text-blue-400 text-xs tracking-wider">
+						EXPLORER
+					</span>
+				</div>
 
-					<TabsContent className="mt-0" value="code">
-						<div className="grid h-[calc(100vh-420px)] gap-4 lg:grid-cols-[350px_1fr]">
-							<div className="overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">
-								<VirtualizedFileTree
-									defaultBranch={data.defaultBranch}
-									fileTree={data.fileTree ?? []}
-									isPrivate={data.isPrivate}
-									name={data.name}
-									onFileSelect={handleFileSelect}
-									owner={data.owner}
-									repoId={data.id}
-								/>
-							</div>
-							<div className="overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">
-								{selectedFile ? (
-									<FileViewer
-										content={fileContent ?? null}
-										error={fileError ?? null}
-										filePath={selectedFile}
-										isLoading={isFileLoading ?? false}
-									/>
-								) : (
-									<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-white/30">
-										<Code2 className="mb-4 h-12 w-12 opacity-30" />
-										<p className="font-mono text-sm">
-											Select a file to view its contents
-										</p>
-									</div>
-								)}
-							</div>
+				<div className="mb-4 flex items-center gap-2">
+					<button
+						className={`tab-pill ${explorerTab === "code" ? "active" : ""}`}
+						onClick={() => setExplorerTab("code")}
+						type="button"
+					>
+						<Code2 className="mr-1.5 h-3.5 w-3.5" />
+						Code
+					</button>
+					<button
+						className={`tab-pill ${explorerTab === "files" ? "active" : ""}`}
+						onClick={() => setExplorerTab("files")}
+						type="button"
+					>
+						<BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+						File Distribution
+					</button>
+				</div>
+
+				{explorerTab === "code" ? (
+					<div
+						className="grid gap-4 lg:grid-cols-[350px_1fr]"
+						style={{ height: "calc(100vh - 380px)" }}
+					>
+						<div className="overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">
+							<VirtualizedFileTree
+								defaultBranch={data.defaultBranch}
+								fileTree={data.fileTree ?? []}
+								isPrivate={data.isPrivate}
+								name={data.name}
+								onFileSelect={handleFileSelect}
+								owner={data.owner}
+								repoId={data.id}
+							/>
 						</div>
-					</TabsContent>
-
-					<TabsContent className="mt-0" value="files">
-						{analysis?.fileTypeBreakdownJson && (
-							<div className="rounded-lg border border-white/5 bg-white/[0.02] p-6">
-								<FileTypeChart
-									data={
-										analysis.fileTypeBreakdownJson as Record<string, number>
-									}
+						<div className="overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">
+							{selectedFile ? (
+								<FileViewer
+									content={fileContent ?? null}
+									error={fileError ?? null}
+									filePath={selectedFile}
+									isLoading={isFileLoading ?? false}
 								/>
-							</div>
-						)}
-					</TabsContent>
-				</Tabs>
-			</motion.div>
+							) : (
+								<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-white/30">
+									<Code2 className="mb-4 h-12 w-12 opacity-30" />
+									<p className="font-mono text-sm">
+										Select a file to view its contents
+									</p>
+								</div>
+							)}
+						</div>
+					</div>
+				) : analysis?.fileTypeBreakdownJson ? (
+					<div className="rounded-lg border border-white/5 bg-white/[0.02] p-6">
+						<FileTypeChart
+							data={analysis.fileTypeBreakdownJson as Record<string, number>}
+						/>
+					</div>
+				) : null}
+			</section>
 
-			<motion.footer
-				className="mt-4 flex items-center justify-between border-white/5 border-t pt-6"
-				variants={itemVariants}
-			>
+			<footer className="mt-4 flex items-center justify-between border-white/5 border-t pt-6">
 				<div className="font-mono text-white/20 text-xs">
 					<span className="text-amber-400">branch:</span> {data.defaultBranch}
 				</div>
 				<div className="font-mono text-white/20 text-xs">
 					<span className="text-green-400">status:</span> analyzed
 				</div>
-			</motion.footer>
-		</motion.div>
+			</footer>
+		</div>
 	);
 }
 
@@ -366,20 +349,20 @@ function StatCard({
 	icon: React.ElementType;
 	label: string;
 	value: string | number;
-	color: "amber" | "cyan" | "green" | "purple";
+	color: "sky" | "blue" | "emerald" | "violet";
 }) {
 	const colorClasses = {
-		amber: "text-amber-400 border-amber-500/30 bg-amber-500/5",
-		cyan: "text-cyan-400 border-cyan-500/30 bg-cyan-500/5",
-		green: "text-green-400 border-green-500/30 bg-green-500/5",
-		purple: "text-purple-400 border-purple-500/30 bg-purple-500/5",
+		sky: "text-sky-400 border-sky-500/30 bg-sky-500/5",
+		blue: "text-blue-400 border-blue-500/30 bg-blue-500/5",
+		emerald: "text-emerald-400 border-emerald-500/30 bg-emerald-500/5",
+		violet: "text-violet-400 border-violet-500/30 bg-violet-500/5",
 	};
 
 	const iconBgClasses = {
-		amber: "bg-amber-500/10",
-		cyan: "bg-cyan-500/10",
-		green: "bg-green-500/10",
-		purple: "bg-purple-500/10",
+		sky: "bg-sky-500/10",
+		blue: "bg-blue-500/10",
+		emerald: "bg-emerald-500/10",
+		violet: "bg-violet-500/10",
 	};
 
 	return (

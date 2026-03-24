@@ -226,6 +226,24 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 	}
 }
 
+export async function runAnalysisDirect(data: {
+	repoId: string;
+	owner: string;
+	repo: string;
+	branch: string;
+	githubUrl: string;
+}) {
+	const mockJob = {
+		data,
+		updateProgress: async (progress: number) => {
+			console.log(`[DirectAnalysis] Progress: ${progress}%`);
+		},
+	};
+
+	// Call the core logic directly
+	return processAnalysisJob(mockJob as unknown as Job<AnalysisJob>);
+}
+
 let worker: Worker | null = null;
 
 export function startAnalysisWorker() {

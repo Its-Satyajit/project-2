@@ -40,15 +40,16 @@ const languageMap: Record<string, string> = {
 	astro: "astro",
 };
 
-async function highlightCode(code: string, lang: string): Promise<string> {
+async function highlightLine(line: string, lang: string): Promise<string> {
+	if (!line) return " ";
 	try {
-		const result = await codeToHtml(code, {
+		const html = await codeToHtml(line, {
 			lang,
 			theme: "github-dark",
 		});
-		return result;
+		return html;
 	} catch {
-		return code;
+		return line;
 	}
 }
 
@@ -59,20 +60,24 @@ export function FileViewer({
 	error,
 }: FileViewerProps) {
 	const [copied, setCopied] = useState(false);
-	const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
+	const [highlightedLines, setHighlightedLines] = useState<string[]>([]);
 
 	const fileName = filePath.split("/").pop() || filePath;
 	const extension = fileName.split(".").pop()?.toLowerCase() || "";
 	const language = languageMap[extension] || "text";
 
+	const lines = content ? content.split("\n") : [];
+
 	useEffect(() => {
 		if (!content) {
-			setHighlightedHtml(null);
+			setHighlightedLines([]);
 			return;
 		}
 
-		highlightCode(content, language).then(setHighlightedHtml);
-	}, [content, language]);
+		Promise.all(lines.map((line) => highlightLine(line, language))).then(
+			setHighlightedLines,
+		);
+	}, [content, language, lines]);
 
 	const handleCopy = () => {
 		if (content) {
@@ -134,7 +139,7 @@ export function FileViewer({
 		);
 	}
 
-	const lines = content.split("\n");
+	const isHighlighted = highlightedLines.length > 0;
 
 	return (
 		<div className="flex h-full min-h-[400px] flex-col">
@@ -161,25 +166,31 @@ export function FileViewer({
 					)}
 				</Button>
 			</div>
-			<div className="flex h-full min-h-0 overflow-hidden bg-[#0d0d0d]">
-				<div className="shrink-0 select-none border-white/5 border-r bg-[#0d0d0d] py-3 text-right font-mono text-white/20 text-xs">
+			<div className="flex h-full min-h-0 overflow-auto bg-[#0d0d0d]">
+				<div className="shrink-0 select-none border-white/5 border-r bg-[#0d0d0d] py-2 text-right font-mono text-white/20 text-xs">
 					{lines.map((_, i) => (
 						<div className="px-3 leading-6" key={i}>
 							{i + 1}
 						</div>
 					))}
 				</div>
-				<div className="flex-1 overflow-auto">
-					{highlightedHtml ? (
-						<div
-							className="[&_pre]:!bg-transparent [&_pre]:!p-3 [&_pre]:!m-0 [&_pre]:!font-mono [&_pre]:!text-sm [&_pre]:!leading-6 [&_pre]:!overflow-visible"
-							dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-						/>
-					) : (
-						<pre className="whitespace-pre font-mono text-sm text-white/80 leading-6">
-							<code>{content}</code>
-						</pre>
-					)}
+				<div className="flex-1 font-mono text-sm leading-6">
+					{isHighlighted
+						? highlightedLines.map((html, i) => (
+								<div
+									className="flex min-h-[1.5rem] items-stretch whitespace-pre-wrap break-all px-3 py-0.5 hover:bg-white/[0.02]"
+									dangerouslySetInnerHTML={{ __html: html }}
+									key={i}
+								/>
+							))
+						: lines.map((line, i) => (
+								<div
+									className="flex min-h-[1.5rem] items-stretch whitespace-pre-wrap break-all px-3 py-0.5 hover:bg-white/[0.02]"
+									key={i}
+								>
+									{line}
+								</div>
+							))}
 				</div>
 			</div>
 		</div>
