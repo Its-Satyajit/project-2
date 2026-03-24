@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { Language, Parser } from "web-tree-sitter";
 import type { ImportStatement, ParsedFile } from "./index";
@@ -11,9 +12,10 @@ async function getPyParser(): Promise<Parser> {
 		parser = new Parser();
 		const wasmPath = path.join(
 			process.cwd(),
-			"public/tree-sitter/tree-sitter-python.wasm",
+			"public/tree-sitter/wasm/tree-sitter-python.wasm",
 		);
-		pyLanguage = await Language.load(wasmPath);
+		const wasmBuffer = fs.readFileSync(wasmPath);
+		pyLanguage = await Language.load(wasmBuffer);
 		parser.setLanguage(pyLanguage);
 	}
 	return parser;

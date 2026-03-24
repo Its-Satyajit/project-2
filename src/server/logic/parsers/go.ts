@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { Language, Parser } from "web-tree-sitter";
 import type { ImportStatement, ParsedFile } from "./index";
@@ -11,9 +12,10 @@ async function getGoParser(): Promise<Parser> {
 		parser = new Parser();
 		const wasmPath = path.join(
 			process.cwd(),
-			"public/tree-sitter/tree-sitter-go.wasm",
+			"public/tree-sitter/wasm/tree-sitter-go.wasm",
 		);
-		goLanguage = await Language.load(wasmPath);
+		const wasmBuffer = fs.readFileSync(wasmPath);
+		goLanguage = await Language.load(wasmBuffer);
 		parser.setLanguage(goLanguage);
 	}
 	return parser;

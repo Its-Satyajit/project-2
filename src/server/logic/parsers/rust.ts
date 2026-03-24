@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { Language, Parser } from "web-tree-sitter";
 import type { ImportStatement, ParsedFile } from "./index";
@@ -5,18 +6,141 @@ import type { ImportStatement, ParsedFile } from "./index";
 let rustLanguage: Language | null = null;
 let parser: Parser | null = null;
 
+// Common Rust standard library and external crates to mark as external
+const RUST_EXTERNAL_CRATES = new Set([
+	"std",
+	"core",
+	"alloc",
+	"anyhow",
+	"clap",
+	"tracing",
+	"serde",
+	"tokio",
+	"reqwest",
+	"thiserror",
+	"rustls",
+	"rcgen",
+	"chrono",
+	"serde_json",
+	"toml",
+	"log",
+	"env_logger",
+]);
+
+// Known crate name to directory mappings (populated from Cargo.toml)
+let crateMappings: Map<string, string> | null = null;
+
 async function getRustParser(): Promise<Parser> {
 	if (!parser) {
 		await Parser.init();
 		parser = new Parser();
 		const wasmPath = path.join(
 			process.cwd(),
-			"public/tree-sitter/tree-sitter-rust.wasm",
+			"public/tree-sitter/wasm/tree-sitter-rust.wasm",
 		);
-		rustLanguage = await Language.load(wasmPath);
+		const wasmBuffer = fs.readFileSync(wasmPath);
+		rustLanguage = await Language.load(wasmBuffer);
 		parser.setLanguage(rustLanguage);
 	}
 	return parser;
+}
+
+/**
+ * Load crate mappings from Cargo.toml files in the project
+ */
+function loadCrateMappings(): Map<string, string> {
+	if (crateMappings) return crateMappings;
+
+	crateMappings = new Map();
+
+	try {
+		const projectRoot = process.cwd();
+		const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
+
+		for (const entry of entries) {
+			if (entry.isDirectory()) {
+				const cargoTomlPath = path.join(projectRoot, entry.name, "Cargo.toml");
+				if (fs.existsSync(cargoTomlPath)) {
+					const content = fs.readFileSync(cargoTomlPath, "utf-8");
+					const nameMatch = content.match(/^name\s*=\s*"([^"]+)"/m);
+					if (nameMatch && nameMatch[1]) {
+						crateMappings.set(nameMatch[1], entry.name);
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.error("[RustParser] Error loading crate mappings:", error);
+	}
+
+	return crateMappings;
+}
+
+/**
+ * Convert a Rust use statement to a file path
+ * e.g., "devbind_core::config::DevBindConfig" -> "./core/src/config.rs"
+ */
+function rustImportToFilePath(
+	importSource: string,
+	currentFilePath: string,
+): { filePath: string; isExternal: boolean } | null {
+	const baseImport = importSource.split("::")[0] || importSource;
+
+	if (!baseImport || RUST_EXTERNAL_CRATES.has(baseImport)) {
+		return { filePath: "", isExternal: true };
+	}
+
+	const mappings = loadCrateMappings();
+	const crateDir = mappings.get(baseImport);
+
+	if (crateDir) {
+		const moduleParts = importSource.split("::").slice(1);
+		if (moduleParts.length > 0) {
+			const modulePath = moduleParts.join("/");
+			return {
+				filePath: `./${crateDir}/src/${modulePath}.rs`,
+				isExternal: false,
+			};
+		}
+		return {
+			filePath: `./${crateDir}/src/lib.rs`,
+			isExternal: false,
+		};
+	}
+
+	if (importSource.startsWith("crate::")) {
+		const crateRoot = currentFilePath.split("/src/")[0];
+		if (crateRoot) {
+			const modulePath = importSource
+				.replace("crate::", "")
+				.replace(/::/g, "/");
+			return {
+				filePath: `./${crateRoot.split("/").pop()}/src/${modulePath}.rs`,
+				isExternal: false,
+			};
+		}
+	}
+
+	if (importSource.startsWith("super::")) {
+		const currentDir = path.dirname(currentFilePath);
+		const parentDir = path.dirname(currentDir);
+		const modulePath = importSource.replace("super::", "").replace(/::/g, "/");
+		return {
+			filePath: `./${parentDir}/${modulePath}.rs`,
+			isExternal: false,
+		};
+	}
+
+	if (importSource.startsWith("self::")) {
+		const currentDir = path.dirname(currentFilePath);
+		const modulePath = importSource.replace("self::", "").replace(/::/g, "/");
+		return {
+			filePath: `./${currentDir}/${modulePath}.rs`,
+			isExternal: false,
+		};
+	}
+
+	return null;
 }
 
 export async function parseRust(
@@ -47,11 +171,16 @@ export async function parseRust(
 					const match = text.match(/^use\s+([^;]+)/);
 					if (match) {
 						const source = match[1].trim();
-						imports.push({
-							raw: text,
-							source,
-							isDynamic: false,
-						});
+						const resolved = rustImportToFilePath(source, filePath);
+						if (resolved) {
+							if (!resolved.isExternal) {
+								imports.push({
+									raw: text,
+									source: resolved.filePath,
+									isDynamic: false,
+								});
+							}
+						}
 					}
 				}
 			}
@@ -78,11 +207,6 @@ export async function parseRust(
 
 		walkUseDeclarations(tree.rootNode);
 		tree.delete();
-
-		console.log(`[RustParser] ${filePath}: parsed ${imports.length} imports`);
-		for (const imp of imports.slice(0, 5)) {
-			console.log(`  - "${imp.source}"`);
-		}
 
 		return {
 			path: filePath,

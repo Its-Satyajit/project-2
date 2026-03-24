@@ -85,12 +85,20 @@ export async function getFileContentFromRaw({
 	path: string;
 }): Promise<string | null> {
 	try {
-		const encodedPath = encodeURIComponent(path);
+		// Only encode individual path segments, not the slashes
+		const encodedPath = path
+			.split("/")
+			.map((segment) => encodeURIComponent(segment))
+			.join("/");
 		const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${encodedPath}`;
 		const res = await fetch(url);
-		if (!res.ok) return null;
+		if (!res.ok) {
+			console.log(`[RawFetch] ${res.status} for ${path}`);
+			return null;
+		}
 		return res.text();
-	} catch {
+	} catch (error) {
+		console.error(`[RawFetch] Error for ${path}:`, error);
 		return null;
 	}
 }

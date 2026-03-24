@@ -5,8 +5,10 @@ import { Geist } from "next/font/google";
 import { Suspense } from "react";
 import Navigation from "~/components/Navigation";
 import QueryProvider from "~/components/QueryProvider";
+import { env } from "~/env";
 
 export const metadata: Metadata = {
+	metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
 	title: {
 		default: "Repository Analyzer",
 		template: "%s | Repository Analyzer",
