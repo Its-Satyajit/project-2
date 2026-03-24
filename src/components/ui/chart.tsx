@@ -80,6 +80,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
 	return (
 		<style
+			// biome-ignore lint/security/noDangerouslySetInnerHtml: safe may be
 			dangerouslySetInnerHTML={{
 				__html: Object.entries(THEMES)
 					.map(
@@ -125,6 +126,8 @@ function ChartTooltipContent({
 		indicator?: "line" | "dot" | "dashed";
 		nameKey?: string;
 		labelKey?: string;
+		payload?: any[];
+		label?: any;
 	}) {
 	const { config } = useChart();
 
@@ -180,8 +183,8 @@ function ChartTooltipContent({
 			{!nestLabel ? tooltipLabel : null}
 			<div className="grid gap-1.5">
 				{payload
-					.filter((item) => item.type !== "none")
-					.map((item, index) => {
+					.filter((item: any) => item.type !== "none")
+					.map((item: any, index: number) => {
 						const key = `${nameKey || item.name || item.dataKey || "value"}`;
 						const itemConfig = getPayloadConfigFromPayload(config, item, key);
 						const indicatorColor = color || item.payload.fill || item.color;
@@ -259,9 +262,10 @@ function ChartLegendContent({
 	verticalAlign = "bottom",
 	nameKey,
 }: React.ComponentProps<"div"> &
-	Pick<RechartsPrimitive.LegendProps, "payload" | "verticalAlign"> & {
+	Pick<RechartsPrimitive.LegendProps, "verticalAlign"> & {
 		hideIcon?: boolean;
 		nameKey?: string;
+		payload?: any[];
 	}) {
 	const { config } = useChart();
 
@@ -278,8 +282,8 @@ function ChartLegendContent({
 			)}
 		>
 			{payload
-				.filter((item) => item.type !== "none")
-				.map((item) => {
+				.filter((item: any) => item.type !== "none")
+				.map((item: any) => {
 					const key = `${nameKey || item.dataKey || "value"}`;
 					const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
