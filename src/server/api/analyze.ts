@@ -2,8 +2,8 @@ import Elysia, { t } from "elysia";
 import { getOwnerRepo } from "~/lib/getOwnerRepo";
 import { rateLimit } from "~/server/middleware/rate-limit";
 import { insertRepositories } from "../dal/repositories";
+import { inngest } from "../inngest/client";
 import { getRepoMetadata } from "../octokit";
-import { addAnalysisJob } from "../queue/worker";
 
 // Strict rate limit for expensive analysis endpoint: 5 per hour
 const analyzeRateLimit = rateLimit({
@@ -22,6 +22,9 @@ export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 			return { error: "Invalid GitHub URL" };
 		}
 
+		console.log(
+			`[API] Fetching repo metadata for ${parseResult.owner}/${parseResult.repo}`,
+		);
 		const repoMetadata = await getRepoMetadata(parseResult);
 
 		const repoRecord = await insertRepositories({
@@ -44,17 +47,20 @@ export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 		}
 
 		try {
-			console.log(`[API] Adding analysis job for ${repoRecord.id}`);
-			await addAnalysisJob({
-				repoId: repoRecord.id,
-				owner: parseResult.owner,
-				repo: parseResult.repo,
-				branch: repoMetadata.default_branch,
-				githubUrl: ctx.body.githubUrl,
+			console.log(`[API] Sending Inngest event for ${repoRecord.id}`);
+			await inngest.send({
+				name: "repo/analyze",
+				data: {
+					repoId: repoRecord.id,
+					owner: parseResult.owner,
+					repo: parseResult.repo,
+					branch: repoMetadata.default_branch,
+					githubUrl: ctx.body.githubUrl,
+				},
 			});
-			console.log(`[API] Job added to queue for ${repoRecord.id}`);
+			console.log(`[API] Inngest event sent for ${repoRecord.id}`);
 		} catch (err) {
-			console.error("[API] Failed to add job:", err);
+			console.error("[API] Failed to send Inngest event:", err);
 		}
 
 		return {

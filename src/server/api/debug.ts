@@ -48,22 +48,10 @@ export const debugRoute = new Elysia().post(
 					return { success: true, message: "Status reset to pending" };
 				}
 				case "queue-status": {
-					// Check queue status
-					const { analysisQueue } = await import("../queue/index");
-					const waiting = await analysisQueue.getWaitingCount();
-					const active = await analysisQueue.getActiveCount();
-					const completed = await analysisQueue.getCompletedCount();
-					const failed = await analysisQueue.getFailedCount();
-
-					// Get job IDs
-					const jobs = await analysisQueue.getJobs();
-
+					// Check queue status - BullMQ removed, Inngest status not locally available
 					return {
-						waiting,
-						active,
-						completed,
-						failed,
-						recentJobIds: jobs.slice(0, 5).map((j: any) => j.id),
+						message: "BullMQ queue removed. Analysis now uses Inngest.",
+						note: "Check Inngest Dev Server at http://localhost:8288 for local status."
 					};
 				}
 				case "trigger-analysis": {
@@ -79,22 +67,25 @@ export const debugRoute = new Elysia().post(
 					}
 
 					const r = repo[0];
-					const { addAnalysisJob } = await import("../queue/worker");
+					const { inngest } = await import("../inngest/client");
 
 					// Parse owner/repo from full_name
 					const parts = (r.fullName ?? "").split("/");
 					const owner = parts[0] ?? "";
 					const repoName = parts[1] ?? "";
 
-					await addAnalysisJob({
-						repoId: r.id,
-						owner,
-						repo: repoName,
-						branch: r.defaultBranch ?? "main",
-						githubUrl: r.url ?? "",
+					await inngest.send({
+						name: "repo/analyze",
+						data: {
+							repoId: r.id,
+							owner,
+							repo: repoName,
+							branch: r.defaultBranch ?? "main",
+							githubUrl: r.url ?? "",
+						},
 					});
 
-					return { success: true, message: "Analysis job triggered" };
+					return { success: true, message: "Inngest analysis event sent" };
 				}
 				case "run-analysis": {
 					// Run analysis directly without queue (for testing)
@@ -115,7 +106,7 @@ export const debugRoute = new Elysia().post(
 
 					try {
 						// Import and run analysis directly
-						const { runAnalysisDirect } = await import("../queue/worker");
+						const { runAnalysisDirect } = await import("../inngest/functions");
 						const result = await runAnalysisDirect({
 							repoId: r.id,
 							owner,

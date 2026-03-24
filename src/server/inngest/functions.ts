@@ -1,5 +1,4 @@
-import { type Job, Worker } from "bullmq";
-import { env } from "~/env";
+import { inngest } from "./client";
 import { getExtension } from "~/lib/getExtension";
 import { convertToFileTree } from "~/lib/treeUtils";
 import { insertAnalysisResults } from "../dal/analysis";
@@ -14,99 +13,39 @@ import {
 } from "../logic/dependencyAnalysis";
 import { performHotspotAnalysis } from "../logic/hotspotAnalysis";
 import { getFileContentFromRaw, getRepoCommits, getRepoTree } from "../octokit";
-import type { AnalysisJob } from "./index";
-import { analysisQueue } from "./index";
 
 const CONTENT_MAX_SIZE = 50 * 1024;
 const CODE_EXTENSIONS = [
-	// TypeScript/JavaScript
-	"ts",
-	"tsx",
-	"js",
-	"jsx",
-	// Python
-	"py",
-	// Go
-	"go",
-	// Rust
-	"rs",
-	// Java
-	"java",
-	// C/C++
-	"c",
-	"h",
-	"cpp",
-	"cc",
-	"cxx",
-	"c++",
-	"hpp",
-	"hh",
-	"hxx",
-	"h++",
-	// C#
-	"cs",
-	// Kotlin
-	"kt",
-	"kts",
-	// Swift
-	"swift",
-	// PHP
-	"php",
-	// Dart
-	"dart",
-	// R
-	"r",
-	// Ruby
-	"rb",
-	// MATLAB/Octave
-	"m",
-	// Scala
-	"scala",
-	// Shell
-	"sh",
-	"bash",
-	"zsh",
-	// Julia
-	"jl",
-	// Objective-C
-	"mm",
-	// Assembly
-	"asm",
-	"s",
-	"S",
-	// Groovy
-	"groovy",
-	"gradle",
-	// Haskell
-	"hs",
-	"lhs",
-	// Elixir
-	"ex",
-	"exs",
-	// SQL
-	"sql",
+	"ts", "tsx", "js", "jsx", "py", "go", "rs", "java", "c", "h", "cpp", "cc", "cxx", "c++", "hpp", "hh", "hxx", "h++", "cs", "kt", "kts", "swift", "php", "dart", "r", "rb", "m", "scala", "sh", "bash", "zsh", "jl", "mm", "asm", "s", "S", "groovy", "gradle", "hs", "lhs", "ex", "exs", "sql",
 ];
 
 async function updateStatus(repoId: string, status: string, phase: string) {
 	await updateRepositoryStatus(repoId, status, phase);
 }
 
-async function processAnalysisJob(job: Job<AnalysisJob>) {
-	const { repoId, owner, repo, branch } = job.data;
+// Core analysis logic that can be reused for Inngest or direct local execution
+export async function coreAnalysisLogic(
+	data: { 
+		repoId: string; 
+		owner: string; 
+		repo: string; 
+		branch: string; 
+		githubUrl: string; 
+	}, 
+	step: { run: <T>(name: string, fn: () => Promise<T>) => Promise<T>, updateProgress?: (p: number) => Promise<void> }
+) {
+	const { repoId, owner, repo, branch } = data;
 
-	console.log(`[Worker] Starting analysis for ${owner}/${repo} (${repoId})`);
-	console.log(`[Worker] Job data:`, job.data);
-
-	try {
+	// 1. Fetching repository data
+	const { repoTree, limitedTree } = await step.run("fetch-repo-data", async () => {
 		await updateStatus(repoId, "fetching", "Fetching repository data");
-
-		const [repoTree, repoCommits] = await Promise.all([
+		const [tree, commits] = await Promise.all([
 			getRepoTree({ owner, repo, branch }),
 			getRepoCommits({ owner, repo }),
 		]);
 
 		await insertCommits(
-			repoCommits.map((item) => ({
+			commits.map((item) => ({
 				repositoryId: repoId,
 				sha: item.sha,
 				message: item.commit.message,
@@ -117,9 +56,9 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 			})),
 		);
 
-		const limitedTree = repoTree.slice(0, 2000);
+		const limTree = tree.slice(0, 2000);
 		await insertFiles(
-			limitedTree.map((item) => ({
+			limTree.map((item) => ({
 				repositoryId: repoId,
 				path: item.path,
 				size: item.size ?? 0,
@@ -133,23 +72,26 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 			})),
 		);
 
-		await job.updateProgress(25);
+		return { repoTree: tree, limitedTree: limTree };
+	});
 
+	// 2. Basic analysis
+	const { basicResults } = await step.run("basic-analysis", async () => {
 		await updateStatus(repoId, "basic-analysis", "Performing basic analysis");
 
 		const fileTree = convertToFileTree(
 			limitedTree
 				.filter(
-					(f): f is typeof f & { path: string; isDirectory: boolean } =>
+					(f: any): f is any & { path: string; isDirectory: boolean } =>
 						f.path !== null,
 				)
-				.map((f) => ({
+				.map((f: any) => ({
 					...f,
 					isDirectory: f.type === "tree",
 				})),
 		);
 
-		const basicResults = await performBasicAnalysis({
+		const results = await performBasicAnalysis({
 			repoId,
 			fullTree: repoTree,
 			owner,
@@ -157,8 +99,11 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 			fileTree,
 		});
 
-		await job.updateProgress(50);
+		return { basicResults: results };
+	});
 
+	// 3. Dependency analysis
+	await step.run("dependency-analysis", async () => {
 		await updateStatus(
 			repoId,
 			"dependency-analysis",
@@ -166,7 +111,7 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 		);
 
 		const codeFiles = limitedTree.filter(
-			(f) =>
+			(f: any) =>
 				f.type === "blob" &&
 				f.size !== undefined &&
 				f.size > 0 &&
@@ -174,19 +119,9 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 				CODE_EXTENSIONS.includes(getExtension(f.path) || ""),
 		);
 
-		console.log(
-			`Found ${codeFiles.length} code files to analyze. Sample:`,
-			codeFiles.slice(0, 5).map((f) => f.path),
-		);
-
 		const filesContent: FileContent[] = [];
-		let failedFetches = 0;
-
-		for (const file of codeFiles.slice(0, 1000)) {
-			if (!file.path) {
-				console.log(`Skipping file with no path:`, file);
-				continue;
-			}
+		for (const file of codeFiles.slice(0, 50)) {
+			if (!file.path) continue;
 
 			const content = await getFileContentFromRaw({
 				owner,
@@ -201,27 +136,11 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 					content,
 					language: detectLanguage(file.path) || "typescript",
 				});
-			} else {
-				failedFetches++;
-				if (failedFetches <= 5) {
-					console.log(`Failed to fetch content for: ${file.path}`);
-				}
 			}
 		}
 
-		if (failedFetches > 0) {
-			console.log(`Total failed fetches: ${failedFetches}`);
-		}
-
-		console.log(`Fetched content for ${filesContent.length} files`);
-
-		await job.updateProgress(75);
-
 		const dependencyResults = await performDependencyAnalysis(filesContent);
-
 		const hotspotResults = performHotspotAnalysis(dependencyResults.graph);
-
-		await job.updateProgress(90);
 
 		await insertAnalysisResults({
 			repositoryId: repoId,
@@ -235,16 +154,24 @@ async function processAnalysisJob(job: Job<AnalysisJob>) {
 		});
 
 		await updateStatus(repoId, "complete", "Analysis complete");
+	});
 
-		await job.updateProgress(100);
-
-		return { success: true, repoId };
-	} catch (error) {
-		await updateStatus(repoId, "failed", "Analysis failed");
-		throw error;
-	}
+	return { success: true, repoId };
 }
 
+// Inngest Background Function
+export const processAnalysisJob = inngest.createFunction(
+	{ 
+		id: "analyze-repo", 
+		name: "Analyze Repository",
+		triggers: [{ event: "repo/analyze" }]
+	},
+	async ({ event, step }: { event: { data: any }, step: any }) => {
+		return coreAnalysisLogic(event.data, step);
+	},
+);
+
+// Direct Analysis for Local Dev / Testing
 export async function runAnalysisDirect(data: {
 	repoId: string;
 	owner: string;
@@ -252,55 +179,15 @@ export async function runAnalysisDirect(data: {
 	branch: string;
 	githubUrl: string;
 }) {
-	const mockJob = {
-		data,
+	const mockStep = {
+		run: async <T>(name: string, fn: () => Promise<T>) => {
+			console.log(`[DirectAnalysis] Running step: ${name}`);
+			return fn();
+		},
 		updateProgress: async (progress: number) => {
 			console.log(`[DirectAnalysis] Progress: ${progress}%`);
 		},
 	};
 
-	// Call the core logic directly
-	return processAnalysisJob(mockJob as unknown as Job<AnalysisJob>);
-}
-
-import { connection } from "./index";
-
-let worker: Worker | null = null;
-
-export function startAnalysisWorker() {
-	if (worker) return worker;
-
-	console.log(`[Worker] Connecting to Redis...`);
-
-	worker = new Worker<AnalysisJob>("analysis", processAnalysisJob, {
-		connection,
-		concurrency: 2,
-	});
-
-	worker.on("error", (err) => {
-		console.error("[Worker] Connection error:", err);
-	});
-
-	worker.on("completed", (job) => {
-		console.log(`[Worker] Analysis job ${job.id} completed`);
-	});
-
-	worker.on("failed", (job, err) => {
-		console.error(`[Worker] Analysis job ${job?.id} failed:`, err);
-	});
-
-	worker.on("active", (job) => {
-		console.log(
-			`[Worker] Processing job ${job.id} for repo ${job.data.repoId}`,
-		);
-	});
-
-	return worker;
-}
-
-export async function addAnalysisJob(data: AnalysisJob) {
-	console.log(`[Queue] Adding analysis job for ${data.repoId}`);
-	return analysisQueue.add("analyze", data, {
-		jobId: data.repoId,
-	});
+	return coreAnalysisLogic(data, mockStep);
 }

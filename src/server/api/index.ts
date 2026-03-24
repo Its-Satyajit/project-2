@@ -1,6 +1,6 @@
 import Elysia from "elysia";
 import { rateLimit } from "~/server/middleware/rate-limit";
-import { analyzeRoute } from "./ analyze";
+import { analyzeRoute } from "./analyze";
 import { dashboardRoute } from "./dashboard";
 import { debugRoute } from "./debug";
 import { fileContentRoute } from "./file-content";
