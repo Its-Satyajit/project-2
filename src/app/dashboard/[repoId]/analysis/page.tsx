@@ -245,10 +245,10 @@ function AnalysisContent() {
 						<Loader2 className="relative h-12 w-12 animate-spin text-amber-500" />
 					</div>
 					<div className="text-center">
-						<p className="font-mono text-neutral-400 text-sm uppercase tracking-widest">
+						<p className="font-mono text-muted-foreground text-sm uppercase tracking-widest">
 							Analyzing Repository
 						</p>
-						<p className="mt-1 font-mono text-neutral-600 text-xs">
+						<p className="mt-1 font-mono text-muted-foreground text-xs">
 							Scanning dependencies...
 						</p>
 					</div>
@@ -269,7 +269,7 @@ function AnalysisContent() {
 					<h2 className="mb-2 font-mono font-semibold text-lg tracking-tight">
 						Unable to Load Repository
 					</h2>
-					<p className="mb-6 font-mono text-neutral-500 text-sm">
+					<p className="mb-6 font-mono text-muted-foreground text-sm">
 						The repository may not exist or may be private.
 					</p>
 					<button
@@ -306,13 +306,13 @@ function AnalysisContent() {
 			initial="hidden"
 			variants={containerVariants}
 		>
-			<div className="border-neutral-800 border-b bg-black/50 backdrop-blur-xl">
+			<div className="border-border border-b bg-background/50 backdrop-blur-xl">
 				<div className="mx-auto max-w-7xl px-6 py-5">
 					<motion.div variants={itemVariants}>
 						<div className="mb-5 flex items-start justify-between">
 							<div className="flex flex-col gap-1">
 								<button
-									className="group mb-3 flex w-fit items-center gap-2 text-left font-mono text-neutral-500 text-xs uppercase tracking-wider transition-colors hover:text-amber-500"
+									className="group mb-3 flex w-fit items-center gap-2 text-left font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors hover:text-amber-500"
 									onClick={() => router.push(`/dashboard/${repoId}`)}
 									type="button"
 								>
@@ -334,10 +334,10 @@ function AnalysisContent() {
 										</div>
 									)}
 									<div>
-										<h1 className="font-bold font-mono text-2xl text-neutral-100 tracking-tight">
+										<h1 className="font-bold font-mono text-2xl text-foreground tracking-tight">
 											{metadata?.fullName ?? "..."}
 										</h1>
-										<p className="font-mono text-neutral-500 text-xs uppercase tracking-widest">
+										<p className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
 											{status?.analysis?.summary
 												? "Comprehensive Analysis"
 												: "Dependency Analysis"}
@@ -412,27 +412,27 @@ function AnalysisContent() {
 										</CardTitle>
 									</div>
 									<div className="space-y-3">
-										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
-											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										<div className="flex items-center justify-between border-border border-b pb-2">
+											<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Total Files
 											</span>
-											<span className="font-data font-medium text-neutral-200 text-sm">
+											<span className="font-data font-medium text-foreground text-sm">
 												{summary.basic.totalFiles}
 											</span>
 										</div>
-										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
-											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										<div className="flex items-center justify-between border-border border-b pb-2">
+											<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Directories
 											</span>
-											<span className="font-data font-medium text-neutral-200 text-sm">
+											<span className="font-data font-medium text-foreground text-sm">
 												{summary.basic.totalDirectories}
 											</span>
 										</div>
 										<div className="flex items-center justify-between pb-2">
-											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+											<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Lines of Code
 											</span>
-											<span className="font-data font-medium text-neutral-200 text-sm">
+											<span className="font-data font-medium text-foreground text-sm">
 												{summary.basic.totalLines.toLocaleString()}
 											</span>
 										</div>
@@ -452,10 +452,10 @@ function AnalysisContent() {
 										</CardTitle>
 									</div>
 									<div className="mb-4 flex items-baseline gap-2">
-										<span className="font-bold font-mono text-neutral-100 text-xl">
+										<span className="font-bold font-mono text-foreground text-xl">
 											{summary.languages.primaryLanguage}
 										</span>
-										<span className="font-mono text-neutral-500 text-xs uppercase">
+										<span className="font-mono text-muted-foreground text-xs uppercase">
 											(Primary)
 										</span>
 									</div>
@@ -465,7 +465,7 @@ function AnalysisContent() {
 												className="flex items-center justify-between"
 												key={lang.name}
 											>
-												<span className="font-data text-neutral-400 text-xs">
+												<span className="font-data text-muted-foreground text-xs">
 													{lang.name}
 												</span>
 												<div className="flex items-center gap-2">
@@ -475,7 +475,7 @@ function AnalysisContent() {
 															style={{ width: `${lang.percentage}%` }}
 														/>
 													</div>
-													<span className="w-10 text-right font-data text-neutral-400 text-xs">
+													<span className="w-10 text-right font-data text-muted-foreground text-xs">
 														{lang.percentage.toFixed(1)}%
 													</span>
 												</div>
@@ -497,16 +497,16 @@ function AnalysisContent() {
 										</CardTitle>
 									</div>
 									<div className="space-y-3">
-										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
-											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										<div className="flex items-center justify-between border-border border-b pb-2">
+											<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Max Depth
 											</span>
-											<span className="font-data font-medium text-neutral-200 text-sm">
+											<span className="font-data font-medium text-foreground text-sm">
 												{summary.structure.maxDepth}
 											</span>
 										</div>
 										<div>
-											<span className="mb-2 block font-mono text-neutral-500 text-xs uppercase tracking-wider">
+											<span className="mb-2 block font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Top-level Directories
 											</span>
 											<div className="flex flex-wrap gap-1.5">
@@ -533,25 +533,25 @@ function AnalysisContent() {
 										</CardTitle>
 									</div>
 									<div className="space-y-3">
-										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
-											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										<div className="flex items-center justify-between border-border border-b pb-2">
+											<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Total Files
 											</span>
-											<span className="font-data font-medium text-neutral-200 text-sm">
+											<span className="font-data font-medium text-foreground text-sm">
 												{summary.dependencies.totalNodes}
 											</span>
 										</div>
-										<div className="flex items-center justify-between border-neutral-800 border-b pb-2">
-											<span className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										<div className="flex items-center justify-between border-border border-b pb-2">
+											<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 												Connections
 											</span>
-											<span className="font-data font-medium text-neutral-200 text-sm">
+											<span className="font-data font-medium text-foreground text-sm">
 												{summary.dependencies.totalEdges}
 											</span>
 										</div>
 										{summary.dependencies.mostDependedUpon.length > 0 && (
 											<div>
-												<h4 className="mb-2 font-medium font-mono text-neutral-500 text-xs uppercase tracking-wider">
+												<h4 className="mb-2 font-medium font-mono text-muted-foreground text-xs uppercase tracking-wider">
 													Most Depended Upon
 												</h4>
 												<div className="space-y-1.5">
@@ -562,7 +562,7 @@ function AnalysisContent() {
 																className="flex items-center justify-between"
 																key={item.path}
 															>
-																<span className="max-w-[180px] truncate font-data text-neutral-400 text-xs">
+																<span className="max-w-[180px] truncate font-data text-muted-foreground text-xs">
 																	{item.path.split("/").pop()}
 																</span>
 																<span className="font-data text-amber-500">
@@ -594,14 +594,14 @@ function AnalysisContent() {
 												.slice(0, 5)
 												.map((hotspot) => (
 													<div
-														className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900/50 p-2.5 transition-colors hover:border-neutral-700"
+														className="flex items-center justify-between rounded-md border border-border bg-secondary/50 p-2.5 transition-colors hover:border-border"
 														key={hotspot.path}
 													>
 														<div className="min-w-0 flex-1">
-															<p className="truncate font-data text-neutral-300 text-xs">
+															<p className="truncate font-data text-foreground text-xs">
 																{hotspot.path.split("/").pop()}
 															</p>
-															<p className="font-mono text-neutral-600 text-xs">
+															<p className="font-mono text-muted-foreground text-xs">
 																Score: {hotspot.score.toFixed(2)}
 															</p>
 														</div>
@@ -612,7 +612,7 @@ function AnalysisContent() {
 												))}
 										</div>
 									) : (
-										<p className="font-mono text-neutral-500 text-xs">
+										<p className="font-mono text-muted-foreground text-xs">
 											No hotspots detected.
 										</p>
 									)}
@@ -633,15 +633,15 @@ function AnalysisContent() {
 									<div className="space-y-2">
 										{summary.fileTypes.topExtensions.map((ext) => (
 											<div
-												className="flex items-center justify-between border-neutral-800 border-b py-1.5 last:border-0"
+												className="flex items-center justify-between border-border border-b py-1.5 last:border-0"
 												key={ext.extension}
 											>
 												<div className="flex items-center gap-2">
-													<span className="font-data text-neutral-400 text-xs">
+													<span className="font-data text-muted-foreground text-xs">
 														.{ext.extension}
 													</span>
 												</div>
-												<span className="font-data text-neutral-400 text-xs">
+												<span className="font-data text-muted-foreground text-xs">
 													{ext.count}
 												</span>
 											</div>
@@ -653,12 +653,12 @@ function AnalysisContent() {
 							<div className="card-glass flex flex-col items-center justify-center rounded-lg py-16">
 								<div className="relative mb-6">
 									<div className="absolute inset-0 animate-pulse rounded-full bg-amber-500/10 blur-xl" />
-									<BarChart3 className="relative h-12 w-12 text-neutral-600" />
+									<BarChart3 className="relative h-12 w-12 text-muted-foreground" />
 								</div>
-								<p className="font-mono text-neutral-400 text-sm">
+								<p className="font-mono text-muted-foreground text-sm">
 									Analysis in progress...
 								</p>
-								<p className="mt-1 font-mono text-neutral-600 text-xs">
+								<p className="mt-1 font-mono text-muted-foreground text-xs">
 									Summary data will appear once analysis completes.
 								</p>
 							</div>
@@ -671,7 +671,7 @@ function AnalysisContent() {
 								className="card-glass animate-fade-in-up rounded-lg p-5"
 								style={{ animationDelay: "0.1s" }}
 							>
-								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								<h3 className="mb-4 font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 									Top Imported Files
 								</h3>
 								<ResponsiveContainer height={280}>
@@ -693,11 +693,11 @@ function AnalysisContent() {
 												if (active && payload && payload.length && payload[0]) {
 													const data = payload[0];
 													return (
-														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
-															<p className="font-data text-neutral-200 text-xs">
+														<div className="rounded-md border border-border bg-secondary p-2 shadow-lg">
+															<p className="font-data text-foreground text-xs">
 																{data.payload.path}
 															</p>
-															<p className="mt-1 font-mono text-neutral-500 text-xs">
+															<p className="mt-1 font-mono text-muted-foreground text-xs">
 																{data.value} imports
 															</p>
 														</div>
@@ -719,7 +719,7 @@ function AnalysisContent() {
 								className="card-glass animate-fade-in-up rounded-lg p-5"
 								style={{ animationDelay: "0.15s" }}
 							>
-								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								<h3 className="mb-4 font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 									Language Distribution
 								</h3>
 								<ResponsiveContainer height={280}>
@@ -748,11 +748,11 @@ function AnalysisContent() {
 											content={({ active, payload }) => {
 												if (active && payload && payload.length && payload[0]) {
 													return (
-														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
-															<p className="font-mono text-neutral-200 text-xs">
+														<div className="rounded-md border border-border bg-secondary p-2 shadow-lg">
+															<p className="font-mono text-foreground text-xs">
 																{payload[0].name}
 															</p>
-															<p className="font-data text-neutral-500 text-xs">
+															<p className="font-data text-muted-foreground text-xs">
 																{payload[0].value?.toLocaleString()} files
 															</p>
 														</div>
@@ -769,7 +769,7 @@ function AnalysisContent() {
 								className="card-glass animate-fade-in-up rounded-lg p-5"
 								style={{ animationDelay: "0.2s" }}
 							>
-								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								<h3 className="mb-4 font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 									Files by Language
 								</h3>
 								<ResponsiveContainer height={280}>
@@ -793,11 +793,11 @@ function AnalysisContent() {
 													payload[0].payload
 												) {
 													return (
-														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
-															<p className="font-mono text-neutral-200 text-xs">
+														<div className="rounded-md border border-border bg-secondary p-2 shadow-lg">
+															<p className="font-mono text-foreground text-xs">
 																{payload[0].payload.name}
 															</p>
-															<p className="font-data text-neutral-500 text-xs">
+															<p className="font-data text-muted-foreground text-xs">
 																{payload[0].value} files
 															</p>
 														</div>
@@ -827,7 +827,7 @@ function AnalysisContent() {
 								className="card-glass animate-fade-in-up rounded-lg p-5"
 								style={{ animationDelay: "0.25s" }}
 							>
-								<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+								<h3 className="mb-4 font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 									Lines of Code by Language
 								</h3>
 								<ResponsiveContainer height={280}>
@@ -851,11 +851,11 @@ function AnalysisContent() {
 													payload[0].payload
 												) {
 													return (
-														<div className="rounded-md border border-neutral-700 bg-neutral-900 p-2 shadow-lg">
-															<p className="font-mono text-neutral-200 text-xs">
+														<div className="rounded-md border border-border bg-secondary p-2 shadow-lg">
+															<p className="font-mono text-foreground text-xs">
 																{payload[0].payload.name}
 															</p>
-															<p className="font-data text-neutral-500 text-xs">
+															<p className="font-data text-muted-foreground text-xs">
 																{Number(payload[0].value).toLocaleString()}{" "}
 																lines
 															</p>
@@ -886,7 +886,7 @@ function AnalysisContent() {
 							className="card-glass animate-fade-in-up rounded-lg p-5"
 							style={{ animationDelay: "0.3s" }}
 						>
-							<h3 className="mb-4 font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+							<h3 className="mb-4 font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 								Dependency Overview
 							</h3>
 							<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -894,7 +894,7 @@ function AnalysisContent() {
 									<p className="font-data font-semibold text-2xl text-amber-500">
 										{graph?.metadata.totalNodes ?? 0}
 									</p>
-									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Total Files
 									</p>
 								</div>
@@ -902,7 +902,7 @@ function AnalysisContent() {
 									<p className="font-data font-semibold text-2xl text-emerald-500">
 										{graph?.metadata.totalEdges ?? 0}
 									</p>
-									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Dependencies
 									</p>
 								</div>
@@ -910,7 +910,7 @@ function AnalysisContent() {
 									<p className="font-data font-semibold text-2xl text-orange-500">
 										{graph?.metadata.unresolvedImports ?? 0}
 									</p>
-									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Unresolved
 									</p>
 								</div>
@@ -921,7 +921,7 @@ function AnalysisContent() {
 												.length
 										}
 									</p>
-									<p className="font-mono text-neutral-500 text-xs uppercase tracking-wider">
+									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Languages
 									</p>
 								</div>
@@ -931,23 +931,19 @@ function AnalysisContent() {
 				) : activeTab === "treemap" ? (
 					<motion.div variants={itemVariants}>
 						<div className="mb-4 flex items-center justify-between">
-							<h3 className="font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+							<h3 className="font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 								File Treemap
 							</h3>
 							<div className="flex gap-2">
 								<button
-									className={`tab-pill ${
-										treemapColorMode === "language" ? "active" : ""
-									}`}
+									className={`tab-pill ${treemapColorMode === "language" ? "active" : ""}`}
 									onClick={() => setTreemapColorMode("language")}
 									type="button"
 								>
 									By Language
 								</button>
 								<button
-									className={`tab-pill ${
-										treemapColorMode === "hotspot" ? "active" : ""
-									}`}
+									className={`tab-pill ${treemapColorMode === "hotspot" ? "active" : ""}`}
 									onClick={() => setTreemapColorMode("hotspot")}
 									type="button"
 								>
@@ -968,7 +964,7 @@ function AnalysisContent() {
 				) : (
 					<motion.div variants={itemVariants}>
 						<div className="mb-4 flex items-center justify-between">
-							<h3 className="font-mono font-semibold text-neutral-400 text-xs uppercase tracking-widest">
+							<h3 className="font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 								Hotspots
 							</h3>
 							<div className="flex gap-2">
@@ -993,16 +989,16 @@ function AnalysisContent() {
 							<div className="card-glass rounded-lg p-5">
 								{/* Header with filter */}
 								<div className="mb-4 flex items-center justify-between">
-									<h4 className="font-medium font-mono text-neutral-500 text-xs uppercase tracking-wider">
+									<h4 className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Complexity vs. Connectivity
 									</h4>
 									{hotSpotData && hotSpotData.length > 0 && (
 										<div className="flex items-center gap-3">
-											<span className="font-mono text-neutral-600 text-xs">
+											<span className="font-mono text-muted-foreground text-xs">
 												Show top:
 											</span>
 											<select
-												className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 font-mono text-neutral-300 text-xs"
+												className="rounded border border-border bg-muted px-2 py-1 font-mono text-foreground text-xs"
 												defaultValue={Math.min(25, hotSpotData.length)}
 												onChange={(e) => {
 													// Store the filter value in a ref or state if needed
@@ -1234,7 +1230,7 @@ function AnalysisContent() {
 															style={{ minWidth: 220 }}
 														>
 															<div className="mb-2 flex items-start justify-between gap-2">
-																<p className="truncate font-semibold text-neutral-200 text-sm">
+																<p className="truncate font-semibold text-foreground text-sm">
 																	{data.path?.split("/").pop()}
 																</p>
 																<span
@@ -1243,36 +1239,36 @@ function AnalysisContent() {
 																	{severity}
 																</span>
 															</div>
-															<p className="mb-3 truncate font-mono text-neutral-500 text-xs">
+															<p className="mb-3 truncate font-mono text-muted-foreground text-xs">
 																{data.path}
 															</p>
 															<div className="grid grid-cols-2 gap-2 text-xs">
-																<div className="rounded bg-neutral-800/50 p-2">
-																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																<div className="rounded bg-muted/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-muted-foreground uppercase">
 																		Depended on by
 																	</div>
-																	<div className="font-semibold text-neutral-200">
+																	<div className="font-semibold text-foreground">
 																		{data.fanIn} files
 																	</div>
 																</div>
-																<div className="rounded bg-neutral-800/50 p-2">
-																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																<div className="rounded bg-muted/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-muted-foreground uppercase">
 																		Depends on
 																	</div>
-																	<div className="font-semibold text-neutral-200">
+																	<div className="font-semibold text-foreground">
 																		{data.fanOut} files
 																	</div>
 																</div>
-																<div className="rounded bg-neutral-800/50 p-2">
-																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																<div className="rounded bg-muted/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-muted-foreground uppercase">
 																		Lines of Code
 																	</div>
-																	<div className="font-semibold text-neutral-200">
+																	<div className="font-semibold text-foreground">
 																		{data.loc?.toLocaleString()}
 																	</div>
 																</div>
-																<div className="rounded bg-neutral-800/50 p-2">
-																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																<div className="rounded bg-muted/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-muted-foreground uppercase">
 																		Risk Score
 																	</div>
 																	<div
@@ -1373,34 +1369,34 @@ function AnalysisContent() {
 								</ResponsiveContainer>
 
 								{/* Legend */}
-								<div className="mt-4 flex flex-wrap items-center justify-center gap-4 border-neutral-800 border-t pt-4">
+								<div className="mt-4 flex flex-wrap items-center justify-center gap-4 border-border border-t pt-4">
 									<div className="flex items-center gap-4">
-										<span className="font-mono text-[10px] text-neutral-600 uppercase">
+										<span className="font-mono text-[10px] text-muted-foreground uppercase">
 											Risk Level:
 										</span>
 										<div className="flex items-center gap-1.5">
 											<div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
-											<span className="font-mono text-neutral-400 text-xs">
+											<span className="font-mono text-muted-foreground text-xs">
 												Critical
 											</span>
 										</div>
 										<div className="flex items-center gap-1.5">
 											<div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-											<span className="font-mono text-neutral-400 text-xs">
+											<span className="font-mono text-muted-foreground text-xs">
 												Warning
 											</span>
 										</div>
 										<div className="flex items-center gap-1.5">
 											<div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-											<span className="font-mono text-neutral-400 text-xs">
+											<span className="font-mono text-muted-foreground text-xs">
 												Normal
 											</span>
 										</div>
 									</div>
-									<div className="h-4 w-px bg-neutral-800" />
+									<div className="h-4 w-px bg-muted" />
 									<div className="flex items-center gap-2">
-										<span className="text-neutral-500 text-xs">○</span>
-										<span className="font-mono text-neutral-500 text-xs">
+										<span className="text-muted-foreground text-xs">○</span>
+										<span className="font-mono text-muted-foreground text-xs">
 											Size = LOC
 										</span>
 									</div>
@@ -1412,7 +1408,7 @@ function AnalysisContent() {
 										<span className="font-semibold text-rose-400">
 											HOTSPOTS
 										</span>
-										<span className="block text-neutral-500">
+										<span className="block text-muted-foreground">
 											Many depend on, many imports
 										</span>
 									</div>
@@ -1420,7 +1416,7 @@ function AnalysisContent() {
 										<span className="font-semibold text-amber-400">
 											UTILITIES
 										</span>
-										<span className="block text-neutral-500">
+										<span className="block text-muted-foreground">
 											Few depend on, many imports
 										</span>
 									</div>
@@ -1428,7 +1424,7 @@ function AnalysisContent() {
 										<span className="font-semibold text-blue-400">
 											DEPENDENTS
 										</span>
-										<span className="block text-neutral-500">
+										<span className="block text-muted-foreground">
 											Many depend on, few imports
 										</span>
 									</div>
@@ -1436,7 +1432,7 @@ function AnalysisContent() {
 										<span className="font-semibold text-emerald-400">
 											ISOLATED
 										</span>
-										<span className="block text-neutral-500">
+										<span className="block text-muted-foreground">
 											Few depend on, few imports
 										</span>
 									</div>
@@ -1511,7 +1507,7 @@ function AnalysisContent() {
 												<td className="font-data text-amber-500">
 													{hotspot.rank}
 												</td>
-												<td className="font-data text-neutral-300">
+												<td className="font-data text-foreground">
 													{hotspot.path}
 												</td>
 												<td>
@@ -1520,7 +1516,7 @@ function AnalysisContent() {
 												<td className="text-right">{hotspot.fanIn}</td>
 												<td className="text-right">{hotspot.fanOut}</td>
 												<td className="text-right">{hotspot.loc}</td>
-												<td className="text-right font-data text-neutral-300">
+												<td className="text-right font-data text-foreground">
 													{hotspot.score.toFixed(3)}
 												</td>
 											</tr>
@@ -1530,7 +1526,7 @@ function AnalysisContent() {
 							</div>
 						) : (
 							<div className="card-glass flex flex-col items-center justify-center rounded-lg py-16">
-								<p className="font-mono text-neutral-500 text-sm">
+								<p className="font-mono text-muted-foreground text-sm">
 									No hotspot data available.
 								</p>
 							</div>
@@ -1540,8 +1536,8 @@ function AnalysisContent() {
 							onOpenChange={(open) => !open && setSelectedHotspotFile(null)}
 							open={!!selectedHotspotFile}
 						>
-							<DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden border-neutral-800 bg-neutral-950 p-0">
-								<DialogHeader className="border-neutral-800 border-b p-4">
+							<DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden border-border bg-background p-0">
+								<DialogHeader className="border-border border-b p-4">
 									<div className="flex items-center justify-between">
 										<DialogTitle className="flex items-center gap-2 font-data text-sm">
 											<FileCode className="h-4 w-4 text-amber-500" />
@@ -1553,7 +1549,7 @@ function AnalysisContent() {
 													"text"}
 											</span>
 											<Button
-												className="h-8 bg-neutral-900 px-2 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-200"
+												className="h-8 bg-secondary px-2 text-muted-foreground hover:bg-muted hover:text-foreground"
 												onClick={() => {
 													if (hotspotFileContent) {
 														navigator.clipboard.writeText(hotspotFileContent);
@@ -1573,17 +1569,17 @@ function AnalysisContent() {
 										</div>
 									</div>
 								</DialogHeader>
-								<div className="flex-1 overflow-auto bg-[#0a0a0a]">
+								<div className="flex-1 overflow-auto bg-card">
 									{isHotspotContentLoading ? (
 										<div className="flex h-full flex-col items-center justify-center gap-4">
-											<Loader2 className="h-8 w-8 animate-spin text-neutral-600" />
-											<p className="font-mono text-neutral-500 text-xs">
+											<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+											<p className="font-mono text-muted-foreground text-xs">
 												Fetching content...
 											</p>
 										</div>
 									) : (
 										<div className="flex">
-											<div className="select-none border-neutral-800 border-r bg-[#0a0a0a] py-4 text-right text-neutral-700">
+											<div className="select-none border-border border-r bg-card py-4 text-right text-muted-foreground">
 												{hotspotFileContent?.split("\n").map((line, i) => {
 													const lineNum = i + 1;
 													return (
@@ -1596,7 +1592,7 @@ function AnalysisContent() {
 													);
 												})}
 											</div>
-											<pre className="flex-1 whitespace-pre-wrap py-4 pr-4 pl-4 font-data text-neutral-300 text-xs leading-relaxed">
+											<pre className="flex-1 whitespace-pre-wrap py-4 pr-4 pl-4 font-data text-foreground text-xs leading-relaxed">
 												<code>{hotspotFileContent}</code>
 											</pre>
 										</div>
@@ -1619,7 +1615,7 @@ function LoadingFallback() {
 					<div className="absolute inset-0 animate-pulse rounded-full bg-amber-500/20 blur-xl" />
 					<Loader2 className="relative h-12 w-12 animate-spin text-amber-500" />
 				</div>
-				<p className="font-mono text-neutral-400 text-sm uppercase tracking-widest">
+				<p className="font-mono text-muted-foreground text-sm uppercase tracking-widest">
 					Loading Analysis
 				</p>
 			</div>

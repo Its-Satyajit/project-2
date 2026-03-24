@@ -123,6 +123,7 @@ export class SlidingWindowRateLimiter {
 
 	async getCount(endpoint: string, identifier: string): Promise<number> {
 		const key = this.buildKey(endpoint, identifier);
+		const now = Date.now();
 		const count = await this.redis.zcount(key, "-inf", now);
 		return count;
 	}
