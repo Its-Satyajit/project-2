@@ -12,7 +12,7 @@ async function getPyParser(): Promise<Parser> {
 		parser = new Parser();
 		const wasmPath = path.join(
 			process.cwd(),
-			"public/tree-sitter/wasm/tree-sitter-python.wasm",
+			"node_modules/@vscode/tree-sitter-wasm/wasm/tree-sitter-python.wasm",
 		);
 		const wasmBuffer = fs.readFileSync(wasmPath);
 		pyLanguage = await Language.load(wasmBuffer);

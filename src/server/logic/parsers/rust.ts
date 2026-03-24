@@ -36,7 +36,7 @@ async function getRustParser(): Promise<Parser> {
 		parser = new Parser();
 		const wasmPath = path.join(
 			process.cwd(),
-			"public/tree-sitter/wasm/tree-sitter-rust.wasm",
+			"node_modules/@vscode/tree-sitter-wasm/wasm/tree-sitter-rust.wasm",
 		);
 		const wasmBuffer = fs.readFileSync(wasmPath);
 		rustLanguage = await Language.load(wasmBuffer);

@@ -13,6 +13,9 @@ const config: NextConfig = {
 			},
 		],
 	},
+	outputFileTracingIncludes: {
+		"/api/**/*": ["node_modules/@vscode/tree-sitter-wasm/wasm/*.wasm"],
+	},
 	async headers() {
 		return [
 			{
