@@ -24,6 +24,7 @@ import React, { Activity, Suspense, useMemo, useState } from "react";
 import {
 	Bar,
 	BarChart,
+	CartesianGrid,
 	Cell,
 	Pie,
 	PieChart,
@@ -990,116 +991,306 @@ function AnalysisContent() {
 
 						{hotspotViewMode === "scatter" ? (
 							<div className="card-glass rounded-lg p-5">
-								<h4 className="mb-4 font-medium font-mono text-neutral-500 text-xs uppercase tracking-wider">
-									Complexity vs. Connectivity
-								</h4>
-								<ResponsiveContainer height={450}>
+								{/* Header with filter */}
+								<div className="mb-4 flex items-center justify-between">
+									<h4 className="font-medium font-mono text-neutral-500 text-xs uppercase tracking-wider">
+										Complexity vs. Connectivity
+									</h4>
+									{hotSpotData && hotSpotData.length > 0 && (
+										<div className="flex items-center gap-3">
+											<span className="font-mono text-neutral-600 text-xs">
+												Show top:
+											</span>
+											<select
+												className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 font-mono text-neutral-300 text-xs"
+												defaultValue={Math.min(25, hotSpotData.length)}
+												onChange={(e) => {
+													// Store the filter value in a ref or state if needed
+													// For now, we'll use a simple approach
+													const container = e.target.closest(".card-glass");
+													if (container) {
+														const scatter =
+															container.querySelector(".recharts-scatter");
+														if (scatter) {
+															// Trigger re-render by updating data attribute
+															scatter.setAttribute(
+																"data-limit",
+																e.target.value,
+															);
+														}
+													}
+												}}
+											>
+												<option value={10}>10</option>
+												<option value={25}>25</option>
+												<option value={50}>50</option>
+												<option value={hotSpotData.length}>
+													All ({hotSpotData.length})
+												</option>
+											</select>
+										</div>
+									)}
+								</div>
+
+								{/* Chart with quadrant backgrounds */}
+								<ResponsiveContainer height={420}>
 									<ScatterChart
-										margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+										margin={{ top: 30, right: 30, bottom: 60, left: 60 }}
 									>
+										{/* Quadrant background rectangles */}
+										{(() => {
+											if (!hotSpotData || hotSpotData.length === 0) return null;
+											const maxFanIn = Math.max(
+												...hotSpotData.map((d) => d.fanIn),
+												1,
+											);
+											const maxFanOut = Math.max(
+												...hotSpotData.map((d) => d.fanOut),
+												1,
+											);
+											const midFanIn = maxFanIn / 2;
+											const midFanOut = maxFanOut / 2;
+											return (
+												<>
+													{/* Top-right: Hubs (high both) - Red zone */}
+													<rect
+														fill="#f43f5e"
+														fillOpacity={0.03}
+														height={210}
+														width={window.innerWidth > 768 ? 350 : 150}
+														x={midFanIn}
+														y={0}
+													/>
+													{/* Top-left: Utilities (high fan-out, low fan-in) - Yellow zone */}
+													<rect
+														fill="#f59e0b"
+														fillOpacity={0.03}
+														height={210}
+														width={window.innerWidth > 768 ? 350 : 150}
+														x={0}
+														y={0}
+													/>
+													{/* Bottom-right: Dependents (high fan-in, low fan-out) - Blue zone */}
+													<rect
+														fill="#3b82f6"
+														fillOpacity={0.03}
+														height={210}
+														width={window.innerWidth > 768 ? 350 : 150}
+														x={midFanIn}
+														y={midFanOut}
+													/>
+													{/* Bottom-left: Isolated (low both) - Green zone */}
+													<rect
+														fill="#10b981"
+														fillOpacity={0.03}
+														height={210}
+														width={window.innerWidth > 768 ? 350 : 150}
+														x={0}
+														y={midFanOut}
+													/>
+												</>
+											);
+										})()}
+										<CartesianGrid
+											stroke="#1f1f1f"
+											strokeDasharray="3 3"
+											vertical={true}
+										/>
 										<XAxis
-											axisLine={{ stroke: "#262626" }}
+											axisLine={{ stroke: "#333" }}
 											dataKey="fanIn"
 											label={{
-												value: "Fan-in (Dependencies)",
+												value: "Dependencies (files that depend on this)",
 												position: "bottom",
-												fill: "#525252",
+												offset: 40,
+												fill: "#737373",
 												fontSize: 11,
 												fontFamily: "IBM Plex Mono",
 											}}
-											name="Fan-in"
-											tick={{ fill: "#525252", fontSize: 11 }}
+											name="Dependencies"
+											tick={{ fill: "#737373", fontSize: 10 }}
+											tickLine={{ stroke: "#333" }}
 											type="number"
 										/>
 										<YAxis
-											axisLine={{ stroke: "#262626" }}
+											axisLine={{ stroke: "#333" }}
 											dataKey="fanOut"
 											label={{
-												value: "Fan-out (Imports)",
+												value: "Imports (files this depends on)",
 												angle: -90,
 												position: "insideLeft",
-												fill: "#525252",
+												offset: 50,
+												fill: "#737373",
 												fontSize: 11,
 												fontFamily: "IBM Plex Mono",
 											}}
-											name="Fan-out"
-											tick={{ fill: "#525252", fontSize: 11 }}
+											name="Imports"
+											tick={{ fill: "#737373", fontSize: 10 }}
+											tickLine={{ stroke: "#333" }}
 											type="number"
 										/>
 										<ZAxis
 											dataKey="loc"
 											domain={[0, "auto"]}
 											name="LOC"
-											range={[100, 600]}
+											range={[80, 500]}
 										/>
+										{/* Quadrant labels */}
+										{(() => {
+											if (!hotSpotData || hotSpotData.length === 0) return null;
+											const maxFanIn = Math.max(
+												...hotSpotData.map((d) => d.fanIn),
+												1,
+											);
+											const maxFanOut = Math.max(
+												...hotSpotData.map((d) => d.fanOut),
+												1,
+											);
+											const midFanIn = maxFanIn / 2;
+											const midFanOut = maxFanOut / 2;
+											return (
+												<>
+													{/* Top-right: Hubs */}
+													<text
+														fill="#f43f5e"
+														fillOpacity={0.4}
+														fontFamily="IBM Plex Mono"
+														fontSize={10}
+														fontWeight={600}
+														textAnchor="middle"
+														x={midFanIn + (maxFanIn - midFanIn) / 2}
+														y={20}
+													>
+														HOTSPOTS
+													</text>
+													{/* Top-left: Utilities */}
+													<text
+														fill="#f59e0b"
+														fillOpacity={0.4}
+														fontFamily="IBM Plex Mono"
+														fontSize={10}
+														fontWeight={600}
+														textAnchor="middle"
+														x={midFanIn / 2}
+														y={20}
+													>
+														UTILITIES
+													</text>
+													{/* Bottom-right: Dependents */}
+													<text
+														fill="#3b82f6"
+														fillOpacity={0.4}
+														fontFamily="IBM Plex Mono"
+														fontSize={10}
+														fontWeight={600}
+														textAnchor="middle"
+														x={midFanIn + (maxFanIn - midFanIn) / 2}
+														y={400}
+													>
+														DEPENDENTS
+													</text>
+													{/* Bottom-left: Isolated */}
+													<text
+														fill="#10b981"
+														fillOpacity={0.4}
+														fontFamily="IBM Plex Mono"
+														fontSize={10}
+														fontWeight={600}
+														textAnchor="middle"
+														x={midFanIn / 2}
+														y={400}
+													>
+														ISOLATED
+													</text>
+												</>
+											);
+										})()}
 										<Tooltip
 											content={({ active, payload }) => {
 												if (active && payload && payload.length && payload[0]) {
-													const data = payload[0].payload;
+													const data = payload[0].payload as HotspotDataPoint;
+													const severity =
+														data.score >= 8
+															? "critical"
+															: data.score >= 5
+																? "warning"
+																: "normal";
+													const severityColor =
+														severity === "critical"
+															? "text-rose-400"
+															: severity === "warning"
+																? "text-amber-400"
+																: "text-emerald-400";
+													const severityBg =
+														severity === "critical"
+															? "bg-rose-500/10 border-rose-500/30"
+															: severity === "warning"
+																? "bg-amber-500/10 border-amber-500/30"
+																: "bg-emerald-500/10 border-emerald-500/30";
+
 													return (
 														<div
-															className="rounded-lg border border-neutral-700 bg-neutral-900 p-3 shadow-xl"
-															style={{ minWidth: 200 }}
+															className={`rounded-lg border ${severityBg} p-3 shadow-xl backdrop-blur-sm`}
+															style={{ minWidth: 220 }}
 														>
-															<p className="truncate font-data font-medium text-neutral-200 text-sm">
-																{data.path?.split("/").pop()}
-															</p>
-															<p className="mb-2 truncate font-mono text-neutral-500 text-xs">
+															<div className="mb-2 flex items-start justify-between gap-2">
+																<p className="truncate font-semibold text-neutral-200 text-sm">
+																	{data.path?.split("/").pop()}
+																</p>
+																<span
+																	className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${severityColor}`}
+																>
+																	{severity}
+																</span>
+															</div>
+															<p className="mb-3 truncate font-mono text-neutral-500 text-xs">
 																{data.path}
 															</p>
-															<div className="space-y-1">
-																<div className="flex justify-between gap-4">
-																	<span className="font-mono text-neutral-500 text-xs">
-																		Fan-in:
-																	</span>
-																	<span className="font-data text-neutral-300 text-xs">
-																		{data.fanIn}
-																	</span>
+															<div className="grid grid-cols-2 gap-2 text-xs">
+																<div className="rounded bg-neutral-800/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																		Depended on by
+																	</div>
+																	<div className="font-semibold text-neutral-200">
+																		{data.fanIn} files
+																	</div>
 																</div>
-																<div className="flex justify-between gap-4">
-																	<span className="font-mono text-neutral-500 text-xs">
-																		Fan-out:
-																	</span>
-																	<span className="font-data text-neutral-300 text-xs">
-																		{data.fanOut}
-																	</span>
+																<div className="rounded bg-neutral-800/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																		Depends on
+																	</div>
+																	<div className="font-semibold text-neutral-200">
+																		{data.fanOut} files
+																	</div>
 																</div>
-																<div className="flex justify-between gap-4">
-																	<span className="font-mono text-neutral-500 text-xs">
-																		LOC:
-																	</span>
-																	<span className="font-data text-neutral-300 text-xs">
+																<div className="rounded bg-neutral-800/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																		Lines of Code
+																	</div>
+																	<div className="font-semibold text-neutral-200">
 																		{data.loc?.toLocaleString()}
-																	</span>
+																	</div>
 																</div>
-																<div className="mt-1 flex justify-between gap-4 border-neutral-800 border-t pt-1">
-																	<span className="font-mono text-neutral-500 text-xs">
-																		Score:
-																	</span>
-																	<span
-																		className={`font-data font-semibold text-xs ${
-																			data.score >= 8
-																				? "text-rose-500"
-																				: data.score >= 5
-																					? "text-amber-500"
-																					: "text-emerald-500"
-																		}`}
+																<div className="rounded bg-neutral-800/50 p-2">
+																	<div className="mb-0.5 font-mono text-[10px] text-neutral-500 uppercase">
+																		Risk Score
+																	</div>
+																	<div
+																		className={`font-semibold ${severityColor}`}
 																	>
-																		{data.score?.toFixed(3)}
-																	</span>
+																		{data.score?.toFixed(2)}
+																	</div>
 																</div>
 															</div>
-															<div className="mt-2 border-neutral-800 border-t pt-2">
-																<button
-																	className="font-mono text-amber-500 text-xs uppercase tracking-wider transition-colors hover:text-amber-400"
-																	onClick={() =>
-																		setSelectedHotspotFile(data.path)
-																	}
-																	type="button"
-																>
-																	View Code →
-																</button>
-															</div>
+															<button
+																className="mt-3 w-full rounded border border-amber-500/30 bg-amber-500/10 py-1.5 font-mono text-amber-400 text-xs uppercase tracking-wider transition-colors hover:bg-amber-500/20"
+																onClick={() =>
+																	setSelectedHotspotFile(data.path)
+																}
+																type="button"
+															>
+																View Source Code →
+															</button>
 														</div>
 													);
 												}
@@ -1109,7 +1300,6 @@ function AnalysisContent() {
 										/>
 										<Scatter
 											data={hotSpotData ?? undefined}
-											fill="#f59e0b"
 											onClick={(data) => {
 												if (data && "path" in data) {
 													setSelectedHotspotFile(
@@ -1125,9 +1315,13 @@ function AnalysisContent() {
 												const { cx, cy, payload } = props;
 												if (!cx || !cy || !payload) return null;
 
-												const radius = Math.max(
-													6,
-													Math.min(20, Math.sqrt(payload.loc || 100) / 3),
+												// Better radius calculation: logarithmic scale for better distribution
+												const baseRadius = Math.max(
+													5,
+													Math.min(
+														25,
+														4 * Math.log2(Math.max(payload.loc, 1) + 1),
+													),
 												);
 												const severity =
 													payload.score >= 8
@@ -1135,39 +1329,42 @@ function AnalysisContent() {
 														: payload.score >= 5
 															? "warning"
 															: "normal";
-												const color =
+												const fillColor =
 													severity === "critical"
 														? "#f43f5e"
 														: severity === "warning"
 															? "#f59e0b"
 															: "#10b981";
+												const glowColor =
+													severity === "critical"
+														? "rgba(244, 63, 94, 0.4)"
+														: severity === "warning"
+															? "rgba(245, 158, 11, 0.4)"
+															: "rgba(16, 185, 129, 0.2)";
 
 												return (
 													<g>
+														{/* Glow effect for critical files */}
+														{severity === "critical" && (
+															<circle
+																cx={cx}
+																cy={cy}
+																fill={glowColor}
+																r={baseRadius + 4}
+															/>
+														)}
+														{/* Main circle */}
 														<circle
 															cx={cx}
 															cy={cy}
-															fill={color}
-															fillOpacity={0.7}
-															r={radius}
-															stroke={color}
-															strokeOpacity={0.9}
-															strokeWidth={2}
+															fill={fillColor}
+															fillOpacity={0.6}
+															r={baseRadius}
+															stroke={fillColor}
+															strokeOpacity={1}
+															strokeWidth={severity === "critical" ? 2.5 : 1.5}
 															style={{ cursor: "pointer" }}
 														/>
-														<text
-															dominantBaseline="middle"
-															fill="#fff"
-															fontFamily="JetBrains Mono"
-															fontSize={Math.max(8, radius - 2)}
-															fontWeight={500}
-															pointerEvents="none"
-															textAnchor="middle"
-															x={cx}
-															y={cy}
-														>
-															{payload.rank}
-														</text>
 													</g>
 												);
 											}}
@@ -1175,39 +1372,72 @@ function AnalysisContent() {
 									</ScatterChart>
 								</ResponsiveContainer>
 
-								<div className="mt-4 flex items-center justify-center gap-6">
-									<div className="flex items-center gap-2">
-										<div className="h-3 w-3 rounded-full border border-rose-500 bg-rose-500/70" />
-										<span className="font-mono text-neutral-500 text-xs uppercase">
-											Critical (8+)
+								{/* Legend */}
+								<div className="mt-4 flex flex-wrap items-center justify-center gap-4 border-neutral-800 border-t pt-4">
+									<div className="flex items-center gap-4">
+										<span className="font-mono text-[10px] text-neutral-600 uppercase">
+											Risk Level:
 										</span>
+										<div className="flex items-center gap-1.5">
+											<div className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+											<span className="font-mono text-neutral-400 text-xs">
+												Critical
+											</span>
+										</div>
+										<div className="flex items-center gap-1.5">
+											<div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+											<span className="font-mono text-neutral-400 text-xs">
+												Warning
+											</span>
+										</div>
+										<div className="flex items-center gap-1.5">
+											<div className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+											<span className="font-mono text-neutral-400 text-xs">
+												Normal
+											</span>
+										</div>
 									</div>
+									<div className="h-4 w-px bg-neutral-800" />
 									<div className="flex items-center gap-2">
-										<div className="h-3 w-3 rounded-full border border-amber-500 bg-amber-500/70" />
-										<span className="font-mono text-neutral-500 text-xs uppercase">
-											Warning (5-8)
-										</span>
-									</div>
-									<div className="flex items-center gap-2">
-										<div className="h-3 w-3 rounded-full border border-emerald-500 bg-emerald-500/70" />
-										<span className="font-mono text-neutral-500 text-xs uppercase">
-											Normal (&lt;5)
-										</span>
-									</div>
-									<div className="ml-4 flex items-center gap-2">
-										<span className="font-mono text-neutral-600 text-xs">
-											●
-										</span>
+										<span className="text-neutral-500 text-xs">○</span>
 										<span className="font-mono text-neutral-500 text-xs">
-											Circle size = LOC
+											Size = LOC
 										</span>
 									</div>
-									<div className="flex items-center gap-2">
-										<span className="font-mono text-neutral-600 text-xs">
-											#
+								</div>
+
+								{/* Quadrant explanation */}
+								<div className="mt-3 grid grid-cols-2 gap-2 text-[10px] sm:grid-cols-4">
+									<div className="rounded bg-rose-500/5 p-2 text-center">
+										<span className="font-semibold text-rose-400">
+											HOTSPOTS
 										</span>
-										<span className="font-mono text-neutral-500 text-xs">
-											Number = Rank
+										<span className="block text-neutral-500">
+											Many depend on, many imports
+										</span>
+									</div>
+									<div className="rounded bg-amber-500/5 p-2 text-center">
+										<span className="font-semibold text-amber-400">
+											UTILITIES
+										</span>
+										<span className="block text-neutral-500">
+											Few depend on, many imports
+										</span>
+									</div>
+									<div className="rounded bg-blue-500/5 p-2 text-center">
+										<span className="font-semibold text-blue-400">
+											DEPENDENTS
+										</span>
+										<span className="block text-neutral-500">
+											Many depend on, few imports
+										</span>
+									</div>
+									<div className="rounded bg-emerald-500/5 p-2 text-center">
+										<span className="font-semibold text-emerald-400">
+											ISOLATED
+										</span>
+										<span className="block text-neutral-500">
+											Few depend on, few imports
 										</span>
 									</div>
 								</div>

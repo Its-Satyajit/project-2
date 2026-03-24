@@ -60,12 +60,17 @@ export async function parseTypescript(
 						nodeType === "call_expression" ||
 						findChildByPattern(node, "import")?.text === "import";
 
+					// Check if this is a require() call
+					const isRequire =
+						nodeType === "call_expression" &&
+						findChildByPattern(node, "identifier")?.text === "require";
+
 					const raw = content.slice(node.startIndex, node.endIndex);
 
 					imports.push({
 						raw: raw.trim(),
 						source,
-						isDynamic: nodeType === "call_expression" && isDynamic,
+						isDynamic: isDynamic && !isRequire,
 					});
 				}
 			}

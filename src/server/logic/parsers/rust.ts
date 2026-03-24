@@ -171,16 +171,12 @@ export async function parseRust(
 					const match = text.match(/^use\s+([^;]+)/);
 					if (match) {
 						const source = match[1].trim();
-						const resolved = rustImportToFilePath(source, filePath);
-						if (resolved) {
-							if (!resolved.isExternal) {
-								imports.push({
-									raw: text,
-									source: resolved.filePath,
-									isDynamic: false,
-								});
-							}
-						}
+						// Return the source as-is, let dependency analysis resolve it
+						imports.push({
+							raw: text,
+							source,
+							isDynamic: false,
+						});
 					}
 				}
 			}

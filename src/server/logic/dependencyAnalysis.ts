@@ -199,6 +199,29 @@ export async function performDependencyAnalysis(
 	const normalizedFilePaths = codeFiles.map((f) => f.path.replace(/\\/g, "/"));
 	const filePathSet = new Set(normalizedFilePaths);
 
+	// Build Rust crate mapping from file paths
+	// e.g., files in core/src/ -> crate name "core" (from Cargo.toml name "devbind_core")
+	const rustCrateMapping: Record<string, string> = {};
+	const crateDirs = new Set<string>();
+	for (const filePath of normalizedFilePaths) {
+		// Match patterns like "core/src/lib.rs" or "cli/src/main.rs"
+		const match = filePath.match(/^([^/]+)\/src\/.*\.rs$/);
+		if (match?.[1]) {
+			crateDirs.add(match[1]);
+		}
+	}
+	// Map crate directory names to themselves for now
+	// In a real implementation, we'd parse Cargo.toml to get the actual crate names
+	for (const dir of crateDirs) {
+		rustCrateMapping[dir] = dir;
+		// Also try common naming patterns: core -> devbind_core, etc.
+		// This is a heuristic and may not work for all projects
+	}
+	console.log(
+		`[DependencyAnalysis] Rust crate directories found:`,
+		Array.from(crateDirs),
+	);
+
 	console.log(
 		`[DependencyAnalysis] File path set (sample):`,
 		Array.from(filePathSet).slice(0, 5),

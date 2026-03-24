@@ -22,6 +22,8 @@ export interface PathResolverConfig {
 	extensions?: string[];
 	// Base directory for resolution
 	baseDir?: string;
+	// Rust crate name to directory mapping
+	rustCrateMapping?: Record<string, string>;
 }
 
 // Default extensions to try
@@ -105,6 +107,7 @@ export class PathResolver {
 			externalPatterns: config.externalPatterns ?? DEFAULT_EXTERNAL_PATTERNS,
 			extensions: config.extensions ?? DEFAULT_EXTENSIONS,
 			baseDir: config.baseDir ?? "",
+			rustCrateMapping: config.rustCrateMapping ?? {},
 		};
 	}
 
@@ -185,6 +188,14 @@ export class PathResolver {
 	}
 
 	/**
+	 * Check if a crate name is explicitly marked as external (for Rust imports)
+	 * This only checks the explicitly marked packages, not pattern-based detection
+	 */
+	private isExplicitlyExternal(crateName: string): boolean {
+		return this.externalPatternCache.has(crateName);
+	}
+
+	/**
 	 * Clean source string (remove quotes, trim)
 	 */
 	private cleanSource(source: string): string {
@@ -226,6 +237,160 @@ export class PathResolver {
 		}
 
 		return resolved.join("/");
+	}
+
+	/**
+	 * Convert crate name to directory name (e.g., devbind_core -> core)
+	 */
+	private crateNameToDir(crateName: string): string {
+		// Check configured mapping first
+		if (this.config.rustCrateMapping?.[crateName]) {
+			return this.config.rustCrateMapping[crateName];
+		}
+		// Heuristic: convert snake_case crate name to directory name
+		// e.g., devbind_core -> core, my_crate -> crate
+		const parts = crateName.split("_");
+		if (parts.length > 1) {
+			// Return the last part as the likely directory name
+			const lastPart = parts[parts.length - 1];
+			return lastPart ?? crateName;
+		}
+		// Single word crate name - use as-is
+		return crateName;
+	}
+
+	/**
+	 * Find the crate root directory from a file path
+	 * e.g., "cli/src/cmd/add.rs" -> "cli", "core/src/config.rs" -> "core"
+	 */
+	private findCrateRoot(filePath: string): string | null {
+		const parts = filePath.split("/");
+		// Look for pattern: <crate>/src/...
+		const srcIndex = parts.indexOf("src");
+		if (srcIndex > 0) {
+			const crateName = parts[srcIndex - 1];
+			return crateName ?? null;
+		}
+		return null;
+	}
+
+	/**
+	 * Resolve a Rust-style import using :: syntax
+	 */
+	private resolveRustImport(source: string, filePath: string): ResolvedImport {
+		// Handle crate:: imports (relative to crate root)
+		if (source.startsWith("crate::")) {
+			const modulePath = source.slice(7); // Remove "crate::"
+			const crateRoot = this.findCrateRoot(filePath);
+			if (crateRoot) {
+				// Convert module path to file path: config::DevBindConfig -> config.rs
+				const pathParts = modulePath.split("::");
+				// Take only the module path, not the type/item name
+				const moduleFilePath = pathParts.slice(0, -1).join("/");
+				const resolved = moduleFilePath
+					? `${crateRoot}/src/${moduleFilePath}.rs`
+					: `${crateRoot}/src/lib.rs`;
+				return {
+					original: source,
+					resolved: this.normalizePath(resolved),
+					isExternal: false,
+				};
+			}
+			// Fallback if we can't determine crate root
+			const modulePath2 = source.slice(7);
+			const pathParts2 = modulePath2.split("::");
+			const moduleFilePath2 = pathParts2.slice(0, -1).join("/");
+			const resolved2 = moduleFilePath2
+				? `src/${moduleFilePath2}.rs`
+				: "src/lib.rs";
+			return {
+				original: source,
+				resolved: resolved2,
+				isExternal: false,
+			};
+		}
+
+		// Handle super:: imports (parent module)
+		if (source.startsWith("super::")) {
+			const modulePath = source.slice(7); // Remove "super::"
+			const fileDir = filePath.includes("/")
+				? filePath.slice(0, filePath.lastIndexOf("/"))
+				: "";
+			// Go up one directory level
+			const parentDir = fileDir.includes("/")
+				? fileDir.slice(0, fileDir.lastIndexOf("/"))
+				: "";
+			const pathParts = modulePath.split("::");
+			// For super::module::item, we want "module" (pathParts[0])
+			// For super::module, we want "module" (pathParts[0])
+			const moduleFilePath =
+				pathParts.length > 1
+					? pathParts.slice(0, -1).join("/") // Exclude item name
+					: (pathParts[0] ?? ""); // Just the module name
+			const resolved = moduleFilePath
+				? `${parentDir}/${moduleFilePath}.rs`
+				: `${parentDir}.rs`;
+			return {
+				original: source,
+				resolved: this.normalizePath(resolved),
+				isExternal: false,
+			};
+		}
+
+		// Handle self:: imports (same module)
+		if (source.startsWith("self::")) {
+			const modulePath = source.slice(6); // Remove "self::"
+			const fileDir = filePath.includes("/")
+				? filePath.slice(0, filePath.lastIndexOf("/"))
+				: "";
+			const pathParts = modulePath.split("::");
+			const moduleFilePath = pathParts.slice(0, -1).join("/");
+			const resolved = moduleFilePath
+				? `${fileDir}/${moduleFilePath}.rs`
+				: filePath;
+			return {
+				original: source,
+				resolved: this.normalizePath(resolved),
+				isExternal: false,
+			};
+		}
+
+		// Handle external crate imports (e.g., anyhow::Error, serde::Serialize)
+		// Use isExplicitlyExternal to only check explicitly marked packages,
+		// not pattern-based detection which would incorrectly match local crate names
+		const crateNameParts = source.split("::");
+		const crateName = crateNameParts[0] ?? "";
+		if (this.isExplicitlyExternal(crateName)) {
+			return {
+				original: source,
+				resolved: null,
+				isExternal: true,
+			};
+		}
+
+		// Handle local crate imports (e.g., devbind_core::config::DevBindConfig)
+		// This is a crate import that should be resolved to a local file
+		const parts = source.split("::");
+		const crateName2 = parts[0] ?? "";
+		// For imports like "crate::module::item", we want just "module" (parts[1])
+		// For imports like "crate::module", we want "module" (parts[1])
+		// So we take parts[1] if it exists (excluding the crate name and item name)
+		const modulePath =
+			parts.length > 2
+				? parts.slice(1, -1).join("/") // Exclude crate name and item name
+				: (parts[1] ?? ""); // Just the module name (no item)
+
+		// Try to find which crate directory this belongs to
+		const crateDir = this.crateNameToDir(crateName2);
+		const resolved = modulePath
+			? `${crateDir}/src/${modulePath}.rs`
+			: `${crateDir}/src/lib.rs`;
+
+		return {
+			original: source,
+			resolved: this.normalizePath(resolved),
+			isExternal: false,
+		};
 	}
 
 	/**
@@ -313,6 +478,11 @@ export class PathResolver {
 				resolved,
 				isExternal: false,
 			};
+		}
+
+		// Handle Rust-style imports with :: syntax (crate::, super::, self::, or external/local crate)
+		if (cleanedSource.includes("::")) {
+			return this.resolveRustImport(cleanedSource, filePath);
 		}
 
 		// Bare imports (no ./ or alias prefix) - treat as external
