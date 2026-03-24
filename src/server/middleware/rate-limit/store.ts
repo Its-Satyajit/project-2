@@ -33,21 +33,28 @@ export class RateLimitStore {
 	 */
 	async connect(): Promise<void> {
 		try {
-			this.redis = new Redis({
-				host: this.config.host,
-				port: this.config.port,
-				password: this.config.password,
+			const options = {
 				keyPrefix: this.config.keyPrefix,
-				maxRetriesPerRequest: 1,
+				maxRetriesPerRequest: 3, // Changed from 1 to 3
 				lazyConnect: true,
 				connectTimeout: 5000,
+				enableReadyCheck: true, // New option
 				retryStrategy(times: number) {
 					if (times > 3) {
 						return null; // Stop retrying
 					}
 					return Math.min(times * 200, 2000);
 				},
-			});
+			};
+
+			this.redis = this.config.url
+				? new Redis(this.config.url, options)
+				: new Redis({
+						host: this.config.host,
+						port: this.config.port,
+						password: this.config.password,
+						...options,
+				  });
 
 			await this.redis.connect();
 			this.limiter = new SlidingWindowRateLimiter(
@@ -183,6 +190,7 @@ let storeInstance: RateLimitStore | null = null;
 export function getRateLimitStore(config?: RedisStoreConfig): RateLimitStore {
 	if (!storeInstance) {
 		const storeConfig: RedisStoreConfig = config ?? {
+			url: process.env.REDIS_URL,
 			host: process.env.REDIS_HOST ?? "localhost",
 			port: Number.parseInt(process.env.REDIS_PORT ?? "6379", 10),
 			password: process.env.REDIS_PASSWORD,

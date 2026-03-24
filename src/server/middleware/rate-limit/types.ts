@@ -102,6 +102,7 @@ export const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
  * Redis store configuration
  */
 export interface RedisStoreConfig {
+	url?: string;
 	host: string;
 	port: number;
 	password?: string;

@@ -1,6 +1,8 @@
-# Git Insights
+# Git Insights Analyzer
 
 A deep repository analyzer built on the T3 Stack. It provides structural analysis, hotspot detection, and visual insights into your GitHub repositories.
+
+**Repository:** [https://github.com/Its-Satyajit/git-insights-analyzer](https://github.com/Its-Satyajit/git-insights-analyzer)
 
 ---
 

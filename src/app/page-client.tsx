@@ -12,7 +12,6 @@ import {
 	Workflow,
 	Zap,
 } from "lucide-react";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { toast } from "sonner";
 
@@ -83,13 +82,13 @@ export default function HomeClient() {
 
 		onSubmit: async ({ value }) => {
 			const res = await api.analyze.post({ githubUrl: value.githubUrl });
-			if (res.error || !res?.data?.repoId) {
+			if (res.error || !(res.data as any)?.repoId) {
 				toast.error(
 					"Unable to analyze repository. Check the URL and try again.",
 				);
 				return;
 			}
-			redirect(`/dashboard/${res.data.repoId}`);
+			redirect(`/dashboard/${(res.data as any).repoId}`);
 		},
 	});
 
@@ -272,6 +271,7 @@ export default function HomeClient() {
 							{Array.from({ length: 4 }).map((_, i) => (
 								<Card
 									className="border-border bg-card/50"
+									// biome-ignore lint/suspicious/noArrayIndexKey: safe
 									key={`skeleton-${i}`}
 								>
 									<CardHeader>
@@ -297,19 +297,9 @@ export default function HomeClient() {
 											<CardHeader className="pb-2">
 												<div className="flex items-start justify-between">
 													<div className="flex items-center gap-2">
-														{repo.avatarUrl ? (
-															<Image
-																alt={repo.owner}
-																className="rounded"
-																height={24}
-																src={repo.avatarUrl}
-																width={24}
-															/>
-														) : (
-															<div className="flex h-6 w-6 items-center justify-center rounded border border-border bg-secondary/50">
-																<GitBranch className="h-3 w-3 text-muted-foreground" />
-															</div>
-														)}
+														<div className="flex h-6 w-6 items-center justify-center rounded border border-border bg-secondary/50">
+															<GitBranch className="h-3 w-3 text-muted-foreground" />
+														</div>
 														<CardTitle className="font-medium font-mono text-foreground text-sm group-hover:text-amber-500 dark:group-hover:text-amber-400">
 															{repo.fullName}
 														</CardTitle>
