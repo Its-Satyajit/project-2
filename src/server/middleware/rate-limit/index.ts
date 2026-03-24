@@ -8,13 +8,6 @@ import type {
 	WindowDuration,
 } from "./types";
 
-/**
- * Parse window duration to milliseconds
- *
- * Accepts:
- * - Number (treated as seconds): 3600 → 3600000ms
- * - String with unit: "1h", "15m", "30s", "1d"
- */
 function parseWindow(window: WindowDuration): number {
 	if (typeof window === "number") {
 		return window * 1000;
@@ -38,9 +31,6 @@ function parseWindow(window: WindowDuration): number {
 	return value * (multipliers[unit] ?? 1000);
 }
 
-/**
- * Format window for human-readable display
- */
 function formatWindow(ms: number): string {
 	if (ms >= 3600000) {
 		return `${Math.round(ms / 3600000)} hour(s)`;
@@ -51,19 +41,6 @@ function formatWindow(ms: number): string {
 	return `${Math.round(ms / 1000)} second(s)`;
 }
 
-/**
- * Rate Limiter Elysia Plugin
- *
- * Usage:
- * ```typescript
- * import { rateLimit } from "~/middleware/rate-limit";
- *
- * app.post("/analyze",
- *   rateLimit({ limit: 5, window: "1h" }),
- *   analyzeHandler
- * );
- * ```
- */
 export function rateLimit(config: RateLimitConfig) {
 	const { limit, window, keyGenerator, message, skip } = config;
 	const windowMs = parseWindow(window);
@@ -71,33 +48,28 @@ export function rateLimit(config: RateLimitConfig) {
 
 	return (app: Elysia) =>
 		app.onBeforeHandle(async (context) => {
-			// Check if should skip rate limiting
 			if (skip?.(context)) {
 				return;
 			}
 
 			const store = getRateLimitStore();
 
-			// Get endpoint name from path
 			const url = new URL(context.request.url);
 			const endpoint = url.pathname.replace(/^\//, "") || "root";
 
-			// Generate identifier
 			const identifier = keyGenerator
 				? keyGenerator(context)
 				: KeyGenerator.generate(context, endpoint);
 
-			// Check rate limit
 			const result = await store.check(endpoint, identifier, limit, windowMs);
 
-			// Debug logging (remove in production)
+			// Debug logging
 			console.log(
 				`[RateLimit] ${endpoint} | id: ${identifier} | ` +
-					`${result.currentCount}/${limit} | ` +
-					`allowed: ${result.allowed} | remaining: ${result.remaining}`,
+				`${result.currentCount}/${limit} | ` +
+				`allowed: ${result.allowed} | remaining: ${result.remaining}`,
 			);
 
-			// Add rate limit headers to response
 			const headers: RateLimitHeaders = {
 				"X-RateLimit-Limit": String(result.limit),
 				"X-RateLimit-Remaining": String(result.remaining),
@@ -105,8 +77,7 @@ export function rateLimit(config: RateLimitConfig) {
 				"Retry-After": String(result.retryAfter),
 			};
 
-			// Set headers on response using Elysia's set.headers
-			// Access via (context as any).set.headers or context.set?.headers
+			// Set headers using context.set.headers
 			const setHeaders = (
 				context as unknown as { set: { headers: Record<string, string> } }
 			).set?.headers;
@@ -116,7 +87,6 @@ export function rateLimit(config: RateLimitConfig) {
 				}
 			}
 
-			// If not allowed, return 429
 			if (!result.allowed) {
 				const resetDate = new Date(result.resetAt * 1000).toISOString();
 				const errorBody: RateLimitErrorBody = {
@@ -141,17 +111,11 @@ export function rateLimit(config: RateLimitConfig) {
 		});
 }
 
-/**
- * Create a rate limiter with default configuration
- */
 export function createRateLimiter(defaults: Partial<RateLimitConfig> = {}) {
 	const { limit = 60, window = "1m", keyGenerator, message, skip } = defaults;
 
 	return {
-		/**
-		 * Create a rate limited route with specific config
-		 */
-		limit(config: Partial<RateLimitConfig> = {}): ReturnType<typeof rateLimit> {
+		limit(config: Partial<RateLimitConfig> = {}) {
 			return rateLimit({
 				limit: config.limit ?? limit,
 				window: config.window ?? window,
@@ -160,25 +124,12 @@ export function createRateLimiter(defaults: Partial<RateLimitConfig> = {}) {
 				skip: config.skip ?? skip,
 			});
 		},
-
-		/**
-		 * Pre-configured strict rate limiter (5 per hour)
-		 */
 		strict: rateLimit({ limit: 5, window: "1h", ...defaults }),
-
-		/**
-		 * Pre-configured normal rate limiter (60 per minute)
-		 */
 		normal: rateLimit({ limit: 60, window: "1m", ...defaults }),
-
-		/**
-		 * Pre-configured relaxed rate limiter (1000 per hour)
-		 */
 		relaxed: rateLimit({ limit: 1000, window: "1h", ...defaults }),
 	};
 }
 
-// Re-export everything
 export { CircuitBreaker } from "./circuit-breaker";
 export { defaultKeyGenerator, KeyGenerator } from "./key-generator";
 export { SlidingWindowRateLimiter } from "./sliding-window";

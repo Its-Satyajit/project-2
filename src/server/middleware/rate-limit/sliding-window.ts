@@ -1,19 +1,6 @@
 import type { Redis } from "ioredis";
 import type { RateLimitResult } from "./types";
 
-/**
- * Sliding Window Rate Limiter using Redis Sorted Sets (ZSET)
- *
- * Algorithm:
- * 1. Each request adds a timestamped entry to a sorted set
- * 2. Old entries outside the window are removed
- * 3. Current count determines if limit is exceeded
- * 4. TTL is set on the key for automatic cleanup
- *
- * Key structure: rate:{endpoint}:{identifier}
- * Sorted set members: {unique-id}
- * Sorted set scores: {timestamp-in-ms}
- */
 export class SlidingWindowRateLimiter {
 	private redis: Redis;
 	private keyPrefix: string;
@@ -23,33 +10,17 @@ export class SlidingWindowRateLimiter {
 		this.keyPrefix = keyPrefix;
 	}
 
-	/**
-	 * Build the Redis key for rate limiting
-	 */
 	buildKey(endpoint: string, identifier: string): string {
-		// Sanitize endpoint to remove leading slash and special chars
 		const sanitizedEndpoint = endpoint
 			.replace(/^\//, "")
 			.replace(/[^a-zA-Z0-9_-]/g, "_");
 		return `${this.keyPrefix}:${sanitizedEndpoint}:${identifier}`;
 	}
 
-	/**
-	 * Generate a unique ID for each request
-	 */
 	generateRequestId(): string {
 		return `${Date.now()}:${Math.random().toString(36).substring(2, 15)}`;
 	}
 
-	/**
-	 * Check and record a rate limit hit
-	 *
-	 * @param endpoint - The endpoint being rate limited (e.g., "analyze")
-	 * @param identifier - The client identifier (e.g., "user:123" or "ip:1.2.3.4")
-	 * @param limit - Maximum requests allowed in window
-	 * @param windowMs - Window duration in milliseconds
-	 * @returns Rate limit result with allowed/denied status and metadata
-	 */
 	async check(
 		endpoint: string,
 		identifier: string,
@@ -60,11 +31,8 @@ export class SlidingWindowRateLimiter {
 		const now = Date.now();
 		const windowStart = now - windowMs;
 		const requestId = this.generateRequestId();
+		const ttlMs = windowMs;
 
-		// Atomic Lua script for rate limiting
-		// This ensures thread-safety across multiple requests
-		// All timestamps are in milliseconds for consistency
-		const ttlMs = windowMs; // Use window as TTL
 		const luaScript = `
 			local key = KEYS[1]
 			local now = tonumber(ARGV[1])
@@ -85,7 +53,7 @@ export class SlidingWindowRateLimiter {
 				local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
 				local oldestScore = tonumber(oldest[2]) or now
 				
-				-- Calculate when the oldest entry will expire (when window slides past it)
+				-- Calculate when the oldest entry will expire
 				local expiresAt = oldestScore + ttlMs
 				local retryAfterMs = math.max(0, expiresAt - now)
 				local retryAfterSec = math.max(1, math.ceil(retryAfterMs / 1000))
@@ -103,7 +71,6 @@ export class SlidingWindowRateLimiter {
 			currentCount = redis.call('ZCARD', key)
 			
 			-- Calculate reset time (when window resets)
-			-- Reset at = now + window
 			local resetAt = math.ceil((now + ttlMs) / 1000)
 			
 			return {1, currentCount, resetAt}
@@ -137,8 +104,6 @@ export class SlidingWindowRateLimiter {
 				currentCount,
 			};
 		} catch (error) {
-			// On error, allow the request (fail-open)
-			// The circuit breaker should handle this at a higher level
 			console.error("[RateLimiter] Redis error during check:", error);
 			return {
 				allowed: true,
@@ -151,22 +116,13 @@ export class SlidingWindowRateLimiter {
 		}
 	}
 
-	/**
-	 * Reset rate limit for a specific key (admin function)
-	 */
 	async reset(endpoint: string, identifier: string): Promise<void> {
 		const key = this.buildKey(endpoint, identifier);
 		await this.redis.del(key);
 	}
 
-	/**
-	 * Get current count without incrementing
-	 */
 	async getCount(endpoint: string, identifier: string): Promise<number> {
 		const key = this.buildKey(endpoint, identifier);
-		const now = Date.now();
-
-		// Get count of non-expired entries
 		const count = await this.redis.zcount(key, "-inf", now);
 		return count;
 	}
