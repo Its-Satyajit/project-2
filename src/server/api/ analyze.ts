@@ -1,10 +1,19 @@
 import Elysia, { t } from "elysia";
 import { getOwnerRepo } from "~/lib/getOwnerRepo";
+import { rateLimit } from "~/server/middleware/rate-limit";
 import { insertRepositories } from "../dal/repositories";
 import { getRepoMetadata } from "../octokit";
 import { addAnalysisJob } from "../queue/worker";
 
-export const analyzeRoute = new Elysia().post(
+// Strict rate limit for expensive analysis endpoint: 5 per hour
+const analyzeRateLimit = rateLimit({
+	limit: 5,
+	window: "1h",
+	message:
+		"Too many analysis requests. Please wait before requesting another repository analysis.",
+});
+
+export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 	"/analyze",
 	async (ctx) => {
 		const parseResult = getOwnerRepo(ctx.body.githubUrl);
