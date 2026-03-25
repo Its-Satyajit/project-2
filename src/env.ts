@@ -12,7 +12,7 @@ export const env = createEnv({
 				? z.string()
 				: z.string().optional(),
 
-		DATABASE_URL: z.string().url(),
+		DATABASE_URL: z.url(),
 		NODE_ENV: z
 			.enum(["development", "test", "production"])
 			.default("development"),
@@ -21,6 +21,14 @@ export const env = createEnv({
 		REDIS_HOST: z.string().default("localhost"),
 		REDIS_PORT: z.string().default("6379"),
 		REDIS_PASSWORD: z.string().optional(),
+		IDRIVE_E2_ACCESS_KEY: z.string().min(1),
+		IDRIVE_E2_SECRET_KEY: z.string().min(1),
+		IDRIVE_E2_BUCKET_NAME: z.string().min(1),
+		IDRIVE_E2_REGION: z.string().default("eu-central-2"),
+		IDRIVE_E2_ENDPOINT: z
+			.string()
+			.url()
+			.default("https://s3.eu-central-2.idrivee2.com"),
 	},
 
 	/**
@@ -47,6 +55,11 @@ export const env = createEnv({
 		REDIS_HOST: process.env.REDIS_HOST,
 		REDIS_PORT: process.env.REDIS_PORT,
 		REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+		IDRIVE_E2_ACCESS_KEY: process.env.IDRIVE_E2_ACCESS_KEY,
+		IDRIVE_E2_SECRET_KEY: process.env.IDRIVE_E2_SECRET_KEY,
+		IDRIVE_E2_BUCKET_NAME: process.env.IDRIVE_E2_BUCKET_NAME,
+		IDRIVE_E2_REGION: process.env.IDRIVE_E2_REGION,
+		IDRIVE_E2_ENDPOINT: process.env.IDRIVE_E2_ENDPOINT,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

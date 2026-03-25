@@ -116,66 +116,22 @@ export const repositories = pgTable(
 
 export const repositoriesRelations = relations(
 	repositories,
-	({ one, many }) => ({
-		files: many(files),
-		commits: many(commits),
+	({ many }) => ({
 		analysisResults: many(analysisResults),
 		contributors: many(contributors),
 	}),
 );
 
-export const files = pgTable("files", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	repositoryId: uuid("repository_id").references(() => repositories.id),
-	path: text("path"),
-	linesCount: integer("lines_count"),
-	size: integer("size"),
-	depth: integer("depth"),
-	extension: text("extension"),
-	isDirectory: boolean("is_directory").default(false),
-	parsedImports: json("parsed_imports"),
-	createdAt: timestamp("created_at")
-		.$defaultFn(() => /* @__PURE__ */ new Date())
-		.notNull(),
-});
 
-export const filesRelations = relations(files, ({ one }) => ({
-	repositories: one(repositories, {
-		fields: [files.repositoryId],
-		references: [repositories.id],
-	}),
-}));
-
-export const commits = pgTable("commits", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	repositoryId: uuid("repository_id").references(() => repositories.id),
-	sha: text("sha"),
-	authorName: text("author_name"),
-	message: text("message"),
-	committedAt: timestamp("committed_at"),
-	createdAt: timestamp("created_at")
-		.$defaultFn(() => /* @__PURE__ */ new Date())
-		.notNull(),
-});
-
-export const commitsRelations = relations(commits, ({ one, many }) => ({
-	repositories: one(repositories, {
-		fields: [commits.repositoryId],
-		references: [repositories.id],
-	}),
-}));
 export const analysisResults = pgTable(
 	"analysis_results",
 	{
 		id: uuid("id").defaultRandom().primaryKey(),
 		repositoryId: uuid("repository_id").references(() => repositories.id),
-		fileTreeJson: json("file_tree"),
+		s3StorageKey: text("s3_storage_key"),
 		totalFiles: integer("total_files"),
 		totalDirectories: integer("total_directories"),
 		totalLines: integer("total_lines"),
-		fileTypeBreakdownJson: json("file_type_breakdown_json"),
-		hotSpotDataJson: json("hot_spot_data_json"),
-		dependencyGraphJson: json("dependency_graph_json"),
 		summaryText: text("summary_text"),
 		createdAt: timestamp("created_at")
 			.$defaultFn(() => /* @__PURE__ */ new Date())
@@ -189,7 +145,7 @@ export const analysisResults = pgTable(
 
 export const analysisResultsRelations = relations(
 	analysisResults,
-	({ one, many }) => ({
+	({ one }) => ({
 		repositories: one(repositories, {
 			fields: [analysisResults.repositoryId],
 			references: [repositories.id],

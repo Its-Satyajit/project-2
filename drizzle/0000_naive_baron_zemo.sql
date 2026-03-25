@@ -29,27 +29,14 @@ CREATE TABLE "analysis_logs" (
 CREATE TABLE "analysis_results" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"repository_id" uuid,
-	"file_tree" json,
+	"s3_storage_key" text,
 	"total_files" integer,
 	"total_directories" integer,
 	"total_lines" integer,
-	"file_type_breakdown_json" json,
-	"hot_spot_data_json" json,
-	"dependency_graph_json" json,
 	"summary_text" text,
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL,
 	CONSTRAINT "analysis_results_repository_id_unique" UNIQUE("repository_id")
-);
---> statement-breakpoint
-CREATE TABLE "commits" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"repository_id" uuid,
-	"sha" text,
-	"author_name" text,
-	"message" text,
-	"committed_at" timestamp,
-	"created_at" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "contributors" (
@@ -63,19 +50,6 @@ CREATE TABLE "contributors" (
 	"last_contribution_at" timestamp,
 	"created_at" timestamp NOT NULL,
 	"updated_at" timestamp NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "files" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"repository_id" uuid,
-	"path" text,
-	"lines_count" integer,
-	"size" integer,
-	"depth" integer,
-	"extension" text,
-	"is_directory" boolean DEFAULT false,
-	"parsed_imports" json,
-	"created_at" timestamp NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "repositories" (
@@ -134,8 +108,6 @@ CREATE TABLE "verification" (
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "analysis_logs" ADD CONSTRAINT "analysis_logs_repository_id_repositories_id_fk" FOREIGN KEY ("repository_id") REFERENCES "public"."repositories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "analysis_results" ADD CONSTRAINT "analysis_results_repository_id_repositories_id_fk" FOREIGN KEY ("repository_id") REFERENCES "public"."repositories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "commits" ADD CONSTRAINT "commits_repository_id_repositories_id_fk" FOREIGN KEY ("repository_id") REFERENCES "public"."repositories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "contributors" ADD CONSTRAINT "contributors_repository_id_repositories_id_fk" FOREIGN KEY ("repository_id") REFERENCES "public"."repositories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "files" ADD CONSTRAINT "files_repository_id_repositories_id_fk" FOREIGN KEY ("repository_id") REFERENCES "public"."repositories"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "repositories" ADD CONSTRAINT "repositories_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;

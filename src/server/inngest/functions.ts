@@ -1,14 +1,16 @@
+import { lt } from "drizzle-orm";
 import { getExtension } from "~/lib/getExtension";
 import { convertToFileTree } from "~/lib/treeUtils";
 import { getLatestAnalysis, insertAnalysisResults } from "../dal/analysis";
 import { insertLog } from "../dal/analysisLogs";
-import { insertCommits } from "../dal/commit";
 import {
 	deleteContributorsByRepoId,
 	upsertContributors,
 } from "../dal/contributors";
-import { insertFiles } from "../dal/files";
 import { updateRepositoryStatus } from "../dal/repositories";
+import { uploadAnalysisData } from "../dal/s3";
+import { db } from "../db";
+import { analysisLogs } from "../db/schema";
 import { performBasicAnalysis } from "../logic/analysis";
 import {
 	detectLanguage,
@@ -142,7 +144,7 @@ export async function coreAnalysisLogic(
 	);
 
 	// 1. Fetching repository data
-	const { repoTree, limitedTree } = await step.run(
+	const { repoTree, limitedTree, commitsData, filesData } = await step.run(
 		"fetch-repo-data",
 		async () => {
 			await updateStatus(repoId, "fetching", "Fetching repository data");
@@ -151,35 +153,31 @@ export async function coreAnalysisLogic(
 				getRepoCommits({ owner, repo }),
 			]);
 
-			await insertCommits(
-				commits.map((item) => ({
-					repositoryId: repoId,
-					sha: item.sha,
-					message: item.commit.message,
-					authorName: item.commit.author?.name ?? "Unknown",
-					committedAt: item.commit.author?.date
-						? new Date(item.commit.author.date)
-						: null,
-				})),
-			);
+			const commitsData = commits.map((item) => ({
+				sha: item.sha,
+				message: item.commit.message,
+				authorName: item.commit.author?.name ?? "Unknown",
+				committedAt: item.commit.author?.date
+					? new Date(item.commit.author.date)
+					: null,
+			}));
 
 			const limTree = tree.slice(0, 2000);
-			await insertFiles(
-				limTree.map((item) => ({
-					repositoryId: repoId,
-					path: item.path,
-					size: item.size ?? 0,
-					sha: item.sha,
-					isDirectory: item.type === "tree",
-					extension:
-						item.type === "blob" && getExtension(item.path) !== "no-extension"
-							? getExtension(item.path)
-							: null,
-					depth: item.path?.split("/").length ?? 0,
-				})),
-			);
+			const filesData = limTree.map((item) => ({
+				id: Math.random().toString(), // fake ID for compat
+				path: item.path,
+				size: item.size ?? 0,
+				sha: item.sha,
+				isDirectory: item.type === "tree",
+				linesCount: 0,
+				extension:
+					item.type === "blob" && getExtension(item.path) !== "no-extension"
+						? getExtension(item.path)
+						: null,
+				depth: item.path?.split("/").length ?? 0,
+			}));
 
-			return { repoTree: tree, limitedTree: limTree };
+			return { repoTree: tree, limitedTree: limTree, commitsData, filesData };
 		},
 	);
 
@@ -188,13 +186,10 @@ export async function coreAnalysisLogic(
 		await updateStatus(repoId, "basic-analysis", "Performing basic analysis");
 
 		const fileTree = convertToFileTree(
-			limitedTree
-				.filter(
-					(f: any): f is any & { path: string; isDirectory: boolean } =>
-						f.path !== null,
-				)
-				.map((f: any) => ({
-					...f,
+			(limitedTree as Array<{ path: string; type: string }>)
+				.filter((f) => f.path !== null)
+				.map((f) => ({
+					path: f.path,
 					isDirectory: f.type === "tree",
 				})),
 		);
@@ -220,14 +215,14 @@ export async function coreAnalysisLogic(
 
 		const codeFiles = limitedTree
 			.filter(
-				(f: any) =>
+				(f: { path: string; type: string; size?: number }) =>
 					f.type === "blob" &&
 					f.size !== undefined &&
 					f.size > 0 &&
 					f.size <= CONTENT_MAX_SIZE &&
 					CODE_EXTENSIONS.includes(getExtension(f.path) || ""),
 			)
-			.sort((a: any, b: any) => (b.size || 0) - (a.size || 0))
+			.sort((a, b) => (b.size || 0) - (a.size || 0))
 			.slice(0, 1000);
 
 		const BATCH_SIZE = 20;
@@ -268,15 +263,21 @@ export async function coreAnalysisLogic(
 			`[Inngest] Dependency analysis complete: ${dependencyResults.graph.nodes.length} nodes, ${dependencyResults.graph.edges.length} edges`,
 		);
 
+		const s3StorageKey = await uploadAnalysisData(repoId, {
+			commits: commitsData,
+			files: filesData,
+			fileTree: basicResults.fileTree,
+			fileTypeBreakdown: basicResults.fileTypeBreakdown,
+			dependencyGraph: dependencyResults.graph,
+			hotSpotData: hotspotResults.hotspots,
+		});
+
 		await insertAnalysisResults({
 			repositoryId: repoId,
-			fileTreeJson: basicResults.fileTreeJson,
+			s3StorageKey,
 			totalFiles: basicResults.totalFiles,
 			totalDirectories: basicResults.totalDirectories,
 			totalLines: basicResults.totalLines,
-			fileTypeBreakdownJson: basicResults.fileTypeBreakdownJson,
-			dependencyGraphJson: dependencyResults.graph,
-			hotSpotDataJson: hotspotResults.hotspots,
 		});
 
 		await updateStatus(repoId, "complete", "Analysis complete");
@@ -329,6 +330,28 @@ export async function coreAnalysisLogic(
 	return { success: true, repoId };
 }
 
+// 7-day Log Cleanup Job
+export const cleanupOldLogs = inngest.createFunction(
+	{
+		id: "cleanup-old-logs",
+		name: "Cleanup Old Analysis Logs",
+		triggers: [{ cron: "0 0 * * *" }],
+	},
+	async ({ step }) => {
+		await step.run("delete-old-logs", async () => {
+			const sevenDaysAgo = new Date();
+			sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+			const result = await db
+				.delete(analysisLogs)
+				.where(lt(analysisLogs.createdAt, sevenDaysAgo))
+				.returning();
+
+			return { deletedRows: result.length };
+		});
+	},
+);
+
 // Inngest Background Function
 export const processAnalysisJob = inngest.createFunction(
 	{
@@ -336,8 +359,17 @@ export const processAnalysisJob = inngest.createFunction(
 		name: "Analyze Repository",
 		triggers: [{ event: "repo/analyze" }],
 	},
-	async ({ event, step }: { event: { data: any }; step: any }) => {
-		return coreAnalysisLogic(event.data, step);
+	async ({ event, step }) => {
+		return coreAnalysisLogic(
+			event.data as {
+				repoId: string;
+				owner: string;
+				repo: string;
+				branch: string;
+				githubUrl: string;
+			},
+			step as any,
+		);
 	},
 );
 

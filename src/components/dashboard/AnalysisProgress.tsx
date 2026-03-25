@@ -103,33 +103,18 @@ export const AnalysisProgress = React.memo(function AnalysisProgress({
 
 	if (status.status === "complete") {
 		return (
-			<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-4">
-				<div className="flex items-center gap-2 text-emerald-400">
-					<CheckCircle className="h-5 w-5" />
-					<span className="font-medium">Analysis Complete</span>
-				</div>
-				{status.analysis && (
-					<div className="mt-2 grid grid-cols-3 gap-4 text-sm">
-						<div>
-							<span className="text-muted-foreground">Files</span>
-							<p className="font-medium text-foreground">
-								{status.analysis.totalFiles?.toLocaleString()}
-							</p>
-						</div>
-						<div>
-							<span className="text-muted-foreground">Directories</span>
-							<p className="font-medium text-foreground">
-								{status.analysis.totalDirectories?.toLocaleString()}
-							</p>
-						</div>
-						<div>
-							<span className="text-muted-foreground">Lines</span>
-							<p className="font-medium text-foreground">
-								{status.analysis.totalLines?.toLocaleString()}
-							</p>
-						</div>
+			<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-6 text-center">
+				<div className="flex flex-col items-center gap-3 text-emerald-400">
+					<CheckCircle className="h-8 w-8" />
+					<div className="flex flex-col gap-1">
+						<span className="font-bold font-mono text-sm tracking-tight uppercase">
+							ANALYSIS_COMPLETE
+						</span>
+						<p className="font-mono text-emerald-400/60 text-xs">
+							System synchronized with latest repository state
+						</p>
 					</div>
-				)}
+				</div>
 			</div>
 		);
 	}

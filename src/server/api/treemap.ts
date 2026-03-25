@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
+import { fetchAnalysisData } from "../dal/s3";
 import { db } from "../db";
-import { analysisResults, files, repositories } from "../db/schema";
 
 export const treemapRoute = new Elysia().get(
 	"/dashboard/:repoId/treemap",
@@ -18,36 +18,26 @@ export const treemapRoute = new Elysia().get(
 			return { error: "Repository not found" };
 		}
 
-		const allFiles = await db
-			.select({
-				id: files.id,
-				path: files.path,
-				linesCount: files.linesCount,
-				extension: files.extension,
-				isDirectory: files.isDirectory,
-			})
-			.from(files)
-			.where(eq(files.repositoryId, params.repoId));
+		const analysis = repoData.analysisResults?.[0];
+		if (!analysis || !analysis.s3StorageKey) {
+			set.status = 404;
+			return { error: "Analysis data not found" };
+		}
 
+		// Fetch the full blob from S3
+		const analysisData = await fetchAnalysisData(analysis.s3StorageKey);
+
+		const allFiles = analysisData.files || [];
 		const nonDirFiles = allFiles.filter((f) => !f.isDirectory);
 
 		const hotspotMap = new Map<
 			string,
 			{ score: number; fanIn: number; fanOut: number; loc: number }
 		>();
-		const analysis = repoData.analysisResults?.[0];
 
 		// Get LOC from dependency graph
-		if (analysis?.dependencyGraphJson) {
-			const graph = analysis.dependencyGraphJson as {
-				nodes: Array<{
-					path: string;
-					loc: number;
-					score?: number;
-					fanIn?: number;
-					fanOut?: number;
-				}>;
-			};
+		if (analysisData.dependencyGraph) {
+			const graph = analysisData.dependencyGraph;
 			for (const node of graph.nodes ?? []) {
 				hotspotMap.set(node.path, {
 					score: node.score ?? 0,
@@ -58,15 +48,9 @@ export const treemapRoute = new Elysia().get(
 			}
 		}
 
-		// Also get hotspots data for files with scores
-		if (analysis?.hotSpotDataJson) {
-			const hotspots = analysis.hotSpotDataJson as Array<{
-				path: string;
-				score: number;
-				fanIn: number;
-				fanOut: number;
-			}>;
-			for (const h of hotspots) {
+		// Also get hotspots data
+		if (analysisData.hotSpotData) {
+			for (const h of analysisData.hotSpotData) {
 				const existing = hotspotMap.get(h.path);
 				if (existing) {
 					existing.score = h.score;
@@ -86,10 +70,10 @@ export const treemapRoute = new Elysia().get(
 		const treemapData = nonDirFiles.map((file) => {
 			const hotspot = hotspotMap.get(file.path ?? "");
 			const ext = file.extension ?? "";
-			// Use LOC from dependency graph if available, otherwise fallback to files table
+			// Use LOC from dependency graph if available, otherwise fallback to files table dummy 0
 			const loc = hotspot?.loc ?? file.linesCount ?? 0;
 			return {
-				id: file.id,
+				id: file.id || Math.random().toString(),
 				path: file.path ?? "",
 				loc,
 				extension: ext,
@@ -103,7 +87,7 @@ export const treemapRoute = new Elysia().get(
 		return {
 			files: treemapData,
 			totalFiles: treemapData.length,
-			totalLoc: treemapData.reduce((sum, f) => sum + f.loc, 0),
+			totalLoc: treemapData.reduce((sum: number, f) => sum + f.loc, 0),
 		};
 	},
 	{

@@ -1,6 +1,5 @@
 import { getExtension } from "~/lib/getExtension";
 import type { FileTreeItem } from "~/lib/treeUtils";
-import { insertAnalysisResults } from "../dal/analysis";
 import { getFileContent } from "../octokit";
 
 type TreeItem = {
@@ -95,18 +94,16 @@ export async function performBasicAnalysis({
 		totalLines += Math.round(file.size / 45);
 	}
 
-	// 3. Persist results
+	// 3. Prepare result data
 	const analysisData = {
 		repositoryId: repoId,
 		totalFiles,
 		totalDirectories,
 		totalLines,
-		fileTypeBreakdownJson: extensionBreakdown,
+		fileTypeBreakdown: extensionBreakdown,
 		summaryText: `Analysis complete. Found ${totalFiles} files across ${totalDirectories} directories. Estimated ${totalLines} lines of code.`,
-		fileTreeJson: fileTree,
+		fileTree,
 	};
-
-	await insertAnalysisResults(analysisData);
 
 	return analysisData;
 }

@@ -21,7 +21,6 @@ export async function getRepositoryData(repoId: string) {
 	const result = await db.query.repositories.findFirst({
 		where: (t) => eq(t.id, repoId),
 		with: {
-			files: true,
 			analysisResults: true,
 		},
 	});

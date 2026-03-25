@@ -1,39 +1,43 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockEq = vi
-	.fn()
-	.mockImplementation((col, val) => ({ type: "eq", col, val }));
-const mockDesc = vi.fn().mockImplementation((col) => ({ type: "desc", col }));
-
-vi.mock("drizzle-orm", () => ({
-	eq: mockEq,
-	desc: mockDesc,
+const { mockEq, mockDesc } = vi.hoisted(() => ({
+	mockEq: vi
+		.fn()
+		.mockImplementation((col, val) => ({ type: "eq", col, val })),
+	mockDesc: vi.fn().mockImplementation((col) => ({ type: "desc", col })),
 }));
 
-vi.mock("../db", () => ({
-	db: {
-		select: vi.fn().mockReturnValue({
-			from: vi.fn().mockReturnValue({
-				where: vi.fn().mockReturnValue({
-					orderBy: vi.fn().mockResolvedValue([]),
-				}),
-			}),
-		}),
-		insert: vi.fn().mockReturnValue({
-			values: vi.fn().mockResolvedValue(undefined),
-		}),
-		update: vi.fn().mockReturnValue({
-			set: vi.fn().mockReturnValue({
-				where: vi.fn().mockResolvedValue(undefined),
-			}),
-		}),
-		delete: vi.fn().mockReturnValue({
-			where: vi.fn().mockResolvedValue(undefined),
-		}),
-	},
-}));
+vi.mock("drizzle-orm", async (importOriginal) => {
+	const actual = (await importOriginal()) as any;
+	return {
+		...actual,
+		eq: mockEq,
+		desc: mockDesc,
+	};
+});
 
-vi.mock("../db/schema", () => ({
+vi.mock("../../db", () => {
+	const mockResult = Object.assign(Promise.resolve([]), {
+		where: vi.fn().mockImplementation(() => mockResult),
+		orderBy: vi.fn().mockImplementation(() => mockResult),
+		limit: vi.fn().mockImplementation(() => mockResult),
+		offset: vi.fn().mockImplementation(() => mockResult),
+		values: vi.fn().mockImplementation(() => Promise.resolve([])),
+		set: vi.fn().mockImplementation(() => mockResult),
+		from: vi.fn().mockImplementation(() => mockResult),
+	});
+
+	return {
+		db: {
+			select: vi.fn().mockReturnValue(mockResult),
+			insert: vi.fn().mockReturnValue(mockResult),
+			update: vi.fn().mockReturnValue(mockResult),
+			delete: vi.fn().mockReturnValue(mockResult),
+		},
+	};
+});
+
+vi.mock("../../db/schema", () => ({
 	contributors: {
 		// Mock table definition
 	},

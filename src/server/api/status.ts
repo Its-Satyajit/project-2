@@ -1,6 +1,7 @@
 import Elysia, { t } from "elysia";
 import { getRepositoryData } from "../dal/repositories";
-import { type AnalysisData, computeRepoSummary } from "../logic/repoSummary";
+import { fetchAnalysisData } from "../dal/s3";
+import { computeRepoSummary } from "../logic/repoSummary";
 
 export const statusRoute = new Elysia().get(
 	"/dashboard/:repoId/status",
@@ -10,6 +11,17 @@ export const statusRoute = new Elysia().get(
 		if (!repoData) {
 			set.status = 404;
 			return { error: "Repository not found" };
+		}
+
+		const result = repoData.analysisResults[0];
+		let s3Data = null;
+
+		if (result?.s3StorageKey) {
+			try {
+				s3Data = await fetchAnalysisData(result.s3StorageKey);
+			} catch (error) {
+				console.error("Error fetching S3 data for status:", error);
+			}
 		}
 
 		return {
@@ -28,18 +40,22 @@ export const statusRoute = new Elysia().get(
 				forks: repoData.forks,
 				avatarUrl: repoData.avatarUrl,
 			},
-			analysis: repoData.analysisResults?.[0]
+			analysis: result
 				? {
-						totalFiles: repoData.analysisResults[0].totalFiles,
-						totalDirectories: repoData.analysisResults[0].totalDirectories,
-						totalLines: repoData.analysisResults[0].totalLines,
-						fileTypeBreakdown:
-							repoData.analysisResults[0].fileTypeBreakdownJson,
-						dependencyGraph: repoData.analysisResults[0].dependencyGraphJson,
-						hotSpotData: repoData.analysisResults[0].hotSpotDataJson,
-						summary: computeRepoSummary(
-							repoData.analysisResults[0] as AnalysisData,
-						),
+						totalFiles: result.totalFiles,
+						totalDirectories: result.totalDirectories,
+						totalLines: result.totalLines,
+						fileTypeBreakdown: s3Data?.fileTypeBreakdown,
+						dependencyGraph: s3Data?.dependencyGraph,
+						hotSpotData: s3Data?.hotSpotData,
+						summary: s3Data
+							? computeRepoSummary({
+									...s3Data,
+									totalFiles: result.totalFiles ?? 0,
+									totalDirectories: result.totalDirectories ?? 0,
+									totalLines: result.totalLines ?? 0,
+								})
+							: null,
 					}
 				: null,
 		};

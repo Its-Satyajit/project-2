@@ -5,8 +5,6 @@ import { db } from "../db";
 import {
 	analysisLogs,
 	analysisResults,
-	commits,
-	files,
 	repositories,
 } from "../db/schema";
 
@@ -58,8 +56,6 @@ export async function deleteOldAnalysisData(days: number = 7) {
 			deletedRepos: 0,
 			deletedResults: 0,
 			deletedLogs: 0,
-			deletedFiles: 0,
-			deletedCommits: 0,
 		};
 	}
 
@@ -75,16 +71,6 @@ export async function deleteOldAnalysisData(days: number = 7) {
 		.where(inArray(analysisResults.repositoryId, repoIds))
 		.returning({ id: analysisResults.id });
 
-	const filesResult = await db
-		.delete(files)
-		.where(inArray(files.repositoryId, repoIds))
-		.returning({ id: files.id });
-
-	const commitsResult = await db
-		.delete(commits)
-		.where(inArray(commits.repositoryId, repoIds))
-		.returning({ id: commits.id });
-
 	const reposResult = await db
 		.delete(repositories)
 		.where(inArray(repositories.id, repoIds))
@@ -94,7 +80,5 @@ export async function deleteOldAnalysisData(days: number = 7) {
 		deletedRepos: reposResult.length,
 		deletedLogs: logsResult.length,
 		deletedResults: resultsResult.length,
-		deletedFiles: filesResult.length,
-		deletedCommits: commitsResult.length,
 	};
 }

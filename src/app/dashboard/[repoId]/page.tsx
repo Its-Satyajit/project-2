@@ -190,8 +190,8 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 			totalFiles: number;
 			totalDirectories: number;
 			totalLines: number;
-			fileTypeBreakdownJson: Record<string, number>;
 		}>;
+		fileTypeBreakdown?: Record<string, number>;
 	};
 	const analysis = data.analysisResults?.[0];
 
@@ -250,47 +250,39 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 						{"//"}
 					</span>
 					<span className="font-mono text-sky-400 text-xs tracking-wider">
-						REPO_STATS
+						REPOSITORY_OVERVIEW
 					</span>
 				</div>
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-					<StatCard
-						color="sky"
-						icon={FileCode}
-						label="TOTAL_FILES"
-						value={analysis?.totalFiles ?? 0}
-					/>
-					<StatCard
-						color="blue"
-						icon={FolderTree}
-						label="DIRECTORIES"
-						value={analysis?.totalDirectories ?? 0}
-					/>
-					<StatCard
-						color="emerald"
-						icon={Database}
-						label="LINES_OF_CODE"
-						value={(analysis?.totalLines ?? 0).toLocaleString()}
-					/>
-					<StatCard
-						color="violet"
-						icon={Code2}
-						label="PRIMARY_LANG"
-						value={data.primaryLanguage || "N/A"}
-					/>
-				</div>
-			</section>
-			<section>
-				<div className="mb-4 flex items-center gap-2">
-					<span className="font-mono text-muted-foreground text-xs">
-						{"//"}
-					</span>
-					<span className="font-mono text-emerald-400 text-xs tracking-wider">
-						ANALYSIS_STATUS
-					</span>
-				</div>
-				<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/3 p-4">
-					<AnalysisProgress repoId={repoId} />
+				<div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+					<div className="grid gap-4 md:grid-cols-2">
+						<StatCard
+							color="sky"
+							icon={FileCode}
+							label="TOTAL_FILES"
+							value={analysis?.totalFiles ?? 0}
+						/>
+						<StatCard
+							color="blue"
+							icon={FolderTree}
+							label="DIRECTORIES"
+							value={analysis?.totalDirectories ?? 0}
+						/>
+						<StatCard
+							color="emerald"
+							icon={Database}
+							label="LINES_OF_CODE"
+							value={(analysis?.totalLines ?? 0).toLocaleString()}
+						/>
+						<StatCard
+							color="violet"
+							icon={Code2}
+							label="PRIMARY_LANG"
+							value={data.primaryLanguage || "N/A"}
+						/>
+					</div>
+					<div className="flex flex-col h-full justify-center">
+						<AnalysisProgress repoId={repoId} />
+					</div>
 				</div>
 			</section>
 			<section>

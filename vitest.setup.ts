@@ -12,6 +12,11 @@ vi.mock("~/env", () => ({
 		BETTER_AUTH_SECRET: "test-secret",
 		REDIS_HOST: "localhost",
 		REDIS_PORT: "6379",
+		IDRIVE_E2_ACCESS_KEY: "test-access-key",
+		IDRIVE_E2_SECRET_KEY: "test-secret-key",
+		IDRIVE_E2_BUCKET_NAME: "test-bucket",
+		IDRIVE_E2_REGION: "eu-central-2",
+		IDRIVE_E2_ENDPOINT: "https://s3.eu-central-2.idrivee2.com",
 	},
 }));
 

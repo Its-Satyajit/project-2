@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
 import { db } from "../db";
 import { analysisResults, repositories } from "../db/schema";
+import { fetchAnalysisData } from "../dal/s3";
 
 export const debugRoute = new Elysia().post(
 	"/debug",
@@ -263,25 +264,21 @@ export const debugRoute = new Elysia().post(
 					// Inspect the stored dependency graph
 					const results = await db
 						.select({
-							dependencyGraphJson: analysisResults.dependencyGraphJson,
+							s3StorageKey: analysisResults.s3StorageKey,
 						})
 						.from(analysisResults)
 						.where(eq(analysisResults.repositoryId, repoId))
 						.limit(1);
 
-					if (results.length === 0) {
-						return { error: "No analysis results found" };
+					if (results.length === 0 || !results[0]?.s3StorageKey) {
+						return { error: "No analysis results or S3 key found" };
 					}
 
-					const result = results[0];
-					if (!result) {
-						return { error: "No analysis results found" };
-					}
-
-					const graph = result.dependencyGraphJson as {
+					const analysisData = await fetchAnalysisData(results[0].s3StorageKey);
+					const graph = analysisData.dependencyGraph as {
 						nodes: Array<{ id: string; path: string; imports: number }>;
 						edges: Array<{ source: string; target: string }>;
-						metadata: {
+						metadata?: {
 							totalNodes: number;
 							totalEdges: number;
 						};
@@ -304,7 +301,10 @@ export const debugRoute = new Elysia().post(
 					const allPaths = graph.nodes.map((n) => n.path);
 
 					return {
-						metadata: graph.metadata,
+						metadata: graph.metadata || {
+							totalNodes: graph.nodes.length,
+							totalEdges: graph.edges.length,
+						},
 						totalNodes: graph.nodes.length,
 						totalEdges: graph.edges.length,
 						nodesWithImports: nodesWithImports.length,
@@ -317,17 +317,18 @@ export const debugRoute = new Elysia().post(
 					// Check what the parser actually returns
 					const results = await db
 						.select({
-							dependencyGraphJson: analysisResults.dependencyGraphJson,
+							s3StorageKey: analysisResults.s3StorageKey,
 						})
 						.from(analysisResults)
 						.where(eq(analysisResults.repositoryId, repoId))
 						.limit(1);
 
-					if (!results[0]?.dependencyGraphJson) {
-						return { error: "No graph found" };
+					if (!results[0]?.s3StorageKey) {
+						return { error: "No graph key found" };
 					}
 
-					const graph = results[0].dependencyGraphJson as any;
+					const analysisData = await fetchAnalysisData(results[0].s3StorageKey);
+					const graph = analysisData.dependencyGraph as any;
 
 					// Return first 3 nodes with their import counts
 					return {

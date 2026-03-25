@@ -1,6 +1,8 @@
 import Elysia, { t } from "elysia";
 import type { FileTreeItem } from "~/lib/treeUtils";
 import { getRepositoryData } from "../dal/repositories";
+import { fetchAnalysisData } from "../dal/s3";
+import type { CommitData } from "../types/analysis";
 
 export const dashboardRoute = new Elysia().get(
 	"/dashboard/:repoId",
@@ -11,12 +13,33 @@ export const dashboardRoute = new Elysia().get(
 			return { error: "Repository not found" };
 		}
 
-		// Use the stored fileTree from analysisResults if available
-		const fileTree =
-			(data.analysisResults[0]?.fileTreeJson as FileTreeItem[]) ?? [];
+		const result = data.analysisResults[0];
+		let fileTree: FileTreeItem[] = [];
+		let additionalData: {
+			fileTypeBreakdown?: Record<string, number>;
+			dependencyGraph?: any;
+			hotSpotData?: any;
+			commits?: CommitData[];
+		} = {};
+
+		if (result?.s3StorageKey) {
+			try {
+				const s3Data = await fetchAnalysisData(result.s3StorageKey);
+				fileTree = s3Data.fileTree || [];
+				additionalData = {
+					fileTypeBreakdown: s3Data.fileTypeBreakdown,
+					dependencyGraph: s3Data.dependencyGraph,
+					hotSpotData: s3Data.hotSpotData,
+					commits: s3Data.commits,
+				};
+			} catch (error) {
+				console.error("Error fetching analysis data from S3:", error);
+			}
+		}
 
 		return {
 			...data,
+			...additionalData,
 			fileTree,
 		};
 	},
