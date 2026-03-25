@@ -84,14 +84,15 @@ export default function HomeClient() {
 
 		onSubmit: async ({ value }) => {
 			const res = await api.analyze.post({ githubUrl: value.githubUrl });
-			if (res.error || !(res.data as any)?.repoId) {
+			const data = res.data as { repoId?: string } | null;
+			if (res.error || !data?.repoId) {
 				toast.error(
 					"Unable to analyze repository. Check the URL and try again.",
 				);
 				return;
 			}
 			queryClient.invalidateQueries({ queryKey: ["top-repos"] });
-			redirect(`/dashboard/${(res.data as any).repoId}`);
+			redirect(`/dashboard/${data.repoId}`);
 		},
 	});
 
@@ -107,7 +108,7 @@ export default function HomeClient() {
 	return (
 		<main className="relative min-h-screen overflow-hidden bg-background">
 			<div className="absolute inset-0 -z-10">
-				<div className="absolute inset-0 bg-[linear-gradient(rgba(100,100,100,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(100,100,100,0.1)_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] dark:bg-[linear-gradient(rgba(20,20,20,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.3)_1px,transparent_1px)]" />
+				<div className="absolute inset-0 bg-[linear-gradient(rgba(100,100,100,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(100,100,100,0.1)_1px,transparent_1px)] bg-size-[40px_40px] mask-[radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] dark:bg-[linear-gradient(rgba(20,20,20,0.3)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.3)_1px,transparent_1px)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,180,50,0.08),transparent_50%)]" />
 				<div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(50,200,255,0.06),transparent_50%)]" />
 				<div
@@ -132,7 +133,7 @@ export default function HomeClient() {
 						</span>
 						<span className="tracking-wider">git://analyze</span>
 					</div>
-					<h1 className="mb-5 font-[family-name:var(--font-geist-sans)] font-bold text-5xl text-foreground tracking-tight md:text-6xl lg:text-7xl">
+					<h1 className="mb-5 font-(family-name:--font-geist-sans) font-bold text-5xl text-foreground tracking-tight md:text-6xl lg:text-7xl">
 						<span className="text-amber-500">Repository</span>{" "}
 						<span className="text-foreground/90">Analyzer</span>
 					</h1>
@@ -145,7 +146,7 @@ export default function HomeClient() {
 
 				<motion.div className="mb-16" variants={itemVariants}>
 					<div className="relative rounded-lg border border-border bg-card/60 p-1 backdrop-blur-xl">
-						<div className="absolute inset-0 rounded-lg bg-gradient-to-r from-amber-500/5 via-transparent to-cyan-500/5" />
+						<div className="absolute inset-0 rounded-lg bg-linear-to-r from-amber-500/5 via-transparent to-cyan-500/5" />
 						<form
 							className="relative flex items-center gap-2"
 							onSubmit={(e) => {
@@ -180,7 +181,7 @@ export default function HomeClient() {
 							>
 								{([canSubmit, isSubmitting]) => (
 									<Button
-										className="mr-1 h-10 bg-gradient-to-r from-amber-500 to-amber-600 px-6 font-medium font-mono text-foreground text-sm transition-all hover:from-amber-400 hover:to-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
+										className="mr-1 h-10 bg-linear-to-r from-amber-500 to-amber-600 px-6 font-medium font-mono text-foreground text-sm transition-all hover:from-amber-400 hover:to-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
 										disabled={!canSubmit}
 										type="submit"
 									>

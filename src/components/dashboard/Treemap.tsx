@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as d3 from "d3";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { api } from "~/lib/eden";
 
 interface TreemapFile {
@@ -110,7 +110,6 @@ export function Treemap({
 }: TreemapProps) {
 	const effectiveColorBy = colorByProp || colorMode || "language";
 	const effectiveSizeBy = sizeByProp || "loc";
-	const containerRef = useRef<HTMLDivElement>(null);
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 	const [hoveredFile, setHoveredFile] = useState<TreemapFile | null>(null);
 	const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -120,25 +119,26 @@ export function Treemap({
 	const { data, isLoading, error } = useQuery<TreemapData>({
 		queryKey: ["treemap", repoId, maxFiles],
 		queryFn: async () => {
-			const res = await api.dashboard({ repoId: repoId as any }).treemap.get();
+			const res = await api.dashboard({ repoId: repoId || "" }).treemap.get();
 			if (res.error) throw new Error(String(res.error));
 			return res.data as TreemapData;
 		},
 		enabled: !!repoId,
 	});
 
-	useEffect(() => {
-		if (!containerRef.current) return;
-		const observer = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				setDimensions({
-					width: entry.contentRect.width,
-					height: entry.contentRect.height,
-				});
-			}
-		});
-		observer.observe(containerRef.current);
-		return () => observer.disconnect();
+	const containerRef = useCallback((node: HTMLDivElement | null) => {
+		if (node) {
+			const observer = new ResizeObserver((entries) => {
+				for (const entry of entries) {
+					setDimensions({
+						width: entry.contentRect.width,
+						height: entry.contentRect.height,
+					});
+				}
+			});
+			observer.observe(node);
+			return () => observer.disconnect();
+		}
 	}, []);
 
 	const processedData = useMemo(() => {
@@ -272,23 +272,23 @@ export function Treemap({
 							animate={{ opacity: 1, scale: 1 }}
 							initial={{ opacity: 0, scale: 0.9 }}
 							key={file.id || file.path}
+							onClick={() => onFileClick?.(file)}
+							onKeyDown={(e) => e.key === "Enter" && onFileClick?.(file)}
+							onMouseEnter={(e) => handleMouseMove(e, file)}
+							onMouseLeave={() => setHoveredFile(null)}
+							role="button"
+							tabIndex={0}
 							transition={{ delay: i * 0.002, duration: 0.2 }}
 						>
 							<rect
 								className="cursor-pointer transition-opacity hover:opacity-80"
 								fill={file._color || "#374151"}
 								height={Math.max(0, height)}
-								onClick={() => onFileClick?.(file)}
-								onKeyDown={(e) => e.key === "Enter" && onFileClick?.(file)}
-								onMouseEnter={(e) => handleMouseMove(e, file)}
-								onMouseLeave={() => setHoveredFile(null)}
-								role="button"
 								rx={4}
 								ry={4}
 								stroke={isDark ? "#09090b" : "#ffffff"}
 								strokeWidth={1}
 								style={{ opacity: hoveredFile?.path === file.path ? 1 : 0.85 }}
-								tabIndex={0}
 								width={Math.max(0, width)}
 								x={node.x0}
 								y={node.y0}

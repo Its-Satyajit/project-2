@@ -4,7 +4,7 @@ import { escape as htmlEscape } from "es-toolkit";
 import { Copy, FileCode, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { Suspense, use, useMemo, useState } from "react";
 import { codeToHtml } from "shiki";
 import { Button } from "~/components/ui/button";
 
@@ -68,6 +68,33 @@ async function highlightLine(
 	}
 }
 
+function HighlightedLines({
+	promise,
+	filePath,
+}: { promise: Promise<string[]>; filePath: string }) {
+	const lines = use(promise);
+
+	return (
+		<div className="w-full py-2">
+			{lines.map((html, i) => (
+				<div
+					className="flex transition-colors hover:bg-muted/50"
+					key={`${filePath}-line-${i + 1}`}
+				>
+					<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
+						{i + 1}
+					</div>
+					<div
+						className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6 [&>span]:bg-transparent!"
+						// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for Shiki
+						dangerouslySetInnerHTML={{ __html: html }}
+					/>
+				</div>
+			))}
+		</div>
+	);
+}
+
 export function FileViewer({
 	filePath,
 	content,
@@ -76,36 +103,31 @@ export function FileViewer({
 	repo,
 }: FileViewerProps) {
 	const [copied, setCopied] = useState(false);
-	const [highlightedLines, setHighlightedLines] = useState<string[]>([]);
 	const { resolvedTheme } = useTheme();
 
-	// Keep track of mounting to avoid hydration mismatches
-	const [mounted, setMounted] = useState(false);
-	useEffect(() => {
-		setMounted(true);
-	}, []);
+	const isDark = resolvedTheme === "dark";
 
-	const isDark = mounted && resolvedTheme === "dark";
-
-	const fileName = filePath.split("/").pop() || filePath;
-	const extension = fileName.split(".").pop()?.toLowerCase() || "";
+	const fileName = useMemo(
+		() => filePath.split("/").pop() || filePath,
+		[filePath],
+	);
+	const extension = useMemo(
+		() => fileName.split(".").pop()?.toLowerCase() || "",
+		[fileName],
+	);
 	const language = languageMap[extension] || "text";
-	const isImage = ["png", "jpg", "jpeg", "gif", "svg", "webp", "ico"].includes(
-		extension,
+	const isImage = useMemo(
+		() => ["png", "jpg", "jpeg", "gif", "svg", "webp", "ico"].includes(extension),
+		[extension],
 	);
 
-	const lines = content ? content.split("\n") : [];
+	const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
 
-	useEffect(() => {
-		if (!content || !mounted || isImage) {
-			setHighlightedLines([]);
-			return;
-		}
-
-		Promise.all(
-			lines.map((line) => highlightLine(line, language, isDark)),
-		).then(setHighlightedLines);
-	}, [content, language, lines, isDark, mounted, isImage]);
+	const highlightingPromise = useMemo(() => {
+		if (!content || isImage) return null;
+		// Return promise for highlighting all lines
+		return Promise.all(lines.map((line) => highlightLine(line, language, isDark)));
+	}, [content, lines, language, isDark, isImage]);
 
 	const handleCopy = () => {
 		if (content) {
@@ -171,8 +193,6 @@ export function FileViewer({
 		);
 	}
 
-	const isHighlighted = highlightedLines.length > 0;
-
 	return (
 		<div className="flex h-full min-h-[400px] flex-col">
 			<div className="flex items-center justify-between border-border border-b px-4 py-2">
@@ -218,27 +238,13 @@ export function FileViewer({
 						)}
 					</div>
 				) : (
-					<div className="w-full py-2">
-						{isHighlighted
-							? highlightedLines.map((html, i) => (
+					<Suspense
+						fallback={
+							<div className="w-full py-2">
+								{lines.map((line, i) => (
 									<div
 										className="flex transition-colors hover:bg-muted/50"
-										key={`l-${i}-${filePath}`}
-									>
-										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
-											{i + 1}
-										</div>
-										<div
-											className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6 [&>span]:bg-transparent!"
-											// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for Shiki
-											dangerouslySetInnerHTML={{ __html: html }}
-										/>
-									</div>
-								))
-							: lines.map((line, i) => (
-									<div
-										className="flex transition-colors hover:bg-muted/50"
-										key={`n-${i}-${filePath}`}
+										key={`${filePath}-fallback-${i}`}
 									>
 										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
 											{i + 1}
@@ -248,7 +254,32 @@ export function FileViewer({
 										</div>
 									</div>
 								))}
-					</div>
+							</div>
+						}
+					>
+						{highlightingPromise ? (
+							<HighlightedLines
+								filePath={filePath}
+								promise={highlightingPromise}
+							/>
+						) : (
+							<div className="w-full py-2">
+								{lines.map((line, i) => (
+									<div
+										className="flex transition-colors hover:bg-muted/50"
+										key={`${filePath}-no-highlight-${i}`}
+									>
+										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
+											{i + 1}
+										</div>
+										<div className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6">
+											{line}
+										</div>
+									</div>
+								))}
+							</div>
+						)}
+					</Suspense>
 				)}
 			</div>
 		</div>

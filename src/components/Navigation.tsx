@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { api } from "~/lib/eden";
@@ -23,36 +23,25 @@ import { api } from "~/lib/eden";
 export function Navigation() {
 	const params = useParams();
 	const pathname = usePathname();
-	const [repoId, setRepoId] = useState<string | undefined>(undefined);
+	const repoId = params.repoId as string | undefined;
 	const isDev = process.env.NODE_ENV === "development";
 	const { theme, setTheme } = useTheme();
-
-	const [mounted, setMounted] = useState(false);
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	useEffect(() => {
-		setRepoId(params.repoId as string | undefined);
-	}, [params.repoId]);
-
-	const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
+	const [isPending, startTransition] = useTransition();
 
 	const handleAction = async (
 		action: string,
 		callback: () => Promise<void>,
 	) => {
-		setIsLoading((prev) => ({ ...prev, [action]: true }));
-		try {
-			await callback();
-			toast.success(`${action} completed`);
-		} catch (error) {
-			toast.error(
-				`${action} failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-			);
-		} finally {
-			setIsLoading((prev) => ({ ...prev, [action]: false }));
-		}
+		startTransition(async () => {
+			try {
+				await callback();
+				toast.success(`${action} completed`);
+			} catch (error) {
+				toast.error(
+					`${action} failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+				);
+			}
+		});
 	};
 
 	const callDebugAction = async (action: string) => {
@@ -121,6 +110,15 @@ export function Navigation() {
 				throw new Error("Failed to inspect graph");
 			}
 			alert(`Dependency Graph Stats:\n${JSON.stringify(res.data, null, 2)}`);
+		});
+	};
+
+	const resetDatabase = async () => {
+		if (!confirm("Are you sure you want to reset the entire database?")) {
+			return;
+		}
+		await handleAction("Reset database", async () => {
+			await callDebugAction("reset-database");
 		});
 	};
 
@@ -222,21 +220,21 @@ export function Navigation() {
 
 							<Button
 								className="h-7 border-border bg-secondary px-2.5 font-mono text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent hover:text-accent-foreground"
-								disabled={isLoading["Trigger analysis"]}
+								disabled={isPending}
 								onClick={triggerAnalysis}
 								size="sm"
 								title="Re-run analysis for this repository"
 								variant="outline"
 							>
 								<RefreshCw
-									className={`mr-1.5 h-3 w-3 ${isLoading["Trigger analysis"] ? "animate-spin" : ""}`}
+									className={`mr-1.5 h-3 w-3 ${isPending ? "animate-spin" : ""}`}
 								/>
 								Analyze
 							</Button>
 
 							<Button
 								className="h-7 border-border bg-secondary px-2.5 font-mono text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent hover:text-accent-foreground"
-								disabled={isLoading["View graph"]}
+								disabled={isPending}
 								onClick={viewDependencyGraph}
 								size="sm"
 								title="View raw dependency graph JSON"
@@ -248,7 +246,7 @@ export function Navigation() {
 
 							<Button
 								className="h-7 border-border bg-secondary px-2.5 font-mono text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent hover:text-accent-foreground"
-								disabled={isLoading["Clear analysis"]}
+								disabled={isPending}
 								onClick={clearAnalysis}
 								size="sm"
 								title="Delete analysis results and reset status"
@@ -260,10 +258,10 @@ export function Navigation() {
 
 							<Button
 								className="h-7 border-border bg-secondary px-2.5 font-mono text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent hover:text-accent-foreground"
-								disabled={isLoading["Reset status"]}
-								onClick={resetStatus}
+								disabled={isPending}
+								onClick={resetDatabase}
 								size="sm"
-								title="Reset repository status to pending"
+								title="Reset database to initial state (warning: deletes all data)"
 								variant="outline"
 							>
 								<Database className="mr-1.5 h-3 w-3" />
@@ -272,7 +270,18 @@ export function Navigation() {
 
 							<Button
 								className="h-7 border-border bg-secondary px-2.5 font-mono text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent hover:text-accent-foreground"
-								disabled={isLoading["Check queue"]}
+								disabled={isPending}
+								onClick={resetStatus}
+								size="sm"
+								title="Reset repository status to pending"
+								variant="outline"
+							>
+								<Database className="mr-1.5 h-3 w-3" />
+								Status
+							</Button>
+							<Button
+								className="h-7 border-border bg-secondary px-2.5 font-mono text-muted-foreground text-xs uppercase tracking-wider hover:bg-accent hover:text-accent-foreground"
+								disabled={isPending}
 								onClick={checkQueueStatus}
 								size="sm"
 								title="Check queue status (placeholder)"

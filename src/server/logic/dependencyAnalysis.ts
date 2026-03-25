@@ -303,7 +303,7 @@ export async function performDependencyAnalysis(
 		const normalizedSource = file.path.replace(/\\/g, "/");
 
 		for (const imp of parsed.imports) {
-			let resolved;
+			let resolved: { resolved: string | null; isExternal: boolean };
 			if (language === "rust") {
 				resolved = resolveRustImport(imp.source, file.path, {
 					files: normalizedFilePaths,
