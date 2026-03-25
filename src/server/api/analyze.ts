@@ -27,6 +27,13 @@ export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 		);
 		const repoMetadata = await getRepoMetadata(parseResult);
 
+		if (repoMetadata.private) {
+			return {
+				error:
+					"Private repositories are not supported yet. Only public repositories can be analyzed.",
+			};
+		}
+
 		const repoRecord = await insertRepositories({
 			owner: repoMetadata.owner.login,
 			name: repoMetadata.name,

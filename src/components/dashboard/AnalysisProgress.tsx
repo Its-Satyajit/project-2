@@ -39,11 +39,11 @@ const PhaseItem = React.memo(function PhaseItem({
 	return (
 		<div className="flex items-center gap-3">
 			{isComplete ? (
-				<CheckCircle className="h-5 w-5 text-emerald-400" />
+				<CheckCircle className="h-5 w-5 text-accent" />
 			) : isFailed ? (
-				<XCircle className="h-5 w-5 text-red-400" />
+				<XCircle className="h-5 w-5 text-destructive" />
 			) : isActive ? (
-				<Loader2 className="h-5 w-5 animate-spin text-blue-400" />
+				<Loader2 className="h-5 w-5 animate-spin text-primary" />
 			) : (
 				<Circle className="h-5 w-5 text-foreground/20" />
 			)}
@@ -52,7 +52,7 @@ const PhaseItem = React.memo(function PhaseItem({
 					isActive
 						? "font-medium text-foreground"
 						: isComplete
-							? "text-emerald-400"
+							? "text-accent"
 							: "text-muted-foreground"
 				}`}
 			>
@@ -80,7 +80,7 @@ export const AnalysisProgress = React.memo(function AnalysisProgress({
 
 	if (error || !status) {
 		return (
-			<div className="flex items-center gap-2 text-red-500">
+			<div className="flex items-center gap-2 text-destructive">
 				<XCircle className="h-4 w-4" />
 				<span className="text-sm">
 					Unable to check analysis status. Please refresh.
@@ -91,45 +91,30 @@ export const AnalysisProgress = React.memo(function AnalysisProgress({
 
 	if (status.status === "failed") {
 		return (
-			<div className="rounded-lg border border-red-500/20 bg-red-500/[0.05] p-4">
-				<div className="flex items-center gap-2 text-red-400">
+			<div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+				<div className="flex items-center gap-2 text-destructive">
 					<XCircle className="h-5 w-5" />
 					<span className="font-medium">Analysis Failed</span>
 				</div>
-				<p className="mt-1 text-red-400/80 text-sm">{status.phase}</p>
+				<p className="mt-1 text-destructive/80 text-sm">{status.phase}</p>
 			</div>
 		);
 	}
 
 	if (status.status === "complete") {
 		return (
-			<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-4">
-				<div className="flex items-center gap-2 text-emerald-400">
-					<CheckCircle className="h-5 w-5" />
-					<span className="font-medium">Analysis Complete</span>
-				</div>
-				{status.analysis && (
-					<div className="mt-2 grid grid-cols-3 gap-4 text-sm">
-						<div>
-							<span className="text-muted-foreground">Files</span>
-							<p className="font-medium text-foreground">
-								{status.analysis.totalFiles?.toLocaleString()}
-							</p>
-						</div>
-						<div>
-							<span className="text-muted-foreground">Directories</span>
-							<p className="font-medium text-foreground">
-								{status.analysis.totalDirectories?.toLocaleString()}
-							</p>
-						</div>
-						<div>
-							<span className="text-muted-foreground">Lines</span>
-							<p className="font-medium text-foreground">
-								{status.analysis.totalLines?.toLocaleString()}
-							</p>
-						</div>
+			<div className="rounded-lg border border-accent/20 bg-accent/5 p-6 text-center">
+				<div className="flex flex-col items-center gap-3 text-accent">
+					<CheckCircle className="h-8 w-8" />
+					<div className="flex flex-col gap-1">
+						<span className="font-mono font-bold text-sm tracking-tight uppercase">
+							ANALYSIS_COMPLETE
+						</span>
+						<p className="font-mono text-accent/60 text-xs">
+							System synchronized with latest repository state
+						</p>
 					</div>
-				)}
+				</div>
 			</div>
 		);
 	}
@@ -137,12 +122,12 @@ export const AnalysisProgress = React.memo(function AnalysisProgress({
 	const currentPhaseIndex = getPhaseIndex(status.status);
 
 	return (
-		<div className="rounded-lg border border-blue-500/20 bg-blue-500/[0.05] p-4">
-			<div className="flex items-center gap-2 text-blue-400">
+		<div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+			<div className="flex items-center gap-2 text-primary">
 				<Loader2 className="h-5 w-5 animate-spin" />
 				<span className="font-medium">Analyzing Repository</span>
 			</div>
-			<p className="mt-1 text-blue-400/80 text-sm">{status.phase}</p>
+			<p className="mt-1 text-primary/80 text-sm">{status.phase}</p>
 			<div className="mt-4 space-y-2">
 				{PHASES.slice(0, -1).map((phase, idx) => (
 					<PhaseItem

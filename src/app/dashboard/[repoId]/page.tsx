@@ -8,6 +8,7 @@ import {
 	FileCode,
 	FolderTree,
 	GitBranch,
+	GitGraph,
 	Loader2,
 } from "lucide-react";
 import Image from "next/image";
@@ -16,11 +17,11 @@ import type React from "react";
 import { Suspense, use, useState } from "react";
 import type { FileTreeItem } from "~/components/CollapsibleFileTree";
 import { AnalysisProgress } from "~/components/dashboard/AnalysisProgress";
-import { FileTypeChart } from "~/components/dashboard/FileTypeChart";
 import { FileViewer } from "~/components/dashboard/FileViewer";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
 import { VirtualizedFileTree } from "~/components/dashboard/VirtualizedFileTree";
 import { Button } from "~/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 
 import { api } from "~/lib/eden";
 
@@ -33,8 +34,8 @@ export default function RepoPage({
 		<main className="relative min-h-screen overflow-hidden bg-background pt-14">
 			<div className="absolute inset-0 -z-10">
 				<div className="mask-[radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] absolute inset-0 bg-[linear-gradient(rgba(100,100,100,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(100,100,100,0.1)_1px,transparent_1px)] bg-size-[30px_30px] dark:bg-[linear-gradient(rgba(20,20,20,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(20,20,20,0.4)_1px,transparent_1px)]" />
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(245,158,11,0.06),transparent_40%)]" />
-				<div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,rgba(6,182,212,0.05),transparent_40%)]" />
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,var(--color-primary)/0.06,transparent_40%)]" />
+				<div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_70%,var(--color-accent)/0.05,transparent_40%)]" />
 				<div
 					className="pointer-events-none absolute inset-0 opacity-[0.02]"
 					style={{
@@ -55,7 +56,12 @@ export default function RepoPage({
 function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	const { repoId } = use(params);
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
-	const [explorerTab, setExplorerTab] = useState<"code" | "files">("code");
+	const [activeTab, setActiveTab] = useState<"explorer" | "contributors">(
+		"explorer",
+	);
+	const [contributorsSort, setContributorsSort] = useState<
+		"contributions" | "newest"
+	>("contributions");
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["repo-dashboard", repoId],
@@ -66,6 +72,20 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 		enabled: !!repoId,
 		retry: false,
 	});
+
+	const { data: contributorsData, isLoading: isContributorsLoading } = useQuery(
+		{
+			queryKey: ["contributors", repoId, contributorsSort],
+			queryFn: async () => {
+				const res = await fetch(
+					`/api/repos/${repoId}/contributors?sort=${contributorsSort}`,
+				);
+				if (!res.ok) throw new Error("Failed to fetch contributors");
+				return res.json();
+			},
+			enabled: !!repoId && activeTab === "contributors",
+		},
+	);
 
 	const {
 		data: fileContent,
@@ -126,13 +146,13 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	if (isLoading) {
 		return (
 			<div className="flex flex-col items-center justify-center py-32">
-				<div className="mb-6 flex items-center gap-3 font-mono text-amber-400">
+				<div className="mb-6 flex items-center gap-3 font-mono text-primary">
 					<Loader2 className="h-5 w-5 animate-spin" />
 					<span className="text-sm tracking-wider">INITIALIZING_DASHBOARD</span>
 				</div>
 				<div className="h-1 w-48 overflow-hidden rounded-full bg-secondary">
 					<div
-						className="h-full animate-pulse bg-amber-500"
+						className="h-full animate-pulse bg-primary"
 						style={{ width: "60%" }}
 					/>
 				</div>
@@ -170,8 +190,8 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 			totalFiles: number;
 			totalDirectories: number;
 			totalLines: number;
-			fileTypeBreakdownJson: Record<string, number>;
 		}>;
+		fileTypeBreakdown?: Record<string, number>;
 	};
 	const analysis = data.analysisResults?.[0];
 
@@ -188,23 +208,23 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 							{data.avatarUrl ? (
 								<Image
 									alt={data.owner}
-									className="rounded-full border border-amber-500/30"
+									className="rounded-full border border-primary/30"
 									height={36}
 									src={data.avatarUrl}
 									width={36}
 								/>
 							) : (
-								<div className="flex h-9 w-9 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10">
-									<GitBranch className="h-4 w-4 text-amber-400" />
+								<div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
+									<GitBranch className="h-4 w-4 text-primary" />
 								</div>
 							)}
 							<h1 className="font-bold font-mono text-2xl text-foreground tracking-tight">
-								<span className="text-amber-400">{data.owner}</span>
+								<span className="text-primary">{data.owner}</span>
 								<span className="text-muted-foreground">/</span>
 								<span className="text-foreground">{data.name}</span>
 							</h1>
 							{data.isPrivate && (
-								<span className="rounded border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 font-mono text-orange-400 text-xs">
+								<span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-primary text-xs">
 									PRIVATE
 								</span>
 							)}
@@ -216,7 +236,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 						)}
 					</div>
 					<Link href={`/dashboard/${repoId}/analysis`}>
-						<Button className="gap-2 border border-cyan-500/30 bg-cyan-500/10 font-mono text-cyan-400 text-sm hover:bg-cyan-500/20">
+						<Button className="gap-2 border border-accent/30 bg-accent/10 font-mono text-accent text-sm hover:bg-accent/20">
 							<BarChart3 className="h-4 w-4" />
 							<span>DEEP_ANALYSIS</span>
 							<ArrowRight className="h-4 w-4" />
@@ -229,134 +249,222 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					<span className="font-mono text-muted-foreground text-xs">
 						{"//"}
 					</span>
-					<span className="font-mono text-sky-400 text-xs tracking-wider">
-						REPO_STATS
+					<span className="font-mono text-accent text-xs tracking-wider">
+						REPOSITORY_OVERVIEW
 					</span>
 				</div>
-				<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-					<StatCard
-						color="sky"
-						icon={FileCode}
-						label="TOTAL_FILES"
-						value={analysis?.totalFiles ?? 0}
-					/>
-					<StatCard
-						color="blue"
-						icon={FolderTree}
-						label="DIRECTORIES"
-						value={analysis?.totalDirectories ?? 0}
-					/>
-					<StatCard
-						color="emerald"
-						icon={Database}
-						label="LINES_OF_CODE"
-						value={(analysis?.totalLines ?? 0).toLocaleString()}
-					/>
-					<StatCard
-						color="violet"
-						icon={Code2}
-						label="PRIMARY_LANG"
-						value={data.primaryLanguage || "N/A"}
-					/>
+				<div className="grid gap-6 lg:grid-cols-[1fr_400px]">
+					<div className="grid gap-4 md:grid-cols-2">
+						<StatCard
+							color="sky"
+							icon={FileCode}
+							label="TOTAL_FILES"
+							value={analysis?.totalFiles ?? 0}
+						/>
+						<StatCard
+							color="blue"
+							icon={FolderTree}
+							label="DIRECTORIES"
+							value={analysis?.totalDirectories ?? 0}
+						/>
+						<StatCard
+							color="emerald"
+							icon={Database}
+							label="LINES_OF_CODE"
+							value={(analysis?.totalLines ?? 0).toLocaleString()}
+						/>
+						<StatCard
+							color="violet"
+							icon={Code2}
+							label="PRIMARY_LANG"
+							value={data.primaryLanguage || "N/A"}
+						/>
+					</div>
+					<div className="flex h-full flex-col justify-center">
+						<AnalysisProgress repoId={repoId} />
+					</div>
 				</div>
 			</section>
 			<section>
-				<div className="mb-4 flex items-center gap-2">
-					<span className="font-mono text-muted-foreground text-xs">
-						{"//"}
-					</span>
-					<span className="font-mono text-emerald-400 text-xs tracking-wider">
-						ANALYSIS_STATUS
-					</span>
-				</div>
-				<div className="rounded-lg border border-emerald-500/20 bg-emerald-500/3 p-4">
-					<AnalysisProgress repoId={repoId} />
-				</div>
-			</section>
-			<section>
-				<div className="mb-4 flex items-center gap-2">
-					<span className="font-mono text-muted-foreground text-xs">
-						{"//"}
-					</span>
-					<span className="font-mono text-blue-400 text-xs tracking-wider">
-						EXPLORER
-					</span>
-				</div>
-
-				<div className="mb-4 flex items-center gap-2">
-					<button
-						className={`tab-pill ${explorerTab === "code" ? "active" : ""}`}
-						onClick={() => setExplorerTab("code")}
-						type="button"
-					>
-						<Code2 className="mr-1.5 h-3.5 w-3.5" />
-						Code
-					</button>
-					<button
-						className={`tab-pill ${explorerTab === "files" ? "active" : ""}`}
-						onClick={() => setExplorerTab("files")}
-						type="button"
-					>
-						<BarChart3 className="mr-1.5 h-3.5 w-3.5" />
-						File Distribution
-					</button>
-				</div>
-
-				{explorerTab === "code" ? (
-					<div
-						className="grid gap-4 lg:grid-cols-[350px_1fr]"
-						style={{ height: "calc(100vh - 380px)" }}
-					>
-						<div className="overflow-hidden rounded-lg border border-border bg-card">
-							<VirtualizedFileTree
-								defaultBranch={data.defaultBranch}
-								fileTree={data.fileTree ?? []}
-								isPrivate={data.isPrivate}
-								name={data.name}
-								onFileSelect={handleFileSelect}
-								owner={data.owner}
-								repoId={data.id}
-							/>
+				<Tabs
+					onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+					value={activeTab}
+				>
+					<div className="mb-4 flex items-center justify-between">
+						<div className="flex items-center gap-2">
+							<span className="font-mono text-muted-foreground text-xs">
+								{"//"}
+							</span>
+							<span className="font-mono text-primary text-xs tracking-wider">
+								VIEW_MODE
+							</span>
 						</div>
-						<div className="overflow-hidden rounded-lg border border-border bg-card">
-							{selectedFile ? (
-								<FileViewer
-									content={fileContent ?? null}
-									error={fileError ?? null}
-									filePath={selectedFile}
-									isLoading={isFileLoading ?? false}
-									repo={{
-										owner: data.owner,
-										name: data.name,
-										branch: data.defaultBranch || "main",
-										isPrivate: data.isPrivate,
-									}}
+						<TabsList variant="line">
+							<TabsTrigger className="gap-2" value="explorer">
+								<FolderTree className="h-4 w-4" />
+								EXPLORER
+							</TabsTrigger>
+							<TabsTrigger className="gap-2" value="contributors">
+								<GitGraph className="h-4 w-4" />
+								CONTRIBUTORS
+							</TabsTrigger>
+						</TabsList>
+					</div>
+
+					<TabsContent className="mt-0" value="explorer">
+						<div
+							className="grid gap-4 lg:grid-cols-[350px_1fr]"
+							style={{ height: "calc(100vh - 320px)" }}
+						>
+							<div className="overflow-hidden rounded-lg border border-border bg-card">
+								<VirtualizedFileTree
+									defaultBranch={data.defaultBranch}
+									fileTree={data.fileTree ?? []}
+									isPrivate={data.isPrivate}
+									name={data.name}
+									onFileSelect={handleFileSelect}
+									owner={data.owner}
+									repoId={data.id}
 								/>
+							</div>
+							<div className="overflow-hidden rounded-lg border border-border bg-card">
+								{selectedFile ? (
+									<FileViewer
+										content={fileContent ?? null}
+										error={fileError ?? null}
+										filePath={selectedFile}
+										isLoading={isFileLoading ?? false}
+										repo={{
+											owner: data.owner,
+											name: data.name,
+											branch: data.defaultBranch || "main",
+											isPrivate: data.isPrivate,
+										}}
+									/>
+								) : (
+									<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-muted-foreground">
+										<Code2 className="mb-4 h-12 w-12 opacity-30" />
+										<p className="font-mono text-sm">
+											Select a file to view its contents
+										</p>
+									</div>
+								)}
+							</div>
+						</div>
+					</TabsContent>
+
+					<TabsContent className="mt-0" value="contributors">
+						<div className="rounded-lg border border-border bg-card p-4">
+							{contributorsData && contributorsData.length > 0 && (
+								<div className="mb-4 flex items-center gap-2">
+									<span className="font-mono text-muted-foreground text-xs">
+										SORT_BY:
+									</span>
+									<button
+										className={`rounded px-2 py-1 font-mono text-xs transition-colors ${
+											contributorsSort === "contributions"
+												? "bg-primary/20 text-primary"
+												: "text-muted-foreground hover:text-foreground"
+										}`}
+										onClick={() => setContributorsSort("contributions")}
+										type="button"
+									>
+										TOP_CONTRIBUTORS
+									</button>
+									<button
+										className={`rounded px-2 py-1 font-mono text-xs transition-colors ${
+											contributorsSort === "newest"
+												? "bg-primary/20 text-primary"
+												: "text-muted-foreground hover:text-foreground"
+										}`}
+										onClick={() => setContributorsSort("newest")}
+										type="button"
+									>
+										RECENTLY_ADDED
+									</button>
+								</div>
+							)}
+							{isContributorsLoading ? (
+								<div className="flex items-center justify-center p-8">
+									<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+								</div>
+							) : contributorsData && contributorsData.length > 0 ? (
+								<div
+									className="grid gap-4"
+									style={{
+										gridTemplateColumns:
+											"repeat(auto-fill, minmax(280px, 1fr))",
+									}}
+								>
+									{contributorsData.map(
+										(contributor: {
+											id: string;
+											githubLogin: string;
+											avatarUrl: string | null;
+											htmlUrl: string | null;
+											contributions: number;
+										}) => (
+											<div
+												className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-4 transition-colors hover:bg-muted/40"
+												key={contributor.id}
+											>
+												{contributor.avatarUrl ? (
+													<Image
+														alt={contributor.githubLogin}
+														className="rounded-full"
+														height={48}
+														src={contributor.avatarUrl}
+														width={48}
+													/>
+												) : (
+													<div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+														<GitBranch className="h-6 w-6 text-muted-foreground" />
+													</div>
+												)}
+												<div className="min-w-0 flex-1">
+													<p className="truncate font-medium font-mono">
+														{contributor.githubLogin}
+													</p>
+													{contributor.htmlUrl && (
+														<a
+															className="block truncate font-mono text-muted-foreground text-xs hover:underline"
+															href={contributor.htmlUrl}
+															rel="noopener noreferrer"
+															target="_blank"
+														>
+															{contributor.htmlUrl}
+														</a>
+													)}
+												</div>
+												<div className="text-right">
+													<p className="font-bold font-mono text-foreground text-lg">
+														{contributor.contributions}
+													</p>
+													<p className="font-mono text-muted-foreground text-xs">
+														contributions
+													</p>
+												</div>
+											</div>
+										),
+									)}
+								</div>
 							) : (
-								<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-muted-foreground">
-									<Code2 className="mb-4 h-12 w-12 opacity-30" />
-									<p className="font-mono text-sm">
-										Select a file to view its contents
-									</p>
+								<div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+									<GitGraph className="mb-4 h-12 w-12 opacity-30" />
+									<p className="font-mono text-sm">No contributors found</p>
 								</div>
 							)}
 						</div>
-					</div>
-				) : analysis?.fileTypeBreakdownJson ? (
-					<div className="rounded-lg border border-border bg-card p-6">
-						<FileTypeChart
-							data={analysis.fileTypeBreakdownJson as Record<string, number>}
-						/>
-					</div>
-				) : null}
+					</TabsContent>
+				</Tabs>
 			</section>
 			<footer className="mt-4 flex items-center justify-between border-border border-t pt-6">
 				<div className="font-mono text-muted-foreground text-xs">
-					<span className="text-amber-600 dark:text-amber-400">branch:</span>{" "}
+					<span className="text-primary">branch:</span>{" "}
 					{data.defaultBranch}
 				</div>
 				<div className="font-mono text-muted-foreground text-xs">
-					<span className="text-green-600 dark:text-green-400">status:</span>{" "}
+					<span className="text-accent">status:</span>{" "}
 					analyzed
 				</div>
 			</footer>{" "}
@@ -376,17 +484,17 @@ function StatCard({
 	color: "sky" | "blue" | "emerald" | "violet";
 }) {
 	const colorClasses = {
-		sky: "text-sky-400 border-sky-500/30 bg-sky-500/5",
-		blue: "text-blue-400 border-blue-500/30 bg-blue-500/5",
-		emerald: "text-emerald-400 border-emerald-500/30 bg-emerald-500/5",
-		violet: "text-violet-400 border-violet-500/30 bg-violet-500/5",
+		sky: "text-primary border-primary/30 bg-primary/5",
+		blue: "text-primary border-primary/30 bg-primary/5",
+		emerald: "text-accent border-accent/30 bg-accent/5",
+		violet: "text-accent border-accent/30 bg-accent/5",
 	};
 
 	const iconBgClasses = {
-		sky: "bg-sky-500/10",
-		blue: "bg-blue-500/10",
-		emerald: "bg-emerald-500/10",
-		violet: "bg-violet-500/10",
+		sky: "bg-primary/10",
+		blue: "bg-primary/10",
+		emerald: "bg-accent/10",
+		violet: "bg-accent/10",
 	};
 
 	return (

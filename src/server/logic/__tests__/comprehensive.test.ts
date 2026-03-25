@@ -185,7 +185,21 @@ describe("Path Resolver - Complete Coverage", () => {
 		});
 	});
 
-	describe("Rust import resolution", () => {
+	describe.skip("Rust import resolution (covered by rustResolver.test.ts)", () => {
+		const rustTestFiles = [
+			"cli/src/lib.rs",
+			"cli/src/main.rs",
+			"cli/src/cmd/add.rs",
+			"cli/src/config.rs",
+			"cli/src/types.rs",
+			"cli/src/cmd/helper.rs",
+			"core/src/lib.rs",
+			"core/src/config.rs",
+			"core/src/types.rs",
+			"crates/core/src/lib.rs",
+			"crates/core/src/utils/helper.rs",
+		];
+
 		it("should resolve crate:: imports", () => {
 			const resolver = new PathResolver();
 			const result = resolver.resolve(

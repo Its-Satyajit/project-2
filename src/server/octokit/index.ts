@@ -85,7 +85,6 @@ export async function getFileContentFromRaw({
 	path: string;
 }): Promise<string | null> {
 	try {
-		// Only encode individual path segments, not the slashes
 		const encodedPath = path
 			.split("/")
 			.map((segment) => encodeURIComponent(segment))
@@ -101,4 +100,38 @@ export async function getFileContentFromRaw({
 		console.error(`[RawFetch] Error for ${path}:`, error);
 		return null;
 	}
+}
+
+export interface Contributor {
+	login: string;
+	id: number;
+	avatar_url: string;
+	html_url: string;
+	contributions: number;
+}
+
+export async function getRepoContributors({
+	owner,
+	repo,
+	perPage = 100,
+}: {
+	owner: string;
+	repo: string;
+	perPage?: number;
+}): Promise<Contributor[]> {
+	const unauthenticatedOctokit = new Octokit();
+	const { data } = await unauthenticatedOctokit.rest.repos.listContributors({
+		owner,
+		repo,
+		per_page: perPage,
+	});
+	return data
+		.filter((c) => c.login !== undefined)
+		.map((c) => ({
+			login: c.login!,
+			id: c.id ?? 0,
+			avatar_url: c.avatar_url ?? "",
+			html_url: c.html_url ?? "",
+			contributions: c.contributions ?? 0,
+		}));
 }

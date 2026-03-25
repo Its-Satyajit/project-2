@@ -3,7 +3,7 @@ import type { ParsedFile } from "./parsers/index";
 import { resolveImport } from "./parsers/pathResolver";
 import { parsePython } from "./parsers/python";
 import { createRegexParser } from "./parsers/regexParser";
-import { parseRust } from "./parsers/rust";
+import { parseRust, resolveRustImport } from "./parsers/rust";
 import { parseTypescript } from "./parsers/typescript";
 
 export interface GraphNode {
@@ -60,56 +60,97 @@ const LANGUAGE_PARSERS: Record<
 	python: parsePython,
 	go: parseGo,
 	rust: parseRust,
-	java: createRegexParser("java", [
-		/import\s+static\s+([\w.]+)/,
-		/import\s+([\w.]+)/,
-	]),
-	cpp: createRegexParser("cpp", [/#include\s*[<"]([^>"]+)[>"]/]),
-	c: createRegexParser("c", [/#include\s*[<"]([^>"]+)[>"]/]),
-	csharp: createRegexParser("csharp", [/using\s+([\w.]+);/]),
-	kotlin: createRegexParser("kotlin", [/import\s+([\w.]+)/]),
-	swift: createRegexParser("swift", [/import\s+(\w+)/, /@import\s+([\w.]+);/]),
-	php: createRegexParser("php", [
-		/(?:require|require_once|include|include_once)\s*['"]([^'"]+)['"]/,
-		/use\s+([\w\\]+);/,
-	]),
-	dart: createRegexParser("dart", [
-		/import\s+['"]([^'"]+)['"]/,
-		/part\s+of\s+['"]([^'"]+)['"]/,
-		/part\s+['"]([^'"]+)['"]/,
-	]),
-	r: createRegexParser("r", [
-		/library\s*\(\s*(\w+)\s*\)/,
-		/(?:source|suppressPackageStartupMessages)\s*\(\s*['"]([^'"]+)['"]\s*\)/,
-	]),
-	ruby: createRegexParser("ruby", [
-		/require\s+['"]([^'"]+)['"]/,
-		/require_relative\s+['"]([^'"]+)['"]/,
-	]),
-	matlab: createRegexParser("matlab", [
-		/(?:import|addpath|genpath)\s+([\w.]+)/,
-	]),
-	scala: createRegexParser("scala", [/import\s+([\w.]+)/]),
-	shell: createRegexParser("shell", [
-		/source\s+['"]?([^'";\s]+)['"]?/,
-		/\.\s+['"]?([^'";\s]+)['"]?/,
-	]),
-	bash: createRegexParser("bash", [
-		/source\s+['"]?([^'";\s]+)['"]?/,
-		/\.\s+['"]?([^'";\s]+)['"]?/,
-	]),
-	julia: createRegexParser("julia", [/(?:using|import)\s+([\w.]+)/]),
-	objective_c: createRegexParser("objective_c", [
-		/#import\s+[<"]([^>"]+)[>"]/,
-		/#import\s+['"]([^'"]+)['"]/,
-	]),
-	assembly: createRegexParser("assembly", [/include\s+['"]?([^'";\s]+)['"]?/]),
-	groovy: createRegexParser("groovy", [/import\s+([\w.]+)/]),
-	haskell: createRegexParser("haskell", [/import\s+(?:qualified\s+)?([\w.]+)/]),
-	elixir: createRegexParser("elixir", [
-		/(?:import|require|alias|use)\s+([\w.]+)/,
-	]),
-	sql: createRegexParser("sql", [/(?:SOURCE|INCLUDE)\s+['"]?([^'";\s]+)['"]?/]),
+	java: createRegexParser(
+		"java",
+		[/import\s+static\s+([\w.]+)/, /import\s+([\w.]+)/],
+		["//", "/*", "*"],
+	),
+	cpp: createRegexParser(
+		"cpp",
+		[/#include\s*[<"]([^>"]+)[>"]/],
+		["//", "/*", "*"],
+	),
+	c: createRegexParser("c", [/#include\s*[<"]([^>"]+)[>"]/], ["//", "/*", "*"]),
+	csharp: createRegexParser("csharp", [/using\s+([\w.]+);/], ["//"]),
+	kotlin: createRegexParser("kotlin", [/import\s+([\w.]+)/], ["//"]),
+	swift: createRegexParser(
+		"swift",
+		[/import\s+(\w+)/, /@import\s+([\w.]+);/],
+		["//"],
+	),
+	php: createRegexParser(
+		"php",
+		[
+			/(?:require|require_once|include|include_once)\s*['"]([^'"]+)['"]/,
+			/use\s+([\w\\]+);/,
+		],
+		["//", "#", "/*"],
+	),
+	dart: createRegexParser(
+		"dart",
+		[
+			/import\s+['"]([^'"]+)['"]/,
+			/part\s+of\s+['"]([^'"]+)['"]/,
+			/part\s+['"]([^'"]+)['"]/,
+		],
+		["//"],
+	),
+	r: createRegexParser(
+		"r",
+		[
+			/library\s*\(\s*(\w+)\s*\)/,
+			/(?:source|suppressPackageStartupMessages)\s*\(\s*['"]([^'"]+)['"]\s*\)/,
+		],
+		["#"],
+	),
+	ruby: createRegexParser(
+		"ruby",
+		[/require\s+['"]([^'"]+)['"]/, /require_relative\s+['"]([^'"]+)['"]/],
+		["#"],
+	),
+	matlab: createRegexParser(
+		"matlab",
+		[/(?:import|addpath|genpath)\s+([\w.]+)/],
+		["%"],
+	),
+	scala: createRegexParser("scala", [/import\s+([\w.]+)/], ["//"]),
+	shell: createRegexParser(
+		"shell",
+		[/source\s+['"]?([^'";\s]+)['"]?/, /\.\s+['"]?([^'";\s]+)['"]?/],
+		["#"],
+	),
+	bash: createRegexParser(
+		"bash",
+		[/source\s+['"]?([^'";\s]+)['"]?/, /\.\s+['"]?([^'";\s]+)['"]?/],
+		["#"],
+	),
+	julia: createRegexParser("julia", [/(?:using|import)\s+([\w.]+)/], ["#"]),
+	objective_c: createRegexParser(
+		"objective_c",
+		[/#import\s+[<"]([^>"]+)[>"]/, /#import\s+['"]([^'"]+)['"]/],
+		["//", "/*"],
+	),
+	assembly: createRegexParser(
+		"assembly",
+		[/include\s+['"]?([^'";\s]+)['"]?/],
+		[";", "@", "#"],
+	),
+	groovy: createRegexParser("groovy", [/import\s+([\w.]+)/], ["//"]),
+	haskell: createRegexParser(
+		"haskell",
+		[/import\s+(?:qualified\s+)?([\w.]+)/],
+		["--"],
+	),
+	elixir: createRegexParser(
+		"elixir",
+		[/(?:import|require|alias|use)\s+([\w.]+)/],
+		["#"],
+	),
+	sql: createRegexParser(
+		"sql",
+		[/(?:SOURCE|INCLUDE)\s+['"]?([^'";\s]+)['"]?/],
+		["--", "#", "/*"],
+	),
 };
 
 export function detectLanguage(filePath: string): string | null {
@@ -201,11 +242,12 @@ export async function performDependencyAnalysis(
 
 	// Build Rust crate mapping from file paths
 	// e.g., files in core/src/ -> crate name "core" (from Cargo.toml name "devbind_core")
+	// Also handles crates/crate_name/src/... pattern
 	const rustCrateMapping: Record<string, string> = {};
 	const crateDirs = new Set<string>();
 	for (const filePath of normalizedFilePaths) {
-		// Match patterns like "core/src/lib.rs" or "cli/src/main.rs"
-		const match = filePath.match(/^([^/]+)\/src\/.*\.rs$/);
+		// Match patterns like "core/src/lib.rs", "cli/src/main.rs", or "crates/biome_config/src/..."
+		const match = filePath.match(/^(?:crates\/)?([^/]+)\/src\/.*\.rs$/);
 		if (match?.[1]) {
 			crateDirs.add(match[1]);
 		}
@@ -261,11 +303,22 @@ export async function performDependencyAnalysis(
 		const normalizedSource = file.path.replace(/\\/g, "/");
 
 		for (const imp of parsed.imports) {
-			const resolved = resolveImport(imp.source, file.path);
+			let resolved: { resolved: string | null; isExternal: boolean };
+			if (language === "rust") {
+				resolved = resolveRustImport(imp.source, file.path, {
+					files: normalizedFilePaths,
+					crateMapping: rustCrateMapping,
+				});
+			} else {
+				resolved = resolveImport(imp.source, file.path, {
+					rustCrateMapping,
+					files: normalizedFilePaths,
+				});
+			}
 
-			if (resolved.isExternal) {
-				// External package - skip
-			} else if (resolved.resolved) {
+			if (resolved.isExternal || !resolved.resolved) {
+				// External package or unresolved - skip
+			} else {
 				// Normalize the target path to match the format in filePathSet
 				const normalizedTarget = resolved.resolved.replace(/\\/g, "/");
 
@@ -290,10 +343,6 @@ export async function performDependencyAnalysis(
 					);
 					unresolvedImports.push(`${normalizedSource} → ${imp.source}`);
 				}
-			} else {
-				console.log(
-					`[DependencyAnalysis]   No resolution: ${normalizedSource} → ${imp.source} (isExternal: ${resolved.isExternal})`,
-				);
 			}
 		}
 

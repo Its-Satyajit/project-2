@@ -10,11 +10,11 @@ import { env } from "~/env";
 export const metadata: Metadata = {
 	metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
 	title: {
-		default: "Repository Analyzer",
-		template: "%s | Repository Analyzer",
+		default: "Analyze | Code Intelligence",
+		template: "%s | Analyze",
 	},
 	description:
-		"Get deep insights into any GitHub repository. Explore structure, analyze dependencies, find hotspots, and understand your project's architecture.",
+		"A premium repository analyzer for the modern developer. Visualize architecture, identify hotspots, and master your codebase with editorial precision.",
 	keywords: [
 		"github analyzer",
 		"code analysis",
@@ -66,10 +66,10 @@ export const metadata: Metadata = {
 			"max-snippet": -1,
 		},
 	},
-	icons: [
-		{ rel: "icon", url: "/favicon.ico" },
-		{ rel: "apple", url: "/apple-touch-icon.png", sizes: "180x180" },
-	],
+	icons: {
+		icon: "/icon.png",
+		apple: "/icon.png",
+	},
 	verification: {
 		google: "google-site-verification-code",
 	},

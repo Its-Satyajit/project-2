@@ -14,6 +14,7 @@ export const reposRoute = new Elysia().get(
 			description: repo.description,
 			stars: repo.stars ?? 0,
 			forks: repo.forks ?? 0,
+			contributorCount: repo.contributorCount ?? 0,
 			primaryLanguage: repo.primaryLanguage,
 			analysisStatus: repo.analysisStatus,
 		}));

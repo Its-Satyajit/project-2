@@ -1,1 +1,0 @@
-ALTER TABLE "repositories" ADD COLUMN "avatar_url" text;

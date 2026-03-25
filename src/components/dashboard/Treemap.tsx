@@ -2,11 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import * as d3 from "d3";
-import { Loader2 } from "lucide-react";
+import { motion } from "motion/react";
 import { useTheme } from "next-themes";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { api } from "~/lib/eden";
-import { getLanguageColor } from "~/lib/languageColors";
 
 interface TreemapFile {
 	id: string;
@@ -17,6 +16,7 @@ interface TreemapFile {
 	fanIn: number;
 	fanOut: number;
 	isExternal: boolean;
+	_color?: string;
 }
 
 interface TreemapData {
@@ -27,7 +27,10 @@ interface TreemapData {
 
 interface TreemapProps {
 	repoId: string;
-	colorMode: "language" | "hotspot";
+	colorBy?: "language" | "hotspot" | "fanIn" | "fanOut";
+	colorMode?: "language" | "hotspot" | "fanIn" | "fanOut";
+	sizeBy?: "loc" | "fanIn" | "fanOut";
+	maxFiles?: number;
 	onFileClick?: (file: TreemapFile) => void;
 }
 
@@ -35,276 +38,343 @@ interface TreemapNode extends d3.HierarchyRectangularNode<TreemapFile> {
 	data: TreemapFile;
 }
 
-export function Treemap({ repoId, colorMode, onFileClick }: TreemapProps) {
-	const containerRef = useRef<HTMLDivElement>(null);
+const LANGUAGE_COLORS: Record<string, string> = {
+	ts: "#fafafa", // Neutral 50
+	tsx: "#f5f5f5", // Neutral 100
+	js: "#e5e5e5", // Neutral 200
+	jsx: "#e5e5e5",
+	py: "#fbbf24", // Amber 400
+	go: "#f59e0b", // Amber 500
+	rs: "#fafafa",
+	java: "#d4d4d4",
+	cpp: "#a3a3a3",
+	c: "#a3a3a3",
+	rb: "#fbbf24",
+	php: "#f59e0b",
+	swift: "#fcd34d",
+	kt: "#fafafa",
+	vue: "#e5e5e5",
+	svelte: "#fbbf24",
+	css: "#a3a3a3",
+	scss: "#d4d4d4",
+	html: "#f5f5f5",
+	json: "#525252",
+	yaml: "#525252",
+	yml: "#525252",
+	md: "#ffffff",
+	sql: "#f5f5f5",
+	prisma: "#171717",
+};
+
+function getLanguageColor(ext: string): string {
+	return LANGUAGE_COLORS[ext.toLowerCase()] || "#94a3b8";
+}
+
+function getScoreColor(score: number, maxScore: number): string {
+	if (score === 0) return "var(--color-muted-foreground)";
+	const normalized = score / maxScore;
+
+	if (normalized > 0.7) return "#dc2626"; // Critical Red
+	if (normalized > 0.4) return "#d97706"; // Warning Amber
+	if (normalized > 0.2) return "#fafafa"; // Normal Neutral
+	return "#737373"; // Muted Slate
+}
+
+function getFanColor(value: number, maxValue: number): string {
+	if (value === 0) return "var(--color-muted)";
+	const normalized = Math.min(value / maxValue, 1);
+
+	// Interpolate between secondary and primary
+	return `color-mix(in oklch, var(--color-primary) ${normalized * 100}%, var(--color-secondary))`;
+}
+
+export function Treemap({
+	repoId,
+	colorBy: colorByProp,
+	colorMode,
+	sizeBy: sizeByProp,
+	maxFiles = 500,
+	onFileClick,
+}: TreemapProps) {
+	const effectiveColorBy = colorByProp || colorMode || "language";
+	const effectiveSizeBy = sizeByProp || "loc";
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+	const [hoveredFile, setHoveredFile] = useState<TreemapFile | null>(null);
+	const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 	const { resolvedTheme } = useTheme();
 	const isDark = resolvedTheme === "dark";
 
 	const { data, isLoading, error } = useQuery<TreemapData>({
-		queryKey: ["treemap", repoId],
+		queryKey: ["treemap", repoId, maxFiles],
 		queryFn: async () => {
-			const res = await api.dashboard({ repoId: repoId as any }).treemap.get();
-			if (res.error) {
-				throw new Error(String(res.error));
-			}
+			const res = await api.dashboard({ repoId: repoId || "" }).treemap.get();
+			if (res.error) throw new Error(String(res.error));
 			return res.data as TreemapData;
 		},
 		enabled: !!repoId,
 	});
 
-	useEffect(() => {
-		if (!containerRef.current) return;
-
-		const observer = new ResizeObserver((entries) => {
-			for (const entry of entries) {
-				const { width, height } = entry.contentRect;
-				setDimensions({ width, height });
-			}
-		});
-
-		observer.observe(containerRef.current);
-		return () => observer.disconnect();
+	const containerRef = useCallback((node: HTMLDivElement | null) => {
+		if (node) {
+			const observer = new ResizeObserver((entries) => {
+				for (const entry of entries) {
+					setDimensions({
+						width: entry.contentRect.width,
+						height: entry.contentRect.height,
+					});
+				}
+			});
+			observer.observe(node);
+			return () => observer.disconnect();
+		}
 	}, []);
 
-	const treemapData = useMemo(() => {
-		if (!data?.files || data.files.length === 0) return null;
+	const processedData = useMemo(() => {
+		if (!data?.files) return null;
+
+		const maxLoc = Math.max(...data.files.map((f) => f.loc || 1));
+		const maxFanIn = Math.max(...data.files.map((f) => f.fanIn || 0));
+		const maxFanOut = Math.max(...data.files.map((f) => f.fanOut || 0));
+		const maxScore = Math.max(...data.files.map((f) => f.hotspotScore || 0));
 
 		const files = data.files
 			.filter((f) => f.loc > 0)
-			.sort((a, b) => b.loc - a.loc)
-			.slice(0, 2000);
+			.sort(
+				(a, b) =>
+					((b[effectiveSizeBy as keyof TreemapFile] as number) || 0) -
+					((a[effectiveSizeBy as keyof TreemapFile] as number) || 0),
+			)
+			.slice(0, maxFiles)
+			.map((f) => ({
+				...f,
+				_color:
+					effectiveColorBy === "language"
+						? getLanguageColor(f.extension || "")
+						: effectiveColorBy === "hotspot"
+							? getScoreColor(f.hotspotScore, maxScore)
+							: effectiveColorBy === "fanIn"
+								? getFanColor(f.fanIn, maxFanIn)
+								: getFanColor(f.fanOut, maxFanOut),
+			}));
+
+		return { files, maxLoc, maxFanIn, maxFanOut, maxScore };
+	}, [data, effectiveColorBy, effectiveSizeBy, maxFiles]);
+
+	const treemapLayout = useMemo(() => {
+		if (!processedData || dimensions.width === 0 || dimensions.height === 0)
+			return null;
+
+		const { files } = processedData;
 
 		const root = d3
-			.hierarchy<TreemapFile>({
+			.hierarchy<TreemapFile & { _color?: string }>({
 				name: "root",
 				children: files,
 			} as TreemapFile & { name: string; children?: TreemapFile[] })
-			.sum((d) => d.loc)
+			.sum((d) => d.loc || 0)
 			.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
-		return root;
-	}, [data]);
-
-	useEffect(() => {
-		if (!treemapData || dimensions.width === 0 || dimensions.height === 0)
-			return;
-
-		const container = d3.select(containerRef.current);
-		container.selectAll("svg").remove();
-		container.selectAll(".tooltip").remove();
-
-		// Create a tooltip div
-		const tooltip = container
-			.append("div")
-			.attr("class", "tooltip")
-			.style("position", "absolute")
-			.style("visibility", "hidden")
-			.style(
-				"background-color",
-				isDark ? "rgba(20,20,20,0.95)" : "rgba(255,255,255,0.95)",
-			)
-			.style("color", isDark ? "#e5e7eb" : "#1f2937")
-			.style("padding", "10px 14px")
-			.style("border-radius", "8px")
-			.style("font-family", "ui-monospace, SFMono-Regular, monospace")
-			.style("font-size", "12px")
-			.style("border", `1px solid ${isDark ? "#333" : "#e5e7eb"}`)
-			.style(
-				"box-shadow",
-				"0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
-			)
-			.style("pointer-events", "none")
-			.style("z-index", "10")
-			.style("backdrop-filter", "blur(8px)");
-
-		const svg = container
-			.append("svg")
-			.attr("width", dimensions.width)
-			.attr("height", dimensions.height)
-			.attr("viewBox", [0, 0, dimensions.width, dimensions.height])
-			.attr("style", "max-width: 100%; height: auto;");
-
 		const treemap = d3
-			.treemap<TreemapFile>()
+			.treemap<TreemapFile & { _color?: string }>()
 			.size([dimensions.width, dimensions.height])
-			.paddingOuter(4)
-			.paddingTop(4)
-			.paddingInner(3)
+			.paddingOuter(3)
+			.paddingTop(20)
+			.paddingInner(2)
 			.round(true);
 
-		const root = treemap(treemapData);
+		return treemap(root);
+	}, [processedData, dimensions]);
 
-		const nodes = svg
-			.selectAll("g")
-			.data(root.descendants() as TreemapNode[])
-			.join("g")
-			.attr("transform", (d) => `translate(${d.x0},${d.y0})`);
+	const nodes = useMemo(() => {
+		if (!treemapLayout) return [];
+		return treemapLayout
+			.descendants()
+			.filter((d) => d.depth === 1) as TreemapNode[];
+	}, [treemapLayout]);
 
-		nodes
-			.append("rect")
-			.attr("width", (d) => Math.max(0, d.x1 - d.x0))
-			.attr("height", (d) => Math.max(0, d.y1 - d.y0))
-			.attr("rx", 4)
-			.attr("ry", 4)
-			.attr("fill", (d) => {
-				const file = d.data;
-				if (!file || file.isExternal) return isDark ? "#27272a" : "#e5e7eb";
-
-				if (colorMode === "hotspot") {
-					const score = file.hotspotScore;
-					if (score === 0) return isDark ? "#18181b" : "#f3f4f6";
-					// use d3 interpolator for better heatmap color, offset slightly so low scores aren't completely white/black
-					return d3.interpolateYlOrRd(score * 0.8 + 0.1);
-				}
-
-				return getLanguageColor(file.extension ?? "");
-			})
-			.attr("stroke", isDark ? "#09090b" : "#ffffff")
-			.attr("stroke-width", 1)
-			.attr("opacity", 0.85)
-			.style("cursor", "pointer")
-			.style("transition", "opacity 0.2s ease, stroke-width 0.2s ease")
-			.on("mouseover", function (event, d) {
-				d3.select(this)
-					.attr("opacity", 1)
-					.attr("stroke-width", 2)
-					.attr("stroke", isDark ? "#ffffff" : "#000000");
-
-				const file = d.data;
-				if (file) {
-					tooltip
-						.html(
-							`
-							<div style="font-weight: 600; margin-bottom: 8px; overflow-wrap: break-word; max-width: 250px; color: ${isDark ? "#fff" : "#000"}">
-								${file.path}
-							</div>
-							<div style="display: flex; justify-content: space-between; gap: 24px; margin-bottom: 4px;">
-								<span style="color: ${isDark ? "#a1a1aa" : "#52525b"}">Lines</span>
-								<span style="font-weight: 500; font-family: ui-monospace, SFMono-Regular, monospace;">${(file.loc ?? 0).toLocaleString()}</span>
-							</div>
-							<div style="display: flex; justify-content: space-between; gap: 24px;">
-								<span style="color: ${isDark ? "#a1a1aa" : "#52525b"}">Hotspot Score</span>
-								<span style="font-weight: 500; font-family: ui-monospace, SFMono-Regular, monospace; color: ${isDark ? "#fbbf24" : "#d97706"}">${(file.hotspotScore ?? 0).toFixed(3)}</span>
-							</div>
-						`,
-						)
-						.style("visibility", "visible");
-				}
-			})
-			.on("mousemove", (event) => {
-				// Prevent tooltip from overflowing the right side of the screen
-				const tooltipNode = tooltip.node();
-				const tooltipWidth = tooltipNode
-					? (tooltipNode as HTMLElement).offsetWidth
-					: 0;
-				let left = event.pageX + 15;
-				if (left + tooltipWidth > window.innerWidth) {
-					left = event.pageX - tooltipWidth - 15;
-				}
-
-				tooltip
-					.style("top", `${event.pageY + 15}px`)
-					.style("left", `${left}px`);
-			})
-			.on("mouseout", function () {
-				d3.select(this)
-					.attr("opacity", 0.85)
-					.attr("stroke-width", 1)
-					.attr("stroke", isDark ? "#09090b" : "#ffffff");
-				tooltip.style("visibility", "hidden");
-			})
-			.on("click", (_, d) => {
-				const file = d.data;
-				if (file) onFileClick?.(file);
-			});
-
-		// Calculate brightness to determine text color
-		const getContrastYIQ = (hexcolor: string) => {
-			if (!hexcolor) return isDark ? "#ffffff" : "#000000";
-			// Handle rgb()
-			if (hexcolor.startsWith("rgb")) {
-				const [r, g, b] = hexcolor.match(/\d+/g) || [0, 0, 0];
-				const yiq =
-					(Number(r) * 299 + Number(g) * 587 + Number(b) * 114) / 1000;
-				return yiq >= 128 ? "#000000" : "#ffffff";
-			}
-			hexcolor = hexcolor.replace("#", "");
-			if (hexcolor.length === 3) {
-				hexcolor = hexcolor
-					.split("")
-					.map((c) => c + c)
-					.join("");
-			}
-			if (hexcolor.length !== 6) return isDark ? "#ffffff" : "#000000";
-			const r = parseInt(hexcolor.substr(0, 2), 16);
-			const g = parseInt(hexcolor.substr(2, 2), 16);
-			const b = parseInt(hexcolor.substr(4, 2), 16);
-			const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-			return yiq >= 128 ? "#000000" : "#ffffff";
-		};
-
-		nodes
-			.filter((d) => d.y1 - d.y0 > 24 && d.x1 - d.x0 > 40)
-			.append("text")
-			.attr("x", 6)
-			.attr("y", 18)
-			.attr("fill", (d) => {
-				const file = d.data;
-				if (!file || file.isExternal) return isDark ? "#9ca3af" : "#4b5563";
-				if (colorMode === "hotspot") {
-					const score = file.hotspotScore;
-					if (score === 0) return isDark ? "#71717a" : "#9ca3af";
-					const color = d3.interpolateYlOrRd(score * 0.8 + 0.1);
-					return getContrastYIQ(color);
-				}
-				const color = getLanguageColor(file.extension ?? "");
-				return getContrastYIQ(color);
-			})
-			.attr("font-size", "11px")
-			.attr("font-weight", "500")
-			.attr("font-family", "ui-monospace, SFMono-Regular, monospace")
-			.style("pointer-events", "none")
-			.text((d) => {
-				const file = d.data;
-				if (!file || !file.path) return "";
-				const width = d.x1 - d.x0;
-				const name = file.path.split("/").pop() ?? file.path;
-				const maxChars = Math.floor(width / 7);
-				return name.length > maxChars
-					? name.slice(0, maxChars - 1) + "…"
-					: name;
-			});
-	}, [treemapData, dimensions, colorMode, onFileClick, isDark]);
+	const handleMouseMove = (e: React.MouseEvent, file: TreemapFile) => {
+		setHoveredFile(file);
+		setTooltipPos({ x: e.clientX, y: e.clientY });
+	};
 
 	if (isLoading) {
 		return (
 			<div className="flex h-full items-center justify-center">
-				<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+				<div className="flex flex-col items-center gap-3">
+					<div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+					<span className="font-mono text-muted-foreground text-xs">
+						Loading treemap...
+					</span>
+				</div>
 			</div>
 		);
 	}
 
 	if (error || !data) {
 		return (
-			<div className="flex h-full items-center justify-center font-mono text-muted-foreground text-sm">
-				Failed to load treemap data
+			<div className="flex h-full items-center justify-center">
+				<div className="flex flex-col items-center gap-2">
+					<div className="font-mono text-destructive text-xs">Failed to load</div>
+					<button
+						className="text-muted-foreground text-xs hover:text-foreground"
+						onClick={() => window.location.reload()}
+						type="button"
+					>
+						Retry
+					</button>
+				</div>
 			</div>
 		);
 	}
 
 	if (data.totalFiles === 0) {
 		return (
-			<div className="flex h-full items-center justify-center font-mono text-muted-foreground text-sm">
-				No files to display
+			<div className="flex h-full items-center justify-center">
+				<span className="font-mono text-muted-foreground text-sm">
+					No files to display
+				</span>
 			</div>
 		);
 	}
 
 	return (
 		<div
-			className="relative h-full w-full overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+			className="relative h-full w-full overflow-hidden rounded-lg bg-card"
 			ref={containerRef}
-		/>
+		>
+			<svg
+				aria-label="File treemap visualization"
+				className="block"
+				height={dimensions.height}
+				width={dimensions.width}
+			>
+				{nodes.map((node, i) => {
+					const width = node.x1 - node.x0;
+					const height = node.y1 - node.y0;
+					const file = node.data;
+					const showLabel = width > 50 && height > 20;
+					const showPath = width > 100 && height > 35;
+
+					return (
+						<motion.g
+							animate={{ opacity: 1, scale: 1 }}
+							initial={{ opacity: 0, scale: 0.9 }}
+							key={file.id || file.path}
+							onClick={() => onFileClick?.(file)}
+							onKeyDown={(e) => e.key === "Enter" && onFileClick?.(file)}
+							onMouseEnter={(e) => handleMouseMove(e, file)}
+							onMouseLeave={() => setHoveredFile(null)}
+							role="button"
+							tabIndex={0}
+							transition={{ delay: i * 0.002, duration: 0.2 }}
+						>
+							<rect
+								className="cursor-pointer transition-opacity hover:opacity-80"
+								fill={file._color || "#374151"}
+								height={Math.max(0, height)}
+								rx={4}
+								ry={4}
+								stroke={isDark ? "#09090b" : "#ffffff"}
+								strokeWidth={1}
+								style={{ opacity: hoveredFile?.path === file.path ? 1 : 0.85 }}
+								width={Math.max(0, width)}
+								x={node.x0}
+								y={node.y0}
+							/>
+							{showLabel && (
+								<text
+									fill={isDark ? "#ffffff" : "#000000"}
+									fontFamily="ui-monospace, SFMono-Regular, monospace"
+									fontSize={10}
+									fontWeight={500}
+									style={{ pointerEvents: "none" }}
+									x={node.x0 + 6}
+									y={node.y0 + 14}
+								>
+									{(() => {
+										const name = file.path.split("/").pop() || file.path;
+										const maxChars = Math.floor(width / 6);
+										return name.length > maxChars
+											? name.slice(0, maxChars - 1) + "…"
+											: name;
+									})()}
+								</text>
+							)}
+							{showPath && (
+								<text
+									fill={isDark ? "#a1a1aa" : "#52525b"}
+									fontFamily="ui-monospace, SFMono-Regular, monospace"
+									fontSize={9}
+									style={{ pointerEvents: "none" }}
+									x={node.x0 + 6}
+									y={node.y0 + 26}
+								>
+									{(() => {
+										const parts = file.path.split("/");
+										if (parts.length <= 2) return "";
+										const path = parts.slice(0, -1).join("/");
+										const maxChars = Math.floor(width / 5);
+										return path.length > maxChars
+											? "…" + path.slice(-maxChars + 1)
+											: path;
+									})()}
+								</text>
+							)}
+						</motion.g>
+					);
+				})}
+			</svg>
+
+			{hoveredFile && (
+				<div
+					className="pointer-events-none fixed z-50 rounded-lg border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-sm"
+					style={{
+						left: tooltipPos.x + 15,
+						top: tooltipPos.y + 15,
+						maxWidth: 320,
+					}}
+				>
+					<div className="mb-2 truncate font-mono font-semibold text-sm">
+						{hoveredFile.path}
+					</div>
+					<div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+						<div className="text-muted-foreground">Lines</div>
+						<div className="font-medium font-mono">
+							{(hoveredFile.loc || 0).toLocaleString()}
+						</div>
+
+						<div className="text-muted-foreground">Hotspot</div>
+						<div className="font-medium font-mono">
+							{(hoveredFile.hotspotScore || 0).toFixed(3)}
+						</div>
+
+						<div className="text-muted-foreground">Fan-in</div>
+						<div className="font-medium font-mono">
+							{hoveredFile.fanIn || 0}
+						</div>
+
+						<div className="text-muted-foreground">Fan-out</div>
+						<div className="font-medium font-mono">
+							{hoveredFile.fanOut || 0}
+						</div>
+
+						<div className="text-muted-foreground">Language</div>
+						<div className="font-medium font-mono uppercase">
+							{hoveredFile.extension}
+						</div>
+					</div>
+				</div>
+			)}
+
+			<div className="absolute right-3 bottom-3 flex gap-3 rounded-md bg-card/80 px-3 py-2 font-mono text-[10px] backdrop-blur-sm">
+				<span className="text-muted-foreground">
+					{processedData?.files.length || 0} files
+				</span>
+				<span className="text-muted-foreground">|</span>
+				<span className="text-muted-foreground">
+					{(data.totalLoc || 0).toLocaleString()} LOC
+				</span>
+			</div>
+		</div>
 	);
 }

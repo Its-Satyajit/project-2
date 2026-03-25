@@ -6,7 +6,6 @@ import type { ImportStatement, ParsedFile } from "./index";
 let rustLanguage: Language | null = null;
 let parser: Parser | null = null;
 
-// Common Rust standard library and external crates to mark as external
 const RUST_EXTERNAL_CRATES = new Set([
 	"std",
 	"core",
@@ -25,197 +24,299 @@ const RUST_EXTERNAL_CRATES = new Set([
 	"toml",
 	"log",
 	"env_logger",
+	"async-trait",
+	"futures",
+	"pin_project",
+	"once_cell",
+	"parking_lot",
+	"regex",
+	"lazy_static",
+	"bytes",
+	"uuid",
+	"semver",
+	"dirs",
 ]);
 
-// Known crate name to directory mappings (populated from Cargo.toml)
-let crateMappings: Map<string, string> | null = null;
+interface RustResolverOptions {
+	files?: string[];
+	crateMapping?: Record<string, string>;
+}
+
+let filesCache: { files: string[]; set: Set<string> } | null = null;
+
+function getFilesSet(files: string[]): Set<string> {
+	if (filesCache && filesCache.files === files) {
+		return filesCache.set;
+	}
+	const set = new Set(files);
+	filesCache = { files, set };
+	return set;
+}
+
+function findMatchingFile(
+	modulePath: string,
+	currentCrate: string,
+	options: RustResolverOptions,
+): string | null {
+	const { files, crateMapping } = options;
+
+	if (!files || files.length === 0) {
+		return null;
+	}
+
+	const filesSet = getFilesSet(files);
+	const cratesToTry = [currentCrate];
+
+	const baseCrate = modulePath.split("::")[0] || "";
+	if (
+		baseCrate &&
+		baseCrate !== "crate" &&
+		baseCrate !== "super" &&
+		baseCrate !== "self"
+	) {
+		const mapped = crateMapping?.[baseCrate] || baseCrate;
+		cratesToTry.push(mapped, ...Object.values(crateMapping || {}));
+	}
+
+	const pathPart = modulePath
+		.replace(/^(crate|super|self)::/, "")
+		.replace(/::/g, "/");
+
+	for (const crate of [...new Set(cratesToTry)]) {
+		const candidates = [
+			`${crate}/src/${pathPart}.rs`,
+			`${crate}/src/${pathPart}/mod.rs`,
+			`${crate}/src/${pathPart}/index.rs`,
+			`crates/${crate}/src/${pathPart}.rs`,
+			`crates/${crate}/src/${pathPart}/mod.rs`,
+			`crates/${crate}/src/${pathPart}/index.rs`,
+		];
+
+		for (const candidate of candidates) {
+			if (filesSet.has(candidate)) {
+				return candidate;
+			}
+		}
+	}
+
+	return null;
+}
+
+function getCurrentCrate(filePath: string): string {
+	const match = filePath.match(/^(?:crates\/)?([^/]+)\/src\//);
+	return match?.[1] || "crate";
+}
 
 async function getRustParser(): Promise<Parser> {
 	if (!parser) {
+		fs.appendFileSync(
+			"rust_parser_debug.log",
+			"[RustParser] Initializing Parser.init()...\n",
+		);
 		await Parser.init();
 		parser = new Parser();
 		const wasmPath = path.join(
 			process.cwd(),
 			"node_modules/@vscode/tree-sitter-wasm/wasm/tree-sitter-rust.wasm",
 		);
+		fs.appendFileSync(
+			"rust_parser_debug.log",
+			`[RustParser] Loading WASM from ${wasmPath}...\n`,
+		);
 		const wasmBuffer = fs.readFileSync(wasmPath);
+		fs.appendFileSync(
+			"rust_parser_debug.log",
+			`[RustParser] WASM Buffer size: ${wasmBuffer.length}\n`,
+		);
 		rustLanguage = await Language.load(wasmBuffer);
+		fs.appendFileSync(
+			"rust_parser_debug.log",
+			`[RustParser] Language loaded: ${!!rustLanguage}\n`,
+		);
 		parser.setLanguage(rustLanguage);
+		fs.appendFileSync("rust_parser_debug.log", "[RustParser] Language set.\n");
 	}
 	return parser;
 }
 
-/**
- * Load crate mappings from Cargo.toml files in the project
- */
-function loadCrateMappings(): Map<string, string> {
-	if (crateMappings) return crateMappings;
-
-	crateMappings = new Map();
-
-	try {
-		const projectRoot = process.cwd();
-		const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
-
-		for (const entry of entries) {
-			if (entry.isDirectory()) {
-				const cargoTomlPath = path.join(projectRoot, entry.name, "Cargo.toml");
-				if (fs.existsSync(cargoTomlPath)) {
-					const content = fs.readFileSync(cargoTomlPath, "utf-8");
-					const nameMatch = content.match(/^name\s*=\s*"([^"]+)"/m);
-					if (nameMatch && nameMatch[1]) {
-						crateMappings.set(nameMatch[1], entry.name);
-					}
-				}
-			}
-		}
-	} catch (error) {
-		console.error("[RustParser] Error loading crate mappings:", error);
-	}
-
-	return crateMappings;
+function isExternalCrate(name: string): boolean {
+	return RUST_EXTERNAL_CRATES.has(name);
 }
 
-/**
- * Convert a Rust use statement to a file path
- * e.g., "devbind_core::config::DevBindConfig" -> "./core/src/config.rs"
- */
-function rustImportToFilePath(
-	importSource: string,
+export function resolveRustImport(
+	source: string,
 	currentFilePath: string,
-): { filePath: string; isExternal: boolean } | null {
-	const baseImport = importSource.split("::")[0] || importSource;
-
-	if (!baseImport || RUST_EXTERNAL_CRATES.has(baseImport)) {
-		return { filePath: "", isExternal: true };
+	options?: RustResolverOptions,
+): { resolved: string | null; isExternal: boolean } {
+	if (!source || source.trim() === "") {
+		return { resolved: null, isExternal: true };
 	}
 
-	const mappings = loadCrateMappings();
-	const crateDir = mappings.get(baseImport);
+	const baseImport = source.split("::")[0] || source;
 
-	if (crateDir) {
-		const moduleParts = importSource.split("::").slice(1);
-		if (moduleParts.length > 0) {
-			const modulePath = moduleParts.join("/");
-			return {
-				filePath: `./${crateDir}/src/${modulePath}.rs`,
-				isExternal: false,
-			};
-		}
-		return {
-			filePath: `./${crateDir}/src/lib.rs`,
-			isExternal: false,
-		};
+	if (isExternalCrate(baseImport)) {
+		return { resolved: null, isExternal: true };
 	}
 
-	if (importSource.startsWith("crate::")) {
-		const crateRoot = currentFilePath.split("/src/")[0];
-		if (crateRoot) {
-			const modulePath = importSource
-				.replace("crate::", "")
-				.replace(/::/g, "/");
-			return {
-				filePath: `./${crateRoot.split("/").pop()}/src/${modulePath}.rs`,
-				isExternal: false,
-			};
-		}
+	if (!options?.files) {
+		return { resolved: null, isExternal: true };
 	}
 
-	if (importSource.startsWith("super::")) {
-		const currentDir = path.dirname(currentFilePath);
-		const parentDir = path.dirname(currentDir);
-		const modulePath = importSource.replace("super::", "").replace(/::/g, "/");
-		return {
-			filePath: `./${parentDir}/${modulePath}.rs`,
-			isExternal: false,
-		};
+	const currentCrate = getCurrentCrate(currentFilePath);
+	const resolved = findMatchingFile(source, currentCrate, options);
+
+	if (resolved) {
+		return { resolved, isExternal: false };
 	}
 
-	if (importSource.startsWith("self::")) {
-		const currentDir = path.dirname(currentFilePath);
-		const modulePath = importSource.replace("self::", "").replace(/::/g, "/");
-		return {
-			filePath: `./${currentDir}/${modulePath}.rs`,
-			isExternal: false,
-		};
-	}
-
-	return null;
+	return { resolved: null, isExternal: true };
 }
 
 export async function parseRust(
-	content: string,
+	content: string | null | undefined,
 	filePath: string,
 ): Promise<ParsedFile> {
-	try {
-		const p = await getRustParser();
-		const tree = p.parse(content);
-
-		if (!tree?.rootNode) {
-			return {
-				path: filePath,
-				language: "rust",
-				imports: [],
-				parseError: "Failed to parse: no root node",
-			};
-		}
-
-		const imports: ImportStatement[] = [];
-
-		const walkUseDeclarations = (node: any) => {
-			const nodeType = node.type;
-
-			if (nodeType === "use_declaration" || nodeType === "use_list") {
-				const text = node.text.trim();
-				if (text.startsWith("use ")) {
-					const match = text.match(/^use\s+([^;]+)/);
-					if (match) {
-						const source = match[1].trim();
-						// Return the source as-is, let dependency analysis resolve it
-						imports.push({
-							raw: text,
-							source,
-							isDynamic: false,
-						});
-					}
-				}
-			}
-
-			if (nodeType === "extern_crate_declaration") {
-				const text = node.text.trim();
-				const match = text.match(/extern\s+crate\s+(\w+)/);
-				if (match) {
-					const source = match[1];
-					imports.push({
-						raw: text,
-						source,
-						isDynamic: false,
-					});
-				}
-			}
-
-			if (node.children) {
-				for (const child of node.children) {
-					walkUseDeclarations(child);
-				}
-			}
-		};
-
-		walkUseDeclarations(tree.rootNode);
-		tree.delete();
-
-		return {
-			path: filePath,
-			language: "rust",
-			imports,
-		};
-	} catch (error) {
+	if (!content) {
 		return {
 			path: filePath,
 			language: "rust",
 			imports: [],
-			parseError:
-				error instanceof Error ? error.message : "Unknown parse error",
 		};
 	}
+	const imports: ImportStatement[] = [];
+
+	const splitRespectingBraces = (text: string, separator: string): string[] => {
+		const parts: string[] = [];
+		let current = "";
+		let braceLevel = 0;
+
+		for (let i = 0; i < text.length; i++) {
+			const char = text[i];
+			if (char === "{") braceLevel++;
+			if (char === "}") braceLevel--;
+
+			if (char === separator && braceLevel === 0) {
+				parts.push(current.trim());
+				current = "";
+			} else {
+				current += char;
+			}
+		}
+		if (current.trim()) {
+			parts.push(current.trim());
+		}
+		return parts;
+	};
+
+	const expandUseClause = (base: string, part: string): string[] => {
+		part = part.trim();
+		if (!part) return [];
+
+		if (part.startsWith("{") && part.endsWith("}")) {
+			const inner = part.slice(1, -1);
+			const segments = splitRespectingBraces(inner, ",");
+			return segments.flatMap((s) => expandUseClause(base, s));
+		}
+
+		const nestedMatch = part.match(/^([^{]+)\s*::\s*(\{.*\})$/);
+		if (nestedMatch && nestedMatch[1] && nestedMatch[2]) {
+			const subPath = nestedMatch[1].trim();
+			const nextBase = base ? `${base}::${subPath}` : subPath;
+			return expandUseClause(nextBase, nestedMatch[2]);
+		}
+
+		if (part.endsWith("::*")) {
+			const source = part.slice(0, -3);
+			return [base ? `${base}::${source}::*` : `${source}::*`];
+		}
+
+		const pathOnly = part.split(/\s+as\s+/)[0] || part;
+		const trimmedPath = pathOnly.trim();
+
+		if (!trimmedPath) return [];
+
+		return [base ? `${base}::${trimmedPath}` : trimmedPath];
+	};
+
+	const runRegexFallback = () => {
+		const lines = content.split("\n");
+		for (const line of lines) {
+			const trimmed = line.trim();
+			if (trimmed.startsWith("use ")) {
+				const useContent = trimmed.replace(/^use\s+/, "").replace(/;$/, "");
+				const sources = expandUseClause("", useContent);
+				for (const source of sources) {
+					if (source && !imports.some((i) => i.source === source)) {
+						imports.push({ raw: trimmed, source, isDynamic: false });
+					}
+				}
+			}
+		}
+	};
+
+	try {
+		const p = await getRustParser();
+		const tree = p.parse(content);
+
+		if (tree && tree.rootNode) {
+			const walkTree = (node: any) => {
+				const type = node.type;
+				if (type === "use_declaration") {
+					const text = node.text.trim();
+					if (text.startsWith("use ")) {
+						const uc = text.replace(/^use\s+/, "").replace(/;$/, "");
+						const sources = expandUseClause("", uc);
+						for (const source of sources) {
+							if (source && !imports.some((i) => i.source === source)) {
+								imports.push({ raw: text, source, isDynamic: false });
+							}
+						}
+					}
+				} else if (type === "extern_crate_declaration") {
+					const text = node.text.trim();
+					const match = text.match(/extern\s+crate\s+(\w+)/);
+					if (match) {
+						const source = match[1] || "";
+						if (source && !imports.some((i) => i.source === source)) {
+							imports.push({ raw: text, source, isDynamic: false });
+						}
+					}
+				} else if (type === "mod_declaration") {
+					const text = node.text.trim();
+					const match = text.match(/^mod\s+(\w+)\s*;/);
+					if (match) {
+						const source = match[1] || "";
+						if (source && !imports.some((i) => i.source === source)) {
+							imports.push({ raw: text, source, isDynamic: false });
+						}
+					}
+				}
+
+				for (let i = 0; i < node.childCount; i++) {
+					const child = node.child(i);
+					if (type !== "use_declaration") {
+						walkTree(child);
+					}
+				}
+			};
+
+			walkTree(tree.rootNode);
+			tree.delete();
+		}
+	} catch (error) {
+		fs.appendFileSync(
+			"rust_parser_debug.log",
+			`[RustParser] Error during Tree-sitter parsing: ${error instanceof Error ? error.message : String(error)}. Falling back to regex.\n`,
+		);
+	}
+
+	if (imports.length === 0) {
+		runRegexFallback();
+	}
+
+	return {
+		path: filePath,
+		language: "rust",
+		imports,
+	};
 }

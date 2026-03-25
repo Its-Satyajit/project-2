@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { FileCodeIcon, FolderIcon, HashIcon, TerminalIcon } from "lucide-react";
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -17,12 +17,12 @@ export function StatCardsSkeleton() {
 	return (
 		<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 			{skeletonKeys.map((key) => (
-				<Card className="border-gray-200 bg-white" key={key}>
+				<Card className="border-border bg-card" key={key}>
 					<CardHeader
 						className={cn(
 							"flex flex-row items-center justify-between space-y-0",
 							"pb-2",
-							"text-gray-500",
+							"text-muted-foreground",
 						)}
 					>
 						<Skeleton className="h-4 w-25" />
@@ -80,24 +80,24 @@ export const StatCards = React.memo(function StatCards({
 					key={stat.title}
 					transition={{ delay: index * 0.05, duration: 0.3, ease: "easeOut" }}
 				>
-					<Card className="border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+					<Card className="border-border bg-card">
 						<CardHeader
 							className={cn(
 								"flex flex-row items-center justify-between space-y-0",
 								"pb-2",
-								"text-gray-500",
+								"text-muted-foreground",
 							)}
 						>
 							<CardTitle className="font-medium text-sm">
 								{stat.title}
 							</CardTitle>
-							<stat.icon className="h-4 w-4 text-blue-500" />
+							<stat.icon className="h-4 w-4 text-primary" />
 						</CardHeader>
 						<CardContent>
-							<div className="font-bold text-2xl text-gray-900 dark:text-gray-100">
+							<div className="font-bold text-2xl text-foreground">
 								{stat.value}
 							</div>
-							<p className="text-gray-500 text-xs dark:text-gray-400">
+							<p className="text-muted-foreground text-xs">
 								{stat.description}
 							</p>
 						</CardContent>

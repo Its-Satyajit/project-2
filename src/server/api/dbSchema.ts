@@ -15,8 +15,8 @@ export const dbSchema = {
 	session: schemas(s.session),
 	account: schemas(s.account),
 	verification: schemas(s.verification),
-	files: schemas(s.files),
-	commits: schemas(s.commits),
 	repositories: schemas(s.repositories),
 	analysisResults: schemas(s.analysisResults),
+	contributors: schemas(s.contributors),
+	analysisLogs: schemas(s.analysisLogs),
 } as const;

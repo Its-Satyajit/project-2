@@ -28,41 +28,7 @@ export interface RepoSummary {
 	};
 }
 
-export interface AnalysisData {
-	totalFiles: number | null;
-	totalDirectories: number | null;
-	totalLines: number | null;
-	fileTypeBreakdownJson: Record<string, number> | null;
-	dependencyGraphJson: {
-		nodes: Array<{
-			id: string;
-			path: string;
-			language: string;
-			imports: number;
-			loc?: number;
-		}>;
-		edges: Array<{
-			source: string;
-			target: string;
-		}>;
-		metadata: {
-			totalNodes: number;
-			totalEdges: number;
-			languageBreakdown: Record<string, number>;
-			unresolvedImports: number;
-		};
-	} | null;
-	hotSpotDataJson: Array<{
-		path: string;
-		language: string;
-		fanIn: number;
-		fanOut: number;
-		loc: number;
-		score: number;
-		rank: number;
-	}> | null;
-	fileTreeJson: FileTreeItem[] | null;
-}
+import type { AnalysisData } from "../types/analysis";
 
 export function computeRepoSummary(analysis: AnalysisData): RepoSummary {
 	// Basic stats
@@ -75,9 +41,10 @@ export function computeRepoSummary(analysis: AnalysisData): RepoSummary {
 	// Language breakdown from dependency graph nodes
 	const languageCounts: Record<string, number> = {};
 	let totalLanguageFiles = 0;
-	if (analysis.dependencyGraphJson?.nodes) {
-		for (const node of analysis.dependencyGraphJson.nodes) {
-			languageCounts[node.language] = (languageCounts[node.language] || 0) + 1;
+	if (analysis.dependencyGraph?.nodes) {
+		for (const node of analysis.dependencyGraph.nodes) {
+			const lang = "language" in node ? (node as any).language : "unknown";
+			languageCounts[lang] = (languageCounts[lang] || 0) + 1;
 			totalLanguageFiles++;
 		}
 	}
@@ -116,33 +83,33 @@ export function computeRepoSummary(analysis: AnalysisData): RepoSummary {
 		}
 	}
 
-	if (analysis.fileTreeJson) {
-		traverseTree(analysis.fileTreeJson, 0, "");
+	if (analysis.fileTree) {
+		traverseTree(analysis.fileTree, 0, "");
 	}
 
 	// Dependencies
 	const dependencyStats = {
-		totalNodes: analysis.dependencyGraphJson?.metadata.totalNodes ?? 0,
-		totalEdges: analysis.dependencyGraphJson?.metadata.totalEdges ?? 0,
+		totalNodes: analysis.dependencyGraph?.nodes?.length ?? 0,
+		totalEdges: analysis.dependencyGraph?.edges?.length ?? 0,
 		mostDependedUpon: [] as Array<{ path: string; fanIn: number }>,
 		mostDependent: [] as Array<{ path: string; fanOut: number }>,
 	};
 
-	if (analysis.dependencyGraphJson?.nodes) {
+	if (analysis.dependencyGraph?.nodes) {
 		// Compute fan-in from edges
 		const fanInMap: Record<string, number> = {};
-		analysis.dependencyGraphJson.nodes.forEach((node) => {
-			fanInMap[node.id] = 0;
+		analysis.dependencyGraph.nodes.forEach((node) => {
+			fanInMap[node.path] = 0;
 		});
-		analysis.dependencyGraphJson.edges.forEach((edge) => {
+		analysis.dependencyGraph.edges.forEach((edge) => {
 			fanInMap[edge.target] = (fanInMap[edge.target] ?? 0) + 1;
 		});
 
 		// Create array with fan-in and fan-out
-		const nodesWithStats = analysis.dependencyGraphJson.nodes.map((node) => ({
+		const nodesWithStats = analysis.dependencyGraph.nodes.map((node) => ({
 			path: node.path,
-			fanIn: fanInMap[node.id] ?? 0,
-			fanOut: node.imports,
+			fanIn: fanInMap[node.path] ?? 0,
+			fanOut: node.fanOut ?? 0,
 		}));
 
 		// Sort by fan-in descending for mostDependedUpon
@@ -162,18 +129,18 @@ export function computeRepoSummary(analysis: AnalysisData): RepoSummary {
 	const hotspots = {
 		topHotspots: [] as Array<{ path: string; score: number; rank: number }>,
 	};
-	if (analysis.hotSpotDataJson) {
-		hotspots.topHotspots = analysis.hotSpotDataJson
+	if (analysis.hotSpotData) {
+		hotspots.topHotspots = analysis.hotSpotData
 			.slice(0, 10)
-			.map(({ path, score, rank }) => ({ path, score, rank }));
+			.map(({ path, score }, index) => ({ path, score, rank: index + 1 }));
 	}
 
-	// File types from fileTypeBreakdownJson
+	// File types from fileTypeBreakdown
 	const fileTypes = {
 		topExtensions: [] as Array<{ extension: string; count: number }>,
 	};
-	if (analysis.fileTypeBreakdownJson) {
-		fileTypes.topExtensions = Object.entries(analysis.fileTypeBreakdownJson)
+	if (analysis.fileTypeBreakdown) {
+		fileTypes.topExtensions = Object.entries(analysis.fileTypeBreakdown)
 			.sort(([, a], [, b]) => b - a)
 			.slice(0, 10)
 			.map(([extension, count]) => ({ extension, count }));

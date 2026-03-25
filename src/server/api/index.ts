@@ -1,6 +1,7 @@
 import Elysia from "elysia";
 import { rateLimit } from "~/server/middleware/rate-limit";
 import { analyzeRoute } from "./analyze";
+import { contributorsRoute } from "./contributors";
 import { dashboardRoute } from "./dashboard";
 import { debugRoute } from "./debug";
 import { fileContentRoute } from "./file-content";
@@ -24,6 +25,7 @@ export const apiHandler = new Elysia()
 		{},
 	)
 	.use(analyzeRoute)
+	.use(contributorsRoute)
 	.use(dashboardRoute)
 	.use(debugRoute)
 	.use(fileContentRoute)
