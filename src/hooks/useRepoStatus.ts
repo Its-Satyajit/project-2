@@ -72,10 +72,17 @@ export function useRepoStatus(repoId: string) {
 		queryFn: async () => {
 			const res = await api.dashboard({ repoId }).status.get();
 			if (res.error) {
-				const error = res.error as any;
-				throw new Error(
-					error.message || error.value || "Failed to fetch status",
-				);
+				const error = res.error as unknown as {
+					message?: string;
+					value?: string | { message?: string; summary?: string };
+				};
+				const errorMessage =
+					error.message ||
+					(typeof error.value === "string"
+						? error.value
+						: error.value?.message || error.value?.summary) ||
+					"Failed to fetch status";
+				throw new Error(errorMessage);
 			}
 			return res.data as RepoStatus;
 		},

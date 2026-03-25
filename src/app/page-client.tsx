@@ -244,7 +244,7 @@ export default function HomeClient() {
 								variants={itemVariants}
 								whileHover={{ y: -2 }}
 							>
-								<div className="absolute inset-0 rounded-lg bg-gradient-to-b from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+								<div className="absolute inset-0 rounded-lg bg-linear-to-b from-cyan-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
 								<div className="relative mb-4 flex h-10 w-10 items-center justify-center rounded border border-border bg-secondary/50">
 									<feature.icon className="h-5 w-5 text-cyan-500 dark:text-cyan-400" />
 								</div>

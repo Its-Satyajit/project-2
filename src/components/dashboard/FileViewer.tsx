@@ -79,6 +79,7 @@ function HighlightedLines({
 			{lines.map((html, i) => (
 				<div
 					className="flex transition-colors hover:bg-muted/50"
+					// biome-ignore lint/suspicious/noArrayIndexKey: Line numbers are stable mapping
 					key={`${filePath}-line-${i + 1}`}
 				>
 					<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
@@ -244,6 +245,7 @@ export function FileViewer({
 								{lines.map((line, i) => (
 									<div
 										className="flex transition-colors hover:bg-muted/50"
+										// biome-ignore lint/suspicious/noArrayIndexKey: Fallback uses index as line number
 										key={`${filePath}-fallback-${i}`}
 									>
 										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
@@ -267,6 +269,7 @@ export function FileViewer({
 								{lines.map((line, i) => (
 									<div
 										className="flex transition-colors hover:bg-muted/50"
+										// biome-ignore lint/suspicious/noArrayIndexKey: Fallback uses index as line number
 										key={`${filePath}-no-highlight-${i}`}
 									>
 										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">

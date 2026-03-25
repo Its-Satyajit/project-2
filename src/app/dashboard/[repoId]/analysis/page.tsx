@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import React, { Activity, Suspense, useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import {
 	Bar,
 	BarChart,
@@ -38,9 +38,8 @@ import {
 	ZAxis,
 } from "recharts";
 import { FileTreeVisualizer } from "~/components/dashboard/FileTreeVisualizer";
-import { FilterBar, type FilterState } from "~/components/dashboard/FilterBar";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { CardTitle } from "~/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -48,19 +47,11 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { useRepoStatus } from "~/hooks/useRepoStatus";
 import { api } from "~/lib/eden";
 import type { FileTreeItem } from "~/lib/treeUtils";
 import "~/styles/analysis.css";
-
-type Node = {
-	id: string;
-	path: string;
-	language: string;
-	imports: number;
-	loc?: number;
-};
 
 type HotspotDataPoint = {
 	path: string;
@@ -96,8 +87,6 @@ const itemVariants = {
 	visible: { opacity: 1, y: 0 },
 };
 
-const staggerDelays = [0, 0.1, 0.2, 0.3, 0.4, 0.5];
-
 function AnalysisContent() {
 	const params = useParams();
 	const router = useRouter();
@@ -105,8 +94,6 @@ function AnalysisContent() {
 
 	const { data: status, isLoading, error } = useRepoStatus(repoId);
 
-	const [searchQuery, setSearchQuery] = useState("");
-	const [selectedNode, setSelectedNode] = useState<Node | null>(null);
 	const [activeTab, setActiveTab] = useState<
 		"overview" | "charts" | "hotspots" | "filetree"
 	>("overview");
@@ -117,33 +104,23 @@ function AnalysisContent() {
 	const [hotspotViewMode, setHotspotViewMode] = useState<"scatter" | "table">(
 		"scatter",
 	);
-	const [filters, setFilters] = useState<FilterState>({
-		selectedExtensions: [],
-		showHotspotsOnly: false,
-		hotspotThreshold: 0,
-	});
 
 	const [chartConfig, setChartConfig] = useState({
 		xAxis: "loc" as "fanIn" | "fanOut" | "loc" | "score",
 		yAxis: "fanOut" as "fanIn" | "fanOut" | "loc" | "score",
 		colorBy: "language" as "risk" | "language",
 	});
+	const [scatterLimit, setScatterLimit] = useState(50);
 
 	const graph = status?.analysis?.dependencyGraph;
 	const hotSpotData = status?.analysis?.hotSpotData;
+
+	const slicedHotSpotData = useMemo(() => {
+		if (!hotSpotData) return [];
+		return hotSpotData.slice(0, scatterLimit);
+	}, [hotSpotData, scatterLimit]);
 	const summary = status?.analysis?.summary;
 	const { metadata } = status ?? {};
-
-	const allExtensions = useMemo(() => {
-		if (!graph?.nodes) return [];
-		const exts = new Set<string>();
-		for (const node of graph.nodes) {
-			const path = node.path;
-			const ext = path.split(".").pop() ?? "";
-			if (ext) exts.add(ext);
-		}
-		return Array.from(exts).sort();
-	}, [graph?.nodes]);
 
 	const { data: hotspotFileContent, isLoading: isHotspotContentLoading } =
 		useQuery({
@@ -193,24 +170,6 @@ function AnalysisContent() {
 	});
 
 	const fileTree = fileTreeData?.fileTree ?? [];
-
-	const filteredNodes = useMemo(() => {
-		if (!graph?.nodes) return [];
-		const query = searchQuery.toLowerCase();
-		return graph.nodes
-			.filter((node) => {
-				if (query && !node.path.toLowerCase().includes(query)) return false;
-				const ext = node.path.split(".").pop() ?? "";
-				if (
-					filters.selectedExtensions.length > 0 &&
-					!filters.selectedExtensions.includes(ext)
-				) {
-					return false;
-				}
-				return true;
-			})
-			.sort((a, b) => b.imports - a.imports);
-	}, [graph?.nodes, searchQuery, filters.selectedExtensions]);
 
 	const topImportedFiles = useMemo(() => {
 		if (!graph?.nodes) return [];
@@ -300,21 +259,6 @@ function AnalysisContent() {
 			</div>
 		);
 	}
-
-	const getConnections = (nodeId: string) => {
-		if (!graph) return { imports: [], importedBy: [] };
-		const imports = graph.edges
-			.filter((e) => e.source === nodeId)
-			.map((e) => graph.nodes.find((n) => n.id === e.target))
-			.filter(Boolean) as Node[];
-		const importedBy = graph.edges
-			.filter((e) => e.target === nodeId)
-			.map((e) => graph.nodes.find((n) => n.id === e.source))
-			.filter(Boolean) as Node[];
-		return { imports, importedBy };
-	};
-
-	const connections = selectedNode ? getConnections(selectedNode.id) : null;
 
 	return (
 		<motion.div
@@ -1032,36 +976,25 @@ function AnalysisContent() {
 												<option value="risk">Risk</option>
 												<option value="language">Language</option>
 											</select>
-											<span className="hidden font-mono text-muted-foreground text-xs sm:inline">
-												Show:
+											<span className="hidden font-mono text-[10px] text-muted-foreground uppercase tracking-widest sm:inline">
+												Files Limit:
 											</span>
-											<select
-												className="rounded border border-border bg-muted px-2 py-1 font-mono text-foreground text-xs"
-												defaultValue={hotSpotData.length}
-												onChange={(e) => {
-													// Store the filter value in a ref or state if needed
-													// For now, we'll use a simple approach
-													const container = e.target.closest(".card-glass");
-													if (container) {
-														const scatter =
-															container.querySelector(".recharts-scatter");
-														if (scatter) {
-															// Trigger re-render by updating data attribute
-															scatter.setAttribute(
-																"data-limit",
-																e.target.value,
-															);
-														}
+											<div className="flex items-center gap-2">
+												<input
+													className="h-1.5 w-24 cursor-pointer appearance-none rounded-lg bg-muted accent-amber-500 hover:accent-amber-400"
+													max={hotSpotData.length}
+													min={5}
+													onChange={(e) =>
+														setScatterLimit(Number.parseInt(e.target.value))
 													}
-												}}
-											>
-												<option value={10}>10</option>
-												<option value={25}>25</option>
-												<option value={50}>50</option>
-												<option value={hotSpotData.length}>
-													All ({hotSpotData.length})
-												</option>
-											</select>
+													step={5}
+													type="range"
+													value={scatterLimit}
+												/>
+												<span className="min-w-10 font-mono text-amber-500 text-xs">
+													{scatterLimit}
+												</span>
+											</div>
 										</div>
 									)}
 								</div>
@@ -1338,7 +1271,7 @@ function AnalysisContent() {
 											cursor={{ strokeDasharray: "3 3" }}
 										/>
 										<Scatter
-											data={hotSpotData ?? undefined}
+											data={slicedHotSpotData}
 											shape={(props: {
 												cx?: number;
 												cy?: number;

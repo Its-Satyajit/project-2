@@ -15,7 +15,7 @@ import {
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useTransition } from "react";
+import * as React from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { api } from "~/lib/eden";
@@ -26,7 +26,7 @@ export function Navigation() {
 	const repoId = params.repoId as string | undefined;
 	const isDev = process.env.NODE_ENV === "development";
 	const { theme, setTheme } = useTheme();
-	const [isPending, startTransition] = useTransition();
+	const [isPending, startTransition] = React.useTransition();
 
 	const handleAction = async (
 		action: string,
