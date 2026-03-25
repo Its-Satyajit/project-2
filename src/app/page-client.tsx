@@ -130,7 +130,7 @@ export default function HomeClient() {
 						<span className="tracking-wider">git://analyze</span>
 					</div>
 					<h1 className="mb-5 font-[family-name:var(--font-geist-sans)] font-bold text-5xl text-foreground tracking-tight md:text-6xl lg:text-7xl">
-						<span className="text-[#f59e0b]">Repository</span>{" "}
+						<span className="text-amber-500">Repository</span>{" "}
 						<span className="text-foreground/90">Analyzer</span>
 					</h1>
 					<p className="max-w-xl font-mono text-base text-muted-foreground leading-relaxed">
@@ -177,7 +177,7 @@ export default function HomeClient() {
 							>
 								{([canSubmit, isSubmitting]) => (
 									<Button
-										className="mr-1 h-10 rounded-md bg-gradient-to-r from-amber-500 to-amber-600 px-6 font-medium font-mono text-foreground text-sm transition-all hover:from-amber-400 hover:to-amber-500 hover:shadow-amber-500/20 hover:shadow-lg dark:text-black"
+										className="mr-1 h-10 bg-gradient-to-r from-amber-500 to-amber-600 px-6 font-medium font-mono text-foreground text-sm transition-all hover:from-amber-400 hover:to-amber-500 hover:shadow-amber-500/20 hover:shadow-lg"
 										disabled={!canSubmit}
 										type="submit"
 									>

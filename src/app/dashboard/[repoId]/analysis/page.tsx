@@ -11,9 +11,11 @@ import {
 	FileType,
 	FolderTree,
 	GitBranch,
+	GitCommitHorizontal,
 	Layers,
 	Loader2,
 	Network,
+	Table2,
 	Target,
 	X,
 } from "lucide-react";
@@ -949,20 +951,22 @@ function AnalysisContent() {
 							<h3 className="font-mono font-semibold text-muted-foreground text-xs uppercase tracking-widest">
 								Hotspots
 							</h3>
-							<div className="flex gap-2">
+							<div className="flex gap-1.5">
 								<button
 									className={`tab-pill ${hotspotViewMode === "scatter" ? "active" : ""}`}
 									onClick={() => setHotspotViewMode("scatter")}
 									type="button"
 								>
-									Scatter
+									<GitCommitHorizontal className="h-3.5 w-3.5" />
+									<span>Scatter</span>
 								</button>
 								<button
 									className={`tab-pill ${hotspotViewMode === "table" ? "active" : ""}`}
 									onClick={() => setHotspotViewMode("table")}
 									type="button"
 								>
-									Table
+									<Table2 className="h-3.5 w-3.5" />
+									<span>Table</span>
 								</button>
 							</div>
 						</div>

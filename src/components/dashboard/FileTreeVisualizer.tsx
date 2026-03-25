@@ -1,6 +1,12 @@
 "use client";
 
-import { AlertTriangle, FileCode, FolderTree } from "lucide-react";
+import {
+	AlertTriangle,
+	FileCode,
+	FolderTree,
+	Hash,
+	Layers,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useMemo, useState } from "react";
 import { ResponsiveContainer, Tooltip, Treemap } from "recharts";
@@ -25,38 +31,44 @@ interface TreemapNode {
 }
 
 const LANGUAGE_COLORS: Record<string, string> = {
-	ts: "#3b82f6",
-	tsx: "#3b82f6",
-	js: "#eab308",
-	jsx: "#eab308",
-	py: "#22c55e",
-	go: "#06b6d4",
-	rs: "#f97316",
+	ts: "#60a5fa",
+	tsx: "#818cf8",
+	js: "#facc15",
+	jsx: "#fbbf24",
+	py: "#4ade80",
+	go: "#22d3ee",
+	rs: "#fb923c",
 	java: "#f97316",
-	cpp: "#6366f1",
-	c: "#64748b",
-	rb: "#ef4444",
-	php: "#8b5cf6",
-	swift: "#f43f5e",
+	cpp: "#a78bfa",
+	c: "#94a3b8",
+	rb: "#f87171",
+	php: "#c084fc",
+	swift: "#f472b6",
 	kt: "#a855f7",
-	vue: "#10b981",
-	svelte: "#f97316",
-	css: "#ec4899",
-	html: "#f97316",
-	json: "#64748b",
-	yaml: "#e11d48",
-	md: "#3b82f6",
-	sql: "#f59e0b",
-	env: "#22c55e",
-	lock: "#475569",
-	config: "#6366f1",
+	vue: "#34d399",
+	svelte: "#fb923c",
+	css: "#f472b6",
+	scss: "#ec4899",
+	html: "#fb923c",
+	json: "#94a3b8",
+	yaml: "#fb7185",
+	yml: "#fb7185",
+	md: "#60a5fa",
+	sql: "#fbbf24",
+	env: "#4ade80",
+	lock: "#64748b",
+	config: "#818cf8",
+	toml: "#f97316",
+	sh: "#4ade80",
+	bash: "#4ade80",
+	dockerfile: "#22d3ee",
 };
 
 const HOTSPOT_COLORS = {
 	critical: "#ef4444",
 	warning: "#f59e0b",
 	normal: "#22c55e",
-	muted: "#475569",
+	muted: "#64748b",
 };
 
 function getLanguageColor(ext: string): string {
@@ -77,14 +89,14 @@ function getHotspotLevel(score: number): "critical" | "warning" | "normal" {
 }
 
 function getFolderColor(depth: number): string {
-	const idx = Math.min(depth, 4);
-	return [
-		"rgba(59,130,246,0.35)",
-		"rgba(59,130,246,0.28)",
-		"rgba(59,130,246,0.22)",
-		"rgba(59,130,246,0.18)",
-		"rgba(59,130,246,0.15)",
-	][idx] as string;
+	const colors = [
+		"rgba(56, 189, 248, 0.5)",
+		"rgba(56, 189, 248, 0.4)",
+		"rgba(56, 189, 248, 0.3)",
+		"rgba(56, 189, 248, 0.22)",
+		"rgba(56, 189, 248, 0.16)",
+	];
+	return colors[Math.min(depth, colors.length - 1)] as string;
 }
 
 function countFiles(items: FileTreeItem[]): number {
@@ -97,6 +109,35 @@ function countFiles(items: FileTreeItem[]): number {
 		}
 	}
 	return count;
+}
+
+function countDirs(items: FileTreeItem[]): number {
+	let count = 0;
+	for (const item of items) {
+		if ("items" in item && item.items) {
+			count++;
+			count += countDirs(item.items);
+		}
+	}
+	return count;
+}
+
+function getTotalLoc(
+	items: FileTreeItem[],
+	hotspotData?: Map<string, { score: number; loc: number }>,
+	parentPath = "",
+): number {
+	let total = 0;
+	for (const item of items) {
+		const currentPath = parentPath ? `${parentPath}/${item.name}` : item.name;
+		if ("items" in item && item.items) {
+			total += getTotalLoc(item.items, hotspotData, currentPath);
+		} else {
+			const info = hotspotData?.get(currentPath);
+			total += info?.loc || 0;
+		}
+	}
+	return total;
 }
 
 function convertToTreemapData(
@@ -162,7 +203,6 @@ interface CustomContentProps {
 	fill?: string;
 	isDirectory?: boolean;
 	hotspotScore?: number;
-	depth?: number;
 }
 
 function CustomContent(props: CustomContentProps) {
@@ -180,60 +220,83 @@ function CustomContent(props: CustomContentProps) {
 
 	if (width < 4 || height < 4) return null;
 
-	const isSmall = width < 50 || height < 25;
-	const showExt = width > 60 && height > 35 && !isDirectory;
+	const isVerySmall = width < 35 || height < 20;
+	const isSmall = width < 55 || height < 28;
+	const showExt = width > 70 && height > 38 && !isDirectory;
 	const displayName = String(name || "");
+	const maxChars = Math.floor(width / 7);
 	const truncatedName =
-		displayName.length > width / 6.5
-			? `${displayName.slice(0, Math.floor(width / 6.5) - 2)}..`
+		displayName.length > maxChars
+			? `${displayName.slice(0, maxChars - 2)}..`
 			: displayName;
 
 	const hotspotBorder =
 		hotspotScore && hotspotScore >= 0.7
-			? "rgba(239, 68, 68, 0.6)"
+			? "rgba(239, 68, 68, 0.8)"
 			: hotspotScore && hotspotScore >= 0.4
-				? "rgba(245, 158, 11, 0.4)"
+				? "rgba(245, 158, 11, 0.6)"
 				: "transparent";
 
 	return (
 		<g>
-			{/* Main rectangle */}
+			{/* Main rectangle with gradient overlay */}
 			<rect
 				fill={fill || "#475569"}
 				height={height}
-				rx={3}
-				ry={3}
+				rx={4}
+				ry={4}
 				stroke={hotspotBorder}
-				strokeWidth={hotspotBorder !== "transparent" ? 2 : 1}
-				style={{ cursor: isDirectory ? "default" : "pointer" }}
+				strokeWidth={hotspotBorder !== "transparent" ? 2 : 0.5}
+				style={{
+					cursor: isDirectory ? "default" : "pointer",
+					transition: "opacity 0.1s",
+				}}
 				width={width}
 				x={x}
 				y={y}
 			/>
 
-			{/* Inner highlight for depth */}
-			{!isDirectory && width > 30 && height > 20 && (
+			{/* Top highlight gradient */}
+			{!isVerySmall && (
 				<rect
-					fill="rgba(255, 255, 255, 0.08)"
-					height={Math.min(height * 0.4, 12)}
-					rx={2}
-					ry={2}
+					fill="url(#topHighlight)"
+					height={Math.min(height * 0.35, 10)}
+					rx={4}
+					ry={4}
 					style={{ pointerEvents: "none" }}
-					width={width - 4}
-					x={x + 2}
-					y={y + 2}
+					width={width}
+					x={x}
+					y={y}
 				/>
 			)}
 
+			{/* Folder icon for directories */}
+			{isDirectory && !isSmall && width > 80 && (
+				<text
+					dominantBaseline="middle"
+					fill="rgba(255, 255, 255, 0.4)"
+					fontSize={12}
+					style={{ pointerEvents: "none" }}
+					textAnchor="middle"
+					x={x + width / 2}
+					y={y + height / 2 - (showExt ? 6 : 2)}
+				>
+					📁
+				</text>
+			)}
+
 			{/* Label */}
-			{!isSmall && (
+			{!isSmall && !isDirectory && (
 				<text
 					dominantBaseline="middle"
 					fill="rgba(255, 255, 255, 0.95)"
 					fontFamily="ui-monospace, SFMono-Regular, monospace"
-					fontSize={isDirectory ? 10 : 11}
-					fontWeight={isDirectory ? 600 : 400}
-					style={{ pointerEvents: "none" }}
+					fontSize={height > 45 ? 11 : 10}
+					fontWeight={500}
+					style={{
+						pointerEvents: "none",
+						textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+					}}
 					textAnchor="middle"
 					x={x + width / 2}
 					y={y + height / 2 - (showExt ? 4 : 0)}
@@ -246,11 +309,11 @@ function CustomContent(props: CustomContentProps) {
 			{showExt && extension && (
 				<text
 					dominantBaseline="middle"
-					fill="rgba(255, 255, 255, 0.6)"
+					fill="rgba(255, 255, 255, 0.55)"
 					fontFamily="ui-monospace, SFMono-Regular, monospace"
-					fontSize={8}
-					fontWeight={500}
-					letterSpacing="0.05em"
+					fontSize={9}
+					fontWeight={600}
+					letterSpacing="0.08em"
 					style={{ pointerEvents: "none" }}
 					textAnchor="middle"
 					x={x + width / 2}
@@ -259,9 +322,24 @@ function CustomContent(props: CustomContentProps) {
 					{extension.toUpperCase()}
 				</text>
 			)}
+
+			{/* Small size indicator for tiny blocks */}
+			{isVerySmall && !isDirectory && width > 20 && height > 14 && (
+				<rect
+					fill="rgba(255,255,255,0.2)"
+					height={Math.min(height - 4, 4)}
+					rx={2}
+					style={{ pointerEvents: "none" }}
+					width={Math.min(width - 4, 6)}
+					x={x + 2}
+					y={y + 2}
+				/>
+			)}
 		</g>
 	);
 }
+
+// SVG gradient definition embedded in component
 
 interface TooltipPayloadItem {
 	payload: TreemapNode;
@@ -282,71 +360,104 @@ function CustomTooltip({
 		: null;
 
 	return (
-		<div className="min-w-[200px] rounded-lg border border-border/50 bg-card/95 px-0 shadow-2xl backdrop-blur-md">
+		<div className="min-w-[220px] rounded-xl border border-white/10 bg-gray-900/95 px-0 shadow-2xl backdrop-blur-xl">
 			{/* Header */}
-			<div className="border-border/50 border-b px-3 py-2">
-				<div className="flex items-center gap-2">
+			<div className="border-white/10 border-b px-4 py-3">
+				<div className="flex items-center gap-2.5">
 					{data.isDirectory ? (
-						<FolderTree className="h-3.5 w-3.5 text-sky-400" />
+						<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/20">
+							<FolderTree className="h-4 w-4 text-sky-400" />
+						</div>
 					) : (
-						<FileCode className="h-3.5 w-3.5 text-muted-foreground" />
+						<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+							<FileCode className="h-4 w-4 text-white/70" />
+						</div>
 					)}
-					<span className="truncate font-medium font-mono text-foreground text-sm">
-						{data.name}
-					</span>
+					<div className="min-w-0 flex-1">
+						<p className="truncate font-semibold text-sm text-white">
+							{data.name}
+						</p>
+						<p className="mt-0.5 truncate text-white/40 text-xs">{data.path}</p>
+					</div>
 				</div>
-				<p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
-					{data.path}
-				</p>
 			</div>
 
 			{/* Stats */}
-			<div className="space-y-1.5 px-3 py-2">
-				<div className="flex items-center justify-between">
-					<span className="text-muted-foreground text-xs">Size</span>
-					<span className="font-medium font-mono text-foreground text-xs">
-						{data.size.toLocaleString()} LOC
-					</span>
+			<div className="grid grid-cols-2 gap-px bg-white/5 p-3">
+				<div className="rounded-lg bg-gray-900/80 px-3 py-2.5">
+					<div className="flex items-center gap-1.5 text-white/40 text-xs">
+						<Hash className="h-3 w-3" />
+						<span>Lines</span>
+					</div>
+					<p className="mt-1 font-mono font-semibold text-sm text-white">
+						{data.size.toLocaleString()}
+					</p>
 				</div>
 
 				{data.extension && !data.isDirectory && (
-					<div className="flex items-center justify-between">
-						<span className="text-muted-foreground text-xs">Type</span>
-						<span
-							className="rounded px-1.5 py-0.5 font-mono text-[10px] uppercase"
-							style={{
-								backgroundColor: `${getLanguageColor(data.extension)}20`,
-								color: getLanguageColor(data.extension),
-							}}
-						>
-							{data.extension}
-						</span>
+					<div className="rounded-lg bg-gray-900/80 px-3 py-2.5">
+						<div className="flex items-center gap-1.5 text-white/40 text-xs">
+							<Layers className="h-3 w-3" />
+							<span>Type</span>
+						</div>
+						<div className="mt-1">
+							<span
+								className="inline-block rounded-md px-2 py-0.5 font-mono font-semibold text-xs uppercase"
+								style={{
+									backgroundColor: `${getLanguageColor(data.extension)}25`,
+									color: getLanguageColor(data.extension),
+									border: `1px solid ${getLanguageColor(data.extension)}40`,
+								}}
+							>
+								{data.extension}
+							</span>
+						</div>
 					</div>
 				)}
 
 				{data.hotspotScore !== undefined && !data.isDirectory && (
-					<div className="flex items-center justify-between">
-						<span className="flex items-center gap-1.5 text-muted-foreground text-xs">
-							<AlertTriangle
+					<div
+						className={cn(
+							"col-span-2 rounded-lg px-3 py-2.5",
+							hotspotLevel === "critical" && "bg-red-500/10",
+							hotspotLevel === "warning" && "bg-amber-500/10",
+							hotspotLevel === "normal" && "bg-emerald-500/10",
+						)}
+					>
+						<div className="flex items-center justify-between">
+							<span className="flex items-center gap-1.5 text-white/60 text-xs">
+								<AlertTriangle
+									className={cn(
+										"h-3.5 w-3.5",
+										hotspotLevel === "critical" && "text-red-400",
+										hotspotLevel === "warning" && "text-amber-400",
+										hotspotLevel === "normal" && "text-emerald-400",
+									)}
+								/>
+								Hotspot Score
+							</span>
+							<span
 								className={cn(
-									"h-3 w-3",
-									hotspotLevel === "critical" && "text-rose-400",
+									"font-bold font-mono text-sm",
+									hotspotLevel === "critical" && "text-red-400",
 									hotspotLevel === "warning" && "text-amber-400",
 									hotspotLevel === "normal" && "text-emerald-400",
 								)}
+							>
+								{data.hotspotScore.toFixed(3)}
+							</span>
+						</div>
+						<div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+							<div
+								className={cn(
+									"h-full rounded-full transition-all",
+									hotspotLevel === "critical" && "bg-red-500",
+									hotspotLevel === "warning" && "bg-amber-500",
+									hotspotLevel === "normal" && "bg-emerald-500",
+								)}
+								style={{ width: `${Math.min(data.hotspotScore * 100, 100)}%` }}
 							/>
-							Hotspot
-						</span>
-						<span
-							className={cn(
-								"font-mono font-semibold text-xs",
-								hotspotLevel === "critical" && "text-rose-400",
-								hotspotLevel === "warning" && "text-amber-400",
-								hotspotLevel === "normal" && "text-emerald-400",
-							)}
-						>
-							{data.hotspotScore.toFixed(3)}
-						</span>
+						</div>
 					</div>
 				)}
 			</div>
@@ -364,8 +475,14 @@ export function FileTreeVisualizer({
 	const [colorMode, setColorMode] = useState<"language" | "hotspot">(
 		"language",
 	);
+	const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
 	const fileCount = useMemo(() => countFiles(fileTree), [fileTree]);
+	const dirCount = useMemo(() => countDirs(fileTree), [fileTree]);
+	const totalLoc = useMemo(
+		() => getTotalLoc(fileTree, hotspotData),
+		[fileTree, hotspotData],
+	);
 
 	const treemapData = useMemo(() => {
 		return convertToTreemapData(fileTree, "", 0, hotspotData, colorMode);
@@ -373,33 +490,66 @@ export function FileTreeVisualizer({
 
 	if (fileTree.length === 0) {
 		return (
-			<div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-				<FolderTree className="h-12 w-12 opacity-20" />
-				<p className="font-mono text-sm">No files to visualize</p>
+			<div className="flex h-full flex-col items-center justify-center gap-4 text-muted-foreground">
+				<div className="rounded-2xl bg-muted/30 p-4">
+					<FolderTree className="h-12 w-12 opacity-30" />
+				</div>
+				<div className="text-center">
+					<p className="font-medium text-foreground text-sm">
+						No files to visualize
+					</p>
+					<p className="mt-1 text-xs">
+						Repository analysis may still be in progress
+					</p>
+				</div>
 			</div>
 		);
 	}
 
 	return (
 		<div className="flex h-full flex-col">
+			{/* SVG Gradient Definitions */}
+			<svg aria-hidden="true" className="absolute h-0 w-0">
+				<defs>
+					<linearGradient id="topHighlight" x1="0" x2="0" y1="0" y2="1">
+						<stop offset="0%" stopColor="rgba(255,255,255,0.15)" />
+						<stop offset="100%" stopColor="rgba(255,255,255,0)" />
+					</linearGradient>
+				</defs>
+			</svg>
+
 			{/* Header */}
-			<div className="shrink-0 border-border/50 border-b bg-muted/20 px-4 py-2.5">
+			<div className="shrink-0 border-border/50 border-b bg-gradient-to-r from-muted/30 to-muted/10 px-5 py-3">
 				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<FolderTree className="h-4 w-4 text-sky-400" />
-						<span className="font-mono font-semibold text-foreground text-sm">
-							File Structure
-						</span>
-						<span className="font-mono text-muted-foreground text-xs">
-							({fileCount} files)
-						</span>
+					<div className="flex items-center gap-3">
+						<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/15">
+							<FolderTree className="h-4 w-4 text-sky-400" />
+						</div>
+						<div>
+							<div className="flex items-center gap-2">
+								<span className="font-semibold text-foreground text-sm">
+									File Structure
+								</span>
+							</div>
+							<div className="mt-0.5 flex items-center gap-3 text-muted-foreground text-xs">
+								<span>{fileCount} files</span>
+								<span className="text-border">·</span>
+								<span>{dirCount} folders</span>
+								{totalLoc > 0 && (
+									<>
+										<span className="text-border">·</span>
+										<span>{totalLoc.toLocaleString()} LOC</span>
+									</>
+								)}
+							</div>
+						</div>
 					</div>
 
 					{/* Mode toggle */}
-					<div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-0.5">
+					<div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
 						<button
 							className={cn(
-								"flex items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-xs transition-all duration-150",
+								"flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium text-xs transition-all duration-150",
 								colorMode === "language"
 									? "bg-background text-foreground shadow-sm"
 									: "text-muted-foreground hover:text-foreground",
@@ -407,12 +557,12 @@ export function FileTreeVisualizer({
 							onClick={() => setColorMode("language")}
 							type="button"
 						>
-							<span className="h-2 w-2 rounded-full bg-[#3b82f6]" />
+							<span className="h-2 w-2 rounded-full bg-blue-500" />
 							Language
 						</button>
 						<button
 							className={cn(
-								"flex items-center gap-1.5 rounded-md px-2.5 py-1 font-mono text-xs transition-all duration-150",
+								"flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium text-xs transition-all duration-150",
 								colorMode === "hotspot"
 									? "bg-background text-foreground shadow-sm"
 									: "text-muted-foreground hover:text-foreground",
@@ -420,7 +570,7 @@ export function FileTreeVisualizer({
 							onClick={() => setColorMode("hotspot")}
 							type="button"
 						>
-							<span className="h-2 w-2 rounded-full bg-[#f59e0b]" />
+							<span className="h-2 w-2 rounded-full bg-amber-500" />
 							Hotspot
 						</button>
 					</div>
@@ -428,9 +578,8 @@ export function FileTreeVisualizer({
 			</div>
 
 			{/* Treemap */}
-			<div className="relative flex-1 p-3">
+			<div className="relative flex-1 p-4">
 				<ResponsiveContainer height="100%" width="100%">
-					{/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
 					<Treemap
 						aspectRatio={4 / 3}
 						content={<CustomContent />}
@@ -441,10 +590,12 @@ export function FileTreeVisualizer({
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						onClick={(node: any) => {
 							if (node?.path && !node.isDirectory && onFileClick) {
+								setHoveredNode(node.path);
 								onFileClick(node.path);
+								setTimeout(() => setHoveredNode(null), 300);
 							}
 						}}
-						stroke={isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)"}
+						stroke={isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"}
 					>
 						<Tooltip
 							content={<CustomTooltip />}
@@ -456,58 +607,52 @@ export function FileTreeVisualizer({
 			</div>
 
 			{/* Legend */}
-			<div className="shrink-0 border-border/50 border-t bg-muted/20 px-4 py-2">
+			<div className="shrink-0 border-border/50 border-t bg-gradient-to-r from-muted/20 to-muted/5 px-5 py-2.5">
 				<div className="flex items-center justify-between">
-					<span className="font-mono text-[10px] text-muted-foreground">
-						Click a file to inspect
+					<span className="text-muted-foreground text-xs">
+						Click a file to inspect source
 					</span>
-					<div className="flex items-center gap-4">
+					<div className="flex items-center gap-5">
 						{colorMode === "hotspot" ? (
 							<>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-rose-500 ring-1 ring-rose-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										Critical
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-red-500 shadow-red-500/20 shadow-sm" />
+									<span className="text-muted-foreground text-xs">
+										Critical (≥0.7)
 									</span>
 								</span>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-amber-500 ring-1 ring-amber-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										Warning
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-amber-500 shadow-amber-500/20 shadow-sm" />
+									<span className="text-muted-foreground text-xs">
+										Warning (≥0.4)
 									</span>
 								</span>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-emerald-500 ring-1 ring-emerald-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										Normal
-									</span>
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-emerald-500 shadow-emerald-500/20 shadow-sm" />
+									<span className="text-muted-foreground text-xs">Normal</span>
 								</span>
 							</>
 						) : (
 							<>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-[#3b82f6] ring-1 ring-blue-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										TS/TSX
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-[#60a5fa] shadow-blue-500/20 shadow-sm" />
+									<span className="text-muted-foreground text-xs">
+										TypeScript
 									</span>
 								</span>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-[#eab308] ring-1 ring-yellow-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										JS/JSX
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-[#facc15] shadow-sm shadow-yellow-500/20" />
+									<span className="text-muted-foreground text-xs">
+										JavaScript
 									</span>
 								</span>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-[#22c55e] ring-1 ring-green-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										Python
-									</span>
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-[#4ade80] shadow-green-500/20 shadow-sm" />
+									<span className="text-muted-foreground text-xs">Python</span>
 								</span>
-								<span className="flex items-center gap-1.5">
-									<span className="h-2.5 w-2.5 rounded-sm bg-[#64748b] ring-1 ring-slate-500/20" />
-									<span className="font-mono text-[10px] text-muted-foreground">
-										Other
-									</span>
+								<span className="flex items-center gap-2">
+									<span className="h-3 w-3 rounded-sm bg-sky-500/50" />
+									<span className="text-muted-foreground text-xs">Folders</span>
 								</span>
 							</>
 						)}

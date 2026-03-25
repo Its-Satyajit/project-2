@@ -16,7 +16,6 @@ import type React from "react";
 import { Suspense, use, useState } from "react";
 import type { FileTreeItem } from "~/components/CollapsibleFileTree";
 import { AnalysisProgress } from "~/components/dashboard/AnalysisProgress";
-import { FileTypeChart } from "~/components/dashboard/FileTypeChart";
 import { FileViewer } from "~/components/dashboard/FileViewer";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
 import { VirtualizedFileTree } from "~/components/dashboard/VirtualizedFileTree";
@@ -55,7 +54,6 @@ export default function RepoPage({
 function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	const { repoId } = use(params);
 	const [selectedFile, setSelectedFile] = useState<string | null>(null);
-	const [explorerTab, setExplorerTab] = useState<"code" | "files">("code");
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["repo-dashboard", repoId],
@@ -283,72 +281,45 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					</span>
 				</div>
 
-				<div className="mb-4 flex items-center gap-2">
-					<button
-						className={`tab-pill ${explorerTab === "code" ? "active" : ""}`}
-						onClick={() => setExplorerTab("code")}
-						type="button"
-					>
-						<Code2 className="mr-1.5 h-3.5 w-3.5" />
-						Code
-					</button>
-					<button
-						className={`tab-pill ${explorerTab === "files" ? "active" : ""}`}
-						onClick={() => setExplorerTab("files")}
-						type="button"
-					>
-						<BarChart3 className="mr-1.5 h-3.5 w-3.5" />
-						File Distribution
-					</button>
-				</div>
-
-				{explorerTab === "code" ? (
-					<div
-						className="grid gap-4 lg:grid-cols-[350px_1fr]"
-						style={{ height: "calc(100vh - 380px)" }}
-					>
-						<div className="overflow-hidden rounded-lg border border-border bg-card">
-							<VirtualizedFileTree
-								defaultBranch={data.defaultBranch}
-								fileTree={data.fileTree ?? []}
-								isPrivate={data.isPrivate}
-								name={data.name}
-								onFileSelect={handleFileSelect}
-								owner={data.owner}
-								repoId={data.id}
-							/>
-						</div>
-						<div className="overflow-hidden rounded-lg border border-border bg-card">
-							{selectedFile ? (
-								<FileViewer
-									content={fileContent ?? null}
-									error={fileError ?? null}
-									filePath={selectedFile}
-									isLoading={isFileLoading ?? false}
-									repo={{
-										owner: data.owner,
-										name: data.name,
-										branch: data.defaultBranch || "main",
-										isPrivate: data.isPrivate,
-									}}
-								/>
-							) : (
-								<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-muted-foreground">
-									<Code2 className="mb-4 h-12 w-12 opacity-30" />
-									<p className="font-mono text-sm">
-										Select a file to view its contents
-									</p>
-								</div>
-							)}
-						</div>
-					</div>
-				) : analysis?.fileTypeBreakdownJson ? (
-					<div className="rounded-lg border border-border bg-card p-6">
-						<FileTypeChart
-							data={analysis.fileTypeBreakdownJson as Record<string, number>}
+				<div
+					className="grid gap-4 lg:grid-cols-[350px_1fr]"
+					style={{ height: "calc(100vh - 320px)" }}
+				>
+					<div className="overflow-hidden rounded-lg border border-border bg-card">
+						<VirtualizedFileTree
+							defaultBranch={data.defaultBranch}
+							fileTree={data.fileTree ?? []}
+							isPrivate={data.isPrivate}
+							name={data.name}
+							onFileSelect={handleFileSelect}
+							owner={data.owner}
+							repoId={data.id}
 						/>
 					</div>
-				) : null}
+					<div className="overflow-hidden rounded-lg border border-border bg-card">
+						{selectedFile ? (
+							<FileViewer
+								content={fileContent ?? null}
+								error={fileError ?? null}
+								filePath={selectedFile}
+								isLoading={isFileLoading ?? false}
+								repo={{
+									owner: data.owner,
+									name: data.name,
+									branch: data.defaultBranch || "main",
+									isPrivate: data.isPrivate,
+								}}
+							/>
+						) : (
+							<div className="flex h-full min-h-[400px] flex-col items-center justify-center text-muted-foreground">
+								<Code2 className="mb-4 h-12 w-12 opacity-30" />
+								<p className="font-mono text-sm">
+									Select a file to view its contents
+								</p>
+							</div>
+						)}
+					</div>
+				</div>
 			</section>
 			<footer className="mt-4 flex items-center justify-between border-border border-t pt-6">
 				<div className="font-mono text-muted-foreground text-xs">

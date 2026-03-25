@@ -39,64 +39,64 @@ interface TreemapNode extends d3.HierarchyRectangularNode<TreemapFile> {
 }
 
 const LANGUAGE_COLORS: Record<string, string> = {
-	ts: "#3178c6",
-	tsx: "#3178c6",
-	js: "#f7df1e",
-	jsx: "#f7df1e",
-	py: "#3776ab",
-	go: "#00add8",
-	rs: "#dea584",
-	java: "#ed8b00",
-	cpp: "#00599c",
-	c: "#a8b9cc",
-	h: "#a8b9cc",
-	hpp: "#00599c",
-	rb: "#cc342d",
-	php: "#777bb4",
-	swift: "#fa7343",
-	kt: "#7f52ff",
-	scala: "#dc322f",
-	cs: "#178600",
-	vue: "#41b883",
-	svelte: "#ff3e00",
-	css: "#563d7c",
-	scss: "#c6538c",
-	html: "#e34c26",
-	json: "#292929",
-	yaml: "#cb171e",
-	yml: "#cb171e",
-	md: "#083fa1",
-	sql: "#e38c00",
-	prisma: "#2d3748",
-	toml: "#9c4121",
-	sh: "#89e051",
-	bash: "#89e051",
-	zsh: "#89e051",
-	dockerfile: "#0db7ed",
+	ts: "#60a5fa",
+	tsx: "#60a5fa",
+	js: "#facc15",
+	jsx: "#facc15",
+	py: "#4ade80",
+	go: "#22d3ee",
+	rs: "#fb923c",
+	java: "#fb923c",
+	cpp: "#818cf8",
+	c: "#94a3b8",
+	h: "#94a3b8",
+	hpp: "#818cf8",
+	rb: "#f87171",
+	php: "#a78bfa",
+	swift: "#f472b6",
+	kt: "#c084fc",
+	scala: "#f87171",
+	cs: "#4ade80",
+	vue: "#34d399",
+	svelte: "#fb923c",
+	css: "#f472b6",
+	scss: "#f472b6",
+	html: "#fb923c",
+	json: "#94a3b8",
+	yaml: "#fb7185",
+	yml: "#fb7185",
+	md: "#60a5fa",
+	sql: "#fbbf24",
+	prisma: "#60a5fa",
+	toml: "#fb923c",
+	sh: "#4ade80",
+	bash: "#4ade80",
+	zsh: "#4ade80",
+	dockerfile: "#22d3ee",
 };
 
 function getLanguageColor(ext: string): string {
-	return LANGUAGE_COLORS[ext.toLowerCase()] || "#6b7280";
+	return LANGUAGE_COLORS[ext.toLowerCase()] || "#94a3b8";
 }
 
 function getScoreColor(score: number, maxScore: number): string {
-	if (score === 0) return "#374151";
+	if (score === 0) return "#64748b";
 	const normalized = score / maxScore;
 
-	if (normalized > 0.7) return "#dc2626";
-	if (normalized > 0.5) return "#ea580c";
-	if (normalized > 0.3) return "#ca8a04";
-	if (normalized > 0.15) return "#65a30d";
-	return "#16a34a";
+	if (normalized > 0.7) return "#f87171";
+	if (normalized > 0.5) return "#fb923c";
+	if (normalized > 0.3) return "#facc15";
+	if (normalized > 0.15) return "#a3e635";
+	return "#4ade80";
 }
 
 function getFanColor(value: number, maxValue: number): string {
-	if (value === 0) return "#374151";
+	if (value === 0) return "#475569";
 	const normalized = Math.min(value / maxValue, 1);
 
 	const r = Math.round(59 + (234 - 59) * normalized);
-	const g = Math.round(110 + (183 - 110) * normalized);
-	const b = Math.round(150 + (84 - 150) * normalized);
+	const g = Math.round(130 + (179 - 130) * normalized);
+	const b = Math.round(246 + (100 - 246) * normalized);
 	return `rgb(${r}, ${g}, ${b})`;
 }
 
