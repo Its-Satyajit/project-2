@@ -3,7 +3,7 @@ import type { ParsedFile } from "./parsers/index";
 import { resolveImport } from "./parsers/pathResolver";
 import { parsePython } from "./parsers/python";
 import { createRegexParser } from "./parsers/regexParser";
-import { parseRust } from "./parsers/rust";
+import { parseRust, resolveRustImport } from "./parsers/rust";
 import { parseTypescript } from "./parsers/typescript";
 
 export interface GraphNode {
@@ -201,11 +201,12 @@ export async function performDependencyAnalysis(
 
 	// Build Rust crate mapping from file paths
 	// e.g., files in core/src/ -> crate name "core" (from Cargo.toml name "devbind_core")
+	// Also handles crates/crate_name/src/... pattern
 	const rustCrateMapping: Record<string, string> = {};
 	const crateDirs = new Set<string>();
 	for (const filePath of normalizedFilePaths) {
-		// Match patterns like "core/src/lib.rs" or "cli/src/main.rs"
-		const match = filePath.match(/^([^/]+)\/src\/.*\.rs$/);
+		// Match patterns like "core/src/lib.rs", "cli/src/main.rs", or "crates/biome_config/src/..."
+		const match = filePath.match(/^(?:crates\/)?([^/]+)\/src\/.*\.rs$/);
 		if (match?.[1]) {
 			crateDirs.add(match[1]);
 		}
@@ -261,7 +262,18 @@ export async function performDependencyAnalysis(
 		const normalizedSource = file.path.replace(/\\/g, "/");
 
 		for (const imp of parsed.imports) {
-			const resolved = resolveImport(imp.source, file.path);
+			let resolved;
+			if (language === "rust") {
+				resolved = resolveRustImport(imp.source, file.path, {
+					files: normalizedFilePaths,
+					crateMapping: rustCrateMapping,
+				});
+			} else {
+				resolved = resolveImport(imp.source, file.path, {
+					rustCrateMapping,
+					files: normalizedFilePaths,
+				});
+			}
 
 			if (resolved.isExternal) {
 				// External package - skip

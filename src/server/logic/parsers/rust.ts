@@ -6,7 +6,6 @@ import type { ImportStatement, ParsedFile } from "./index";
 let rustLanguage: Language | null = null;
 let parser: Parser | null = null;
 
-// Common Rust standard library and external crates to mark as external
 const RUST_EXTERNAL_CRATES = new Set([
 	"std",
 	"core",
@@ -25,10 +24,89 @@ const RUST_EXTERNAL_CRATES = new Set([
 	"toml",
 	"log",
 	"env_logger",
+	"async-trait",
+	"futures",
+	"pin_project",
+	"once_cell",
+	"parking_lot",
+	"regex",
+	"lazy_static",
+	"bytes",
+	"uuid",
+	"semver",
+	"dirs",
 ]);
 
-// Known crate name to directory mappings (populated from Cargo.toml)
-let crateMappings: Map<string, string> | null = null;
+interface RustResolverOptions {
+	files?: string[];
+	crateMapping?: Record<string, string>;
+}
+
+let filesCache: { files: string[]; set: Set<string> } | null = null;
+
+function getFilesSet(files: string[]): Set<string> {
+	if (filesCache && filesCache.files === files) {
+		return filesCache.set;
+	}
+	const set = new Set(files);
+	filesCache = { files, set };
+	return set;
+}
+
+function findMatchingFile(
+	modulePath: string,
+	currentCrate: string,
+	options: RustResolverOptions,
+): string | null {
+	const { files, crateMapping } = options;
+
+	if (!files || files.length === 0) {
+		return null;
+	}
+
+	const filesSet = getFilesSet(files);
+	const cratesToTry = [currentCrate];
+
+	// Extract base crate name and apply mapping
+	const baseCrate = modulePath.split("::")[0] || "";
+	if (
+		baseCrate &&
+		baseCrate !== "crate" &&
+		baseCrate !== "super" &&
+		baseCrate !== "self"
+	) {
+		const mapped = crateMapping?.[baseCrate] || baseCrate;
+		cratesToTry.push(mapped, ...Object.values(crateMapping || {}));
+	}
+
+	const pathPart = modulePath
+		.replace(/^(crate|super|self)::/, "")
+		.replace(/::/g, "/");
+
+	for (const crate of [...new Set(cratesToTry)]) {
+		const candidates = [
+			`${crate}/src/${pathPart}.rs`,
+			`${crate}/src/${pathPart}/mod.rs`,
+			`${crate}/src/${pathPart}/index.rs`,
+			`crates/${crate}/src/${pathPart}.rs`,
+			`crates/${crate}/src/${pathPart}/mod.rs`,
+			`crates/${crate}/src/${pathPart}/index.rs`,
+		];
+
+		for (const candidate of candidates) {
+			if (filesSet.has(candidate)) {
+				return candidate;
+			}
+		}
+	}
+
+	return null;
+}
+
+function getCurrentCrate(filePath: string): string {
+	const match = filePath.match(/^(?:crates\/)?([^/]+)\/src\//);
+	return match?.[1] || "crate";
+}
 
 async function getRustParser(): Promise<Parser> {
 	if (!parser) {
@@ -45,134 +123,46 @@ async function getRustParser(): Promise<Parser> {
 	return parser;
 }
 
-/**
- * Load crate mappings from Cargo.toml files in the project
- */
-function loadCrateMappings(): Map<string, string> {
-	if (crateMappings) return crateMappings;
-
-	crateMappings = new Map();
-
-	try {
-		const projectRoot = process.cwd();
-		const entries = fs.readdirSync(projectRoot, { withFileTypes: true });
-
-		for (const entry of entries) {
-			if (entry.isDirectory()) {
-				const cargoTomlPath = path.join(projectRoot, entry.name, "Cargo.toml");
-				if (fs.existsSync(cargoTomlPath)) {
-					const content = fs.readFileSync(cargoTomlPath, "utf-8");
-					const nameMatch = content.match(/^name\s*=\s*"([^"]+)"/m);
-					if (nameMatch && nameMatch[1]) {
-						crateMappings.set(nameMatch[1], entry.name);
-					}
-				}
-			}
-		}
-	} catch (error) {
-		console.error("[RustParser] Error loading crate mappings:", error);
-	}
-
-	return crateMappings;
+function isExternalCrate(name: string): boolean {
+	return RUST_EXTERNAL_CRATES.has(name);
 }
 
-/**
- * Convert a Rust use statement to a file path
- * e.g., "devbind_core::config::DevBindConfig" -> "./core/src/config.rs"
- */
-function rustImportToFilePath(
-	importSource: string,
-	currentFilePath: string,
-): { filePath: string; isExternal: boolean } | null {
-	const baseImport = importSource.split("::")[0] || importSource;
-
-	if (!baseImport || RUST_EXTERNAL_CRATES.has(baseImport)) {
-		return { filePath: "", isExternal: true };
-	}
-
-	const mappings = loadCrateMappings();
-	const crateDir = mappings.get(baseImport);
-
-	if (crateDir) {
-		const moduleParts = importSource.split("::").slice(1);
-		if (moduleParts.length > 0) {
-			const modulePath = moduleParts.join("/");
-			return {
-				filePath: `./${crateDir}/src/${modulePath}.rs`,
-				isExternal: false,
-			};
-		}
-		return {
-			filePath: `./${crateDir}/src/lib.rs`,
-			isExternal: false,
-		};
-	}
-
-	if (importSource.startsWith("crate::")) {
-		const crateRoot = currentFilePath.split("/src/")[0];
-		if (crateRoot) {
-			const modulePath = importSource
-				.replace("crate::", "")
-				.replace(/::/g, "/");
-			return {
-				filePath: `./${crateRoot.split("/").pop()}/src/${modulePath}.rs`,
-				isExternal: false,
-			};
-		}
-	}
-
-	if (importSource.startsWith("super::")) {
-		const currentDir = path.dirname(currentFilePath);
-		const parentDir = path.dirname(currentDir);
-		const modulePath = importSource.replace("super::", "").replace(/::/g, "/");
-		return {
-			filePath: `./${parentDir}/${modulePath}.rs`,
-			isExternal: false,
-		};
-	}
-
-	if (importSource.startsWith("self::")) {
-		const currentDir = path.dirname(currentFilePath);
-		const modulePath = importSource.replace("self::", "").replace(/::/g, "/");
-		return {
-			filePath: `./${currentDir}/${modulePath}.rs`,
-			isExternal: false,
-		};
-	}
-
-	return null;
-}
-
-/**
- * Resolve a Rust import to a file path
- * This is the exported function used by the dependency analysis
- */
 export function resolveRustImport(
 	source: string,
 	currentFilePath: string,
+	options?: RustResolverOptions,
 ): { resolved: string; isExternal: boolean } {
 	if (!source || source.trim() === "") {
 		return { resolved: "", isExternal: true };
 	}
 
-	const result = rustImportToFilePath(source, currentFilePath);
+	const baseImport = source.split("::")[0] || source;
 
-	if (!result) {
-		const baseImport = source.split("::")[0] || source;
-		if (
-			baseImport &&
-			!RUST_EXTERNAL_CRATES.has(baseImport) &&
-			baseImport[0] === baseImport[0].toLowerCase()
-		) {
+	if (isExternalCrate(baseImport)) {
+		return { resolved: "", isExternal: true };
+	}
+
+	if (!options?.files) {
+		const firstChar = baseImport[0];
+		if (firstChar && firstChar >= "a" && firstChar <= "z") {
 			return { resolved: "", isExternal: false };
 		}
 		return { resolved: "", isExternal: true };
 	}
 
-	return {
-		resolved: result.filePath,
-		isExternal: result.isExternal,
-	};
+	const currentCrate = getCurrentCrate(currentFilePath);
+	const resolved = findMatchingFile(source, currentCrate, options);
+
+	if (resolved) {
+		return { resolved, isExternal: false };
+	}
+
+	const firstChar = baseImport[0];
+	if (firstChar && firstChar >= "a" && firstChar <= "z") {
+		return { resolved: "", isExternal: false };
+	}
+
+	return { resolved: "", isExternal: true };
 }
 
 export async function parseRust(
@@ -203,7 +193,6 @@ export async function parseRust(
 					const match = text.match(/^use\s+([^;]+)/);
 					if (match) {
 						const source = match[1].trim();
-						// Return the source as-is, let dependency analysis resolve it
 						imports.push({
 							raw: text,
 							source,
