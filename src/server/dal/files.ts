@@ -14,7 +14,3 @@ export async function insertFiles(data: Insert | Insert[]) {
 export async function getFilesByRepoId(repoId: string) {
 	return db.select().from(files).where(eq(files.repositoryId, repoId));
 }
-
-export async function updateFileContent(id: string, content: string) {
-	await db.update(files).set({ content }).where(eq(files.id, id));
-}

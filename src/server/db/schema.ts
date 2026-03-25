@@ -132,7 +132,7 @@ export const files = pgTable("files", {
 	depth: integer("depth"),
 	extension: text("extension"),
 	isDirectory: boolean("is_directory").default(false),
-	content: text("content"),
+	parsedImports: json("parsed_imports"),
 	createdAt: timestamp("created_at")
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
@@ -195,6 +195,27 @@ export const analysisResultsRelations = relations(
 		}),
 	}),
 );
+
+export const analysisLogs = pgTable("analysis_logs", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	repositoryId: uuid("repository_id").references(() => repositories.id),
+	event: text("event").notNull(),
+	status: text("status").notNull(),
+	phase: text("phase"),
+	message: text("message"),
+	metadata: json("metadata"),
+	durationMs: integer("duration_ms"),
+	createdAt: timestamp("created_at")
+		.$defaultFn(() => /* @__PURE__ */ new Date())
+		.notNull(),
+});
+
+export const analysisLogsRelations = relations(analysisLogs, ({ one }) => ({
+	repositories: one(repositories, {
+		fields: [analysisLogs.repositoryId],
+		references: [repositories.id],
+	}),
+}));
 
 // export const contributors = pgTable("contributors", {
 // 	//table for later
