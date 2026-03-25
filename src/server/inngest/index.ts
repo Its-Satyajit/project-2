@@ -6,7 +6,5 @@ import { processAnalysisJob } from "./functions";
 // For Elysia, we use the Edge handler which takes a standard Request and returns a Response
 export const inngestHandler = serve({
 	client: inngest,
-	functions: [
-		processAnalysisJob,
-	],
+	functions: [processAnalysisJob],
 });

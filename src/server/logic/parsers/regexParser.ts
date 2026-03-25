@@ -3,6 +3,7 @@ import type { ImportStatement, ParsedFile } from "./index";
 export function createRegexParser(
 	language: string,
 	patterns: RegExp[],
+	commentPrefixes: string[] = ["//", "#", "*", "--"],
 ): (content: string, path: string) => Promise<ParsedFile> {
 	return async (content: string, filePath: string): Promise<ParsedFile> => {
 		try {
@@ -12,12 +13,7 @@ export function createRegexParser(
 			for (const line of lines) {
 				const trimmed = line.trim();
 
-				if (
-					trimmed.startsWith("//") ||
-					trimmed.startsWith("#") ||
-					trimmed.startsWith("*") ||
-					trimmed.startsWith("--")
-				) {
+				if (commentPrefixes.some((prefix) => trimmed.startsWith(prefix))) {
 					continue;
 				}
 

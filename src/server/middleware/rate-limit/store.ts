@@ -54,7 +54,7 @@ export class RateLimitStore {
 						port: this.config.port,
 						password: this.config.password,
 						...options,
-				  });
+					});
 
 			await this.redis.connect();
 			this.limiter = new SlidingWindowRateLimiter(

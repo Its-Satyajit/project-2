@@ -40,5 +40,11 @@
 		".next/types/**/*.ts",
 		".next/dev/types/**/*.ts"
 	],
-	"exclude": ["node_modules", "generated", "coverage", "scripts", "test-redis.js"]
+	"exclude": [
+		"node_modules",
+		"generated",
+		"coverage",
+		"scripts",
+		"test-redis.js"
+	]
 }

@@ -51,7 +51,7 @@ export const debugRoute = new Elysia().post(
 					// Check queue status - BullMQ removed, Inngest status not locally available
 					return {
 						message: "BullMQ queue removed. Analysis now uses Inngest.",
-						note: "Check Inngest Dev Server at http://localhost:8288 for local status."
+						note: "Check Inngest Dev Server at http://localhost:8288 for local status.",
 					};
 				}
 				case "trigger-analysis": {

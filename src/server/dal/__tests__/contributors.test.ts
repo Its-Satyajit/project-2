@@ -35,29 +35,18 @@ vi.mock("../db", () => ({
 
 vi.mock("../db/schema", () => ({
 	contributors: {
-		repositoryId: "repositoryId",
-		githubLogin: "githubLogin",
-		id: "id",
+		// Mock table definition
 	},
 }));
 
-vi.mock("../api/dbSchema", () => ({
-	dbSchema: {
-		contributors: {
-			insert: {},
-			select: {},
-		},
-	},
-}));
-
-const {
-	insertContributors,
-	getContributors,
+import {
+	deleteContributorsByRepoId,
 	getContributorByLogin,
 	getContributorCount,
+	getContributors,
+	insertContributors,
 	upsertContributors,
-	deleteContributorsByRepoId,
-} = require("../contributors");
+} from "../contributors";
 
 const mockContributor = {
 	repositoryId: "550e8400-e29b-41d4-a716-446655440000",

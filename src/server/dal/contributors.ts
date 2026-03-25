@@ -6,7 +6,7 @@ import { contributors } from "../db/schema";
 
 type Insert = Static<typeof dbSchema.contributors.insert>;
 
-export async function insertContributors(data: Insert | Insert[]) {
+export async function insertContributors(data: Insert | Insert[] | null | undefined) {
 	if (!data) return;
 	const values = Array.isArray(data) ? data : [data];
 	if (values.length === 0) return;
