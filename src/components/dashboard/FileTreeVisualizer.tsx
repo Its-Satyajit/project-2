@@ -31,44 +31,44 @@ interface TreemapNode {
 }
 
 const LANGUAGE_COLORS: Record<string, { light: string; dark: string }> = {
-	ts: { light: "#3b82f6", dark: "#60a5fa" },
-	tsx: { light: "#2563eb", dark: "#93c5fd" },
-	js: { light: "#60a5fa", dark: "#93c5fd" },
-	jsx: { light: "#3b82f6", dark: "#60a5fa" },
-	py: { light: "#0d9488", dark: "#2dd4bf" },
-	go: { light: "#0f766e", dark: "#14b8a6" },
-	rs: { light: "#1e293b", dark: "#475569" },
-	java: { light: "#334155", dark: "#64748b" },
-	cpp: { light: "#475569", dark: "#94a3b8" },
-	c: { light: "#64748b", dark: "#cbd5e1" },
-	rb: { light: "#0ea5e9", dark: "#38bdf8" },
-	php: { light: "#0284c7", dark: "#7dd3fc" },
-	swift: { light: "#0ea5e9", dark: "#38bdf8" },
-	kt: { light: "#3b82f6", dark: "#60a5fa" },
-	vue: { light: "#0d9488", dark: "#2dd4bf" },
-	svelte: { light: "#14b8a6", dark: "#5eead4" },
-	css: { light: "#64748b", dark: "#94a3b8" },
-	scss: { light: "#475569", dark: "#64748b" },
-	html: { light: "#3b82f6", dark: "#60a5fa" },
-	json: { light: "#94a3b8", dark: "#cbd5e1" },
-	yaml: { light: "#94a3b8", dark: "#cbd5e1" },
-	yml: { light: "#94a3b8", dark: "#cbd5e1" },
-	md: { light: "#3b82f6", dark: "#60a5fa" },
-	sql: { light: "#1e293b", dark: "#475569" },
-	env: { light: "#0f172a", dark: "#1e293b" },
-	lock: { light: "#475569", dark: "#64748b" },
-	config: { light: "#1e293b", dark: "#334155" },
-	toml: { light: "#94a3b8", dark: "#cbd5e1" },
-	sh: { light: "#0f172a", dark: "#1e293b" },
-	bash: { light: "#0f172a", dark: "#1e293b" },
-	dockerfile: { light: "#0f172a", dark: "#1e293b" },
+	ts: { light: "#171717", dark: "#fafafa" }, // Neutral 900 / 50
+	tsx: { light: "#262626", dark: "#f5f5f5" }, // Neutral 800 / 100
+	js: { light: "#404040", dark: "#e5e5e5" }, // Neutral 700 / 200
+	jsx: { light: "#404040", dark: "#e5e5e5" },
+	py: { light: "#d97706", dark: "#fbbf24" }, // Amber 600 / 400
+	go: { light: "#b45309", dark: "#f59e0b" }, // Amber 700 / 500
+	rs: { light: "#171717", dark: "#fafafa" },
+	java: { light: "#525252", dark: "#d4d4d4" },
+	cpp: { light: "#737373", dark: "#a3a3a3" },
+	c: { light: "#737373", dark: "#a3a3a3" },
+	rb: { light: "#d97706", dark: "#fbbf24" },
+	php: { light: "#b45309", dark: "#f59e0b" },
+	swift: { light: "#fbbf24", dark: "#fcd34d" },
+	kt: { light: "#171717", dark: "#fafafa" },
+	vue: { light: "#404040", dark: "#e5e5e5" },
+	svelte: { light: "#d97706", dark: "#fbbf24" },
+	css: { light: "#737373", dark: "#a3a3a3" },
+	scss: { light: "#525252", dark: "#d4d4d4" },
+	html: { light: "#262626", dark: "#f5f5f5" },
+	json: { light: "#a3a3a3", dark: "#525252" },
+	yaml: { light: "#a3a3a3", dark: "#525252" },
+	yml: { light: "#a3a3a3", dark: "#525252" },
+	md: { light: "#171717", dark: "#ffffff" },
+	sql: { light: "#262626", dark: "#f5f5f5" },
+	env: { light: "#171717", dark: "#ffffff" },
+	lock: { light: "#d4d4d4", dark: "#404040" },
+	config: { light: "#a3a3a3", dark: "#525252" },
+	toml: { light: "#a3a3a3", dark: "#525252" },
+	sh: { light: "#171717", dark: "#fafafa" },
+	bash: { light: "#171717", dark: "#fafafa" },
+	dockerfile: { light: "#0a0a0a", dark: "#ffffff" },
 };
 
 const HOTSPOT_COLORS = {
-	critical: { light: "#ef4444", dark: "#ef4444" },
-	warning: { light: "#f97316", dark: "#f97316" },
-	normal: { light: "#60a5fa", dark: "#3b82f6" },
-	muted: { light: "#cbd5e1", dark: "#334155" },
+	critical: { light: "#dc2626", dark: "#ef4444" },
+	warning: { light: "#d97706", dark: "#fbbf24" },
+	normal: { light: "#171717", dark: "#fafafa" }, // High Neutral
+	muted: { light: "#a3a3a3", dark: "#525252" }, // Low Neutral
 };
 
 function getLanguageColor(ext: string, isDark: boolean): string {
@@ -95,18 +95,18 @@ function getHotspotLevel(score: number): "critical" | "warning" | "normal" {
 
 function getFolderColor(depth: number, isDark: boolean): string {
 	const darkColors = [
-		"rgba(59, 130, 246, 0.25)",
-		"rgba(59, 130, 246, 0.18)",
-		"rgba(59, 130, 246, 0.12)",
-		"rgba(59, 130, 246, 0.08)",
-		"rgba(59, 130, 246, 0.05)",
+		"rgba(38, 38, 38, 0.4)", // Neutral 800 
+		"rgba(38, 38, 38, 0.3)",
+		"rgba(38, 38, 38, 0.2)",
+		"rgba(38, 38, 38, 0.15)",
+		"rgba(38, 38, 38, 0.1)",
 	];
 	const lightColors = [
-		"rgba(37, 99, 235, 0.12)",
-		"rgba(37, 99, 235, 0.08)",
-		"rgba(37, 99, 235, 0.05)",
-		"rgba(37, 99, 235, 0.03)",
-		"rgba(37, 99, 235, 0.02)",
+		"rgba(240, 240, 240, 0.8)", // Neutral 100/50
+		"rgba(240, 240, 240, 0.6)",
+		"rgba(240, 240, 240, 0.4)",
+		"rgba(240, 240, 240, 0.2)",
+		"rgba(240, 240, 240, 0.1)",
 	];
 
 	const colors = isDark ? darkColors : lightColors;
@@ -270,7 +270,7 @@ function CustomContent(props: CustomContentProps) {
 		hotspotScore && hotspotScore >= 0.7
 			? "rgba(239, 68, 68, 0.9)"
 			: hotspotScore && hotspotScore >= 0.4
-				? "rgba(249, 115, 22, 0.8)"
+				? "rgba(217, 119, 6, 0.8)"
 				: "rgba(0,0,0,0.15)";
 
 	return (
@@ -415,15 +415,15 @@ function CustomTooltip({
 			className={cn(
 				"min-w-[240px] rounded-xl border px-0 shadow-2xl backdrop-blur-xl transition-all duration-200",
 				isDark
-					? "border-white/10 bg-gray-900/95"
-					: "border-gray-200 bg-white/95 text-gray-900",
+					? "border-neutral-800 bg-neutral-900/95 shadow-black/50"
+					: "border-neutral-200 bg-white/95 text-neutral-900",
 			)}
 		>
 			{/* Header */}
 			<div
 				className={cn(
 					"border-b px-4 py-3",
-					isDark ? "border-white/10" : "border-gray-100",
+					isDark ? "border-neutral-800" : "border-neutral-100",
 				)}
 			>
 				<div className="flex items-center gap-3">
@@ -432,22 +432,22 @@ function CustomTooltip({
 							"flex h-8 w-8 items-center justify-center rounded-lg",
 							data.isDirectory
 								? isDark
-									? "bg-primary/20"
-									: "bg-primary/10"
+									? "bg-amber-500/20"
+									: "bg-amber-500/10"
 								: isDark
-									? "bg-white/10"
-									: "bg-gray-100",
+									? "bg-neutral-800"
+									: "bg-neutral-100",
 						)}
 					>
 						{data.isDirectory ? (
 							<FolderTree
-								className={cn("h-4.5 w-4.5", isDark ? "text-primary" : "text-primary/80")}
+								className={cn("h-4.5 w-4.5", isDark ? "text-amber-400" : "text-amber-600")}
 							/>
 						) : (
 							<FileCode
 								className={cn(
 									"h-4.5 w-4.5",
-									isDark ? "text-white/70" : "text-gray-600",
+									isDark ? "text-neutral-400" : "text-neutral-500",
 								)}
 							/>
 						)}
@@ -456,7 +456,7 @@ function CustomTooltip({
 						<p
 							className={cn(
 								"truncate font-bold text-sm",
-								isDark ? "text-white" : "text-gray-900",
+								isDark ? "text-neutral-100" : "text-neutral-900",
 							)}
 						>
 							{data.name}
@@ -464,7 +464,7 @@ function CustomTooltip({
 						<p
 							className={cn(
 								"mt-0.5 truncate font-mono text-[10px] uppercase tracking-wider",
-								isDark ? "text-white/40" : "text-gray-500",
+								isDark ? "text-neutral-500" : "text-neutral-400",
 							)}
 						>
 							{data.path}
@@ -477,13 +477,13 @@ function CustomTooltip({
 			<div
 				className={cn(
 					"grid grid-cols-2 gap-px p-3",
-					isDark ? "bg-white/5" : "bg-gray-100",
+					isDark ? "bg-neutral-800/50" : "bg-neutral-50",
 				)}
 			>
 				<div
 					className={cn(
 						"rounded-lg px-3 py-2.5",
-						isDark ? "bg-gray-900/80" : "bg-white",
+						isDark ? "bg-neutral-900" : "bg-white",
 					)}
 				>
 					<div className="flex items-center gap-1.5 text-muted-foreground text-[10px] uppercase tracking-wider">
@@ -493,7 +493,7 @@ function CustomTooltip({
 					<p
 						className={cn(
 							"mt-1 font-mono font-bold text-sm",
-							isDark ? "text-white" : "text-gray-900",
+							isDark ? "text-neutral-100" : "text-neutral-900",
 						)}
 					>
 						{data.size.toLocaleString()}
@@ -504,7 +504,7 @@ function CustomTooltip({
 					<div
 						className={cn(
 							"rounded-lg px-3 py-2.5",
-							isDark ? "bg-gray-900/80" : "bg-white",
+							isDark ? "bg-neutral-900" : "bg-white",
 						)}
 					>
 						<div className="flex items-center gap-1.5 text-muted-foreground text-[10px] uppercase tracking-wider">

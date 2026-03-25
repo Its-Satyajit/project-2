@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { FileCodeIcon, FolderIcon, HashIcon, TerminalIcon } from "lucide-react";
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";

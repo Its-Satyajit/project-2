@@ -1,7 +1,7 @@
 "use client";
 import { useForm } from "@tanstack/react-form-nextjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import {
 	GitBranch,
 	GitFork,

@@ -12,6 +12,7 @@ import {
 	Sun,
 	Trash2,
 } from "lucide-react";
+import { motion } from "motion/react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -134,75 +135,93 @@ export function Navigation() {
 			<div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4">
 				<div className="flex items-center gap-1">
 					<Link
-						className="group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all hover:bg-accent hover:text-accent-foreground"
+						className={`group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all hover:bg-muted ${
+							pathname === "/" ? "text-primary" : "text-muted-foreground"
+						}`}
 						href="/"
 					>
-						<div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10 text-primary">
+						<div className="flex h-6 w-6 items-center justify-center rounded bg-primary/5 text-primary/80">
 							<Home className="h-3.5 w-3.5" />
 						</div>
-						<span className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wider transition-colors group-hover:text-foreground">
+						<span className="font-medium font-mono text-xs uppercase tracking-wider transition-colors group-hover:text-foreground">
 							Home
 						</span>
+						{pathname === "/" && (
+							<motion.div
+								className="h-1.5 w-1.5 self-center rounded-full bg-accent"
+								layoutId="nav-dot"
+							/>
+						)}
 					</Link>
 
 					{repoId && (
 						<>
 							<span className="mx-1 text-muted-foreground">/</span>
 							<Link
-								className={`group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all ${
+								className={`group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all hover:bg-muted ${
 									pathname === `/dashboard/${repoId}`
-										? "bg-accent"
-										: "hover:bg-accent"
+										? "text-primary"
+										: "text-muted-foreground"
 								}`}
 								href={`/dashboard/${repoId}`}
 							>
 								<div
 									className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
 										pathname === `/dashboard/${repoId}`
-											? "bg-primary/20 text-primary"
+											? "bg-primary/10 text-primary"
 											: "bg-muted text-muted-foreground group-hover:text-foreground"
 									}`}
 								>
 									<LayoutDashboard className="h-3.5 w-3.5" />
 								</div>
 								<span
-									className={`font-medium font-mono text-xs uppercase tracking-wider transition-colors ${
-										pathname === `/dashboard/${repoId}`
-											? "text-foreground"
-											: "text-muted-foreground group-hover:text-foreground"
+									className={`font-medium font-mono text-xs uppercase tracking-wider transition-colors group-hover:text-foreground ${
+										pathname === `/dashboard/${repoId}` ? "text-primary" : ""
 									}`}
 								>
 									Dashboard
 								</span>
+								{pathname === `/dashboard/${repoId}` && (
+									<motion.div
+										className="h-1.5 w-1.5 self-center rounded-full bg-accent"
+										layoutId="nav-dot"
+									/>
+								)}
 							</Link>
 
 							<span className="mx-1 text-muted-foreground">/</span>
 							<Link
-								className={`group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all ${
+								className={`group flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all hover:bg-muted ${
 									pathname === `/dashboard/${repoId}/analysis`
-										? "bg-accent"
-										: "hover:bg-accent"
+										? "text-primary"
+										: "text-muted-foreground"
 								}`}
 								href={`/dashboard/${repoId}/analysis`}
 							>
 								<div
 									className={`flex h-6 w-6 items-center justify-center rounded transition-colors ${
 										pathname === `/dashboard/${repoId}/analysis`
-											? "bg-primary/20 text-primary"
+											? "bg-primary/10 text-primary"
 											: "bg-muted text-muted-foreground group-hover:text-foreground"
 									}`}
 								>
 									<GitBranch className="h-3.5 w-3.5" />
 								</div>
 								<span
-									className={`font-medium font-mono text-xs uppercase tracking-wider transition-colors ${
+									className={`font-medium font-mono text-xs uppercase tracking-wider transition-colors group-hover:text-foreground ${
 										pathname === `/dashboard/${repoId}/analysis`
-											? "text-foreground"
-											: "text-muted-foreground group-hover:text-foreground"
+											? "text-primary"
+											: ""
 									}`}
 								>
 									Analysis
 								</span>
+								{pathname === `/dashboard/${repoId}/analysis` && (
+									<motion.div
+										className="h-1.5 w-1.5 self-center rounded-full bg-accent"
+										layoutId="nav-dot"
+									/>
+								)}
 							</Link>
 						</>
 					)}

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import * as d3 from "d3";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { useTheme } from "next-themes";
 import { useCallback, useMemo, useState } from "react";
 import { api } from "~/lib/eden";
@@ -39,40 +39,31 @@ interface TreemapNode extends d3.HierarchyRectangularNode<TreemapFile> {
 }
 
 const LANGUAGE_COLORS: Record<string, string> = {
-	ts: "#3b82f6", // Blue
-	tsx: "#3b82f6",
-	js: "#60a5fa", // Lighter Blue
-	jsx: "#60a5fa",
-	py: "#14b8a6", // Teal
-	go: "#0d9488", // Darker Teal
-	rs: "#0f172a", // Dark Slate
-	java: "#334155", // Slate
-	cpp: "#475569", // Light Slate
-	c: "#475569",
-	h: "#64748b",
-	hpp: "#475569",
-	rb: "#0ea5e9", // Sky
-	php: "#0284c7", // Sky
-	swift: "#7dd3fc", // Light Sky
-	kt: "#38bdf8",
-	scala: "#0ea5e9",
-	cs: "#14b8a6",
-	vue: "#2dd4bf", // Light Teal
-	svelte: "#5eead4",
-	css: "#94a3b8",
-	scss: "#94a3b8",
-	html: "#3b82f6",
-	json: "#cbd5e1",
-	yaml: "#cbd5e1",
-	yml: "#cbd5e1",
-	md: "#94a3b8",
-	sql: "#1e293b",
-	prisma: "#3b82f6",
-	toml: "#cbd5e1",
-	sh: "#1e293b",
-	bash: "#1e293b",
-	zsh: "#1e293b",
-	dockerfile: "#0f172a",
+	ts: "#fafafa", // Neutral 50
+	tsx: "#f5f5f5", // Neutral 100
+	js: "#e5e5e5", // Neutral 200
+	jsx: "#e5e5e5",
+	py: "#fbbf24", // Amber 400
+	go: "#f59e0b", // Amber 500
+	rs: "#fafafa",
+	java: "#d4d4d4",
+	cpp: "#a3a3a3",
+	c: "#a3a3a3",
+	rb: "#fbbf24",
+	php: "#f59e0b",
+	swift: "#fcd34d",
+	kt: "#fafafa",
+	vue: "#e5e5e5",
+	svelte: "#fbbf24",
+	css: "#a3a3a3",
+	scss: "#d4d4d4",
+	html: "#f5f5f5",
+	json: "#525252",
+	yaml: "#525252",
+	yml: "#525252",
+	md: "#ffffff",
+	sql: "#f5f5f5",
+	prisma: "#171717",
 };
 
 function getLanguageColor(ext: string): string {
@@ -83,11 +74,10 @@ function getScoreColor(score: number, maxScore: number): string {
 	if (score === 0) return "var(--color-muted-foreground)";
 	const normalized = score / maxScore;
 
-	if (normalized > 0.7) return "#ef4444"; // Red (Critical)
-	if (normalized > 0.5) return "#f97316"; // Orange (Warning)
-	if (normalized > 0.3) return "var(--color-primary)"; // Blue
-	if (normalized > 0.15) return "var(--color-accent)"; // Teal
-	return "#94a3b8"; // Slate
+	if (normalized > 0.7) return "#dc2626"; // Critical Red
+	if (normalized > 0.4) return "#d97706"; // Warning Amber
+	if (normalized > 0.2) return "#fafafa"; // Normal Neutral
+	return "#737373"; // Muted Slate
 }
 
 function getFanColor(value: number, maxValue: number): string {

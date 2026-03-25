@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import {
 	ArrowLeft,
 	BarChart3,
@@ -29,6 +29,8 @@ import {
 	Cell,
 	Pie,
 	PieChart,
+	ReferenceArea,
+	ReferenceLine,
 	ResponsiveContainer,
 	Scatter,
 	ScatterChart,
@@ -36,6 +38,7 @@ import {
 	XAxis,
 	YAxis,
 	ZAxis,
+	Label,
 } from "recharts";
 import { FileTreeVisualizer } from "~/components/dashboard/FileTreeVisualizer";
 import { Button } from "~/components/ui/button";
@@ -990,56 +993,112 @@ function AnalysisContent() {
 									<ScatterChart
 										margin={{ top: 30, right: 30, bottom: 60, left: 60 }}
 									>
-										{/* Quadrant background rectangles */}
+										{/* Quadrant background areas and labels */}
 										{(() => {
 											if (!hotSpotData || hotSpotData.length === 0) return null;
-											const maxFanIn = Math.max(
-												...hotSpotData.map((d) => d.fanIn),
-												1,
-											);
-											const maxFanOut = Math.max(
-												...hotSpotData.map((d) => d.fanOut),
-												1,
-											);
-											const midFanIn = maxFanIn / 2;
-											const midFanOut = maxFanOut / 2;
+											
+											// Determine max values based on the current chart axes to ensure quadrants fill the visible area
+											const xKey = chartConfig.xAxis;
+											const yKey = chartConfig.yAxis;
+											
+											const maxX = Math.max(...hotSpotData.map(d => Number(d[xKey]) || 0), 1) * 1.1; // Add 10% buffer
+											const maxY = Math.max(...hotSpotData.map(d => Number(d[yKey]) || 0), 1) * 1.1;
+											
+											const midX = maxX / 2;
+											const midY = maxY / 2;
+
 											return (
 												<>
-													{/* Top-right: Hubs - Red zone */}
-													<rect
+													{/* Top-right: HOTSPOTS - Red zone */}
+													<ReferenceArea
 														fill="var(--color-destructive)"
 														fillOpacity={0.03}
-														height={210}
-														width={window.innerWidth > 768 ? 350 : 150}
-														x={midFanIn}
-														y={0}
-													/>
-													{/* Top-left: Utilities - Primary zone */}
-													<rect
+														x1={midX}
+														x2={maxX}
+														y1={midY}
+														y2={maxY}
+													>
+														<Label
+															fill="var(--color-destructive)"
+															fillOpacity={0.4}
+															fontFamily="IBM Plex Mono"
+															fontSize={10}
+															fontWeight={600}
+															position="insideTopRight"
+															value="HOTSPOTS"
+														/>
+													</ReferenceArea>
+
+													{/* Top-left: UTILITIES - Primary zone */}
+													<ReferenceArea
 														fill="var(--color-primary)"
 														fillOpacity={0.03}
-														height={210}
-														width={window.innerWidth > 768 ? 350 : 150}
-														x={0}
-														y={0}
-													/>
-													{/* Bottom-right: Dependents - Primary zone */}
-													<rect
+														x1={0}
+														x2={midX}
+														y1={midY}
+														y2={maxY}
+													>
+														<Label
+															fill="var(--color-primary)"
+															fillOpacity={0.4}
+															fontFamily="IBM Plex Mono"
+															fontSize={10}
+															fontWeight={600}
+															position="insideTopLeft"
+															value="UTILITIES"
+														/>
+													</ReferenceArea>
+
+													{/* Bottom-right: DEPENDENTS - Primary zone */}
+													<ReferenceArea
 														fill="var(--color-primary)"
 														fillOpacity={0.03}
-														height={210}
-														width={window.innerWidth > 768 ? 350 : 150}
-														x={midFanIn}
-														y={midFanOut}
-													/>
-													{/* Bottom-left: Isolated - Accent zone */}
-													<rect
+														x1={midX}
+														x2={maxX}
+														y1={0}
+														y2={midY}
+													>
+														<Label
+															fill="var(--color-primary)"
+															fillOpacity={0.4}
+															fontFamily="IBM Plex Mono"
+															fontSize={10}
+															fontWeight={600}
+															position="insideBottomRight"
+															value="DEPENDENTS"
+														/>
+													</ReferenceArea>
+
+													{/* Bottom-left: ISOLATED - Accent zone */}
+													<ReferenceArea
 														fill="var(--color-accent)"
 														fillOpacity={0.03}
-														height={210}
-														width={window.innerWidth > 768 ? 350 : 150}
-														x={0}
-														y={midFanOut}
+														x1={0}
+														x2={midX}
+														y1={0}
+														y2={midY}
+													>
+														<Label
+															fill="var(--color-accent)"
+															fillOpacity={0.4}
+															fontFamily="IBM Plex Mono"
+															fontSize={10}
+															fontWeight={600}
+															position="insideBottomLeft"
+															value="ISOLATED"
+														/>
+													</ReferenceArea>
+
+													{/* Mid-point lines for quadrants */}
+													<ReferenceLine
+														stroke="#333"
+														strokeDasharray="3 3"
+														x={midX}
+													/>
+													<ReferenceLine
+														stroke="#333"
+														strokeDasharray="3 3"
+														y={midY}
 													/>
 												</>
 											);
@@ -1102,72 +1161,7 @@ function AnalysisContent() {
 											name="LOC"
 											range={[80, 500]}
 										/>
-										{/* Quadrant labels */}
-										{(() => {
-											if (!hotSpotData || hotSpotData.length === 0) return null;
-											const maxFanIn = Math.max(
-												...hotSpotData.map((d) => d.fanIn),
-												1,
-											);
-											const midFanIn = maxFanIn / 2;
-											// Use mid values for quadrants
-											return (
-												<>
-													{/* Top-right: Hubs */}
-													<text
-														fill="var(--color-destructive)"
-														fillOpacity={0.4}
-														fontFamily="IBM Plex Mono"
-														fontSize={10}
-														fontWeight={600}
-														textAnchor="middle"
-														x={midFanIn + (maxFanIn - midFanIn) / 2}
-														y={20}
-													>
-														HOTSPOTS
-													</text>
-													{/* Top-left: Utilities */}
-													<text
-														fill="var(--color-primary)"
-														fillOpacity={0.4}
-														fontFamily="IBM Plex Mono"
-														fontSize={10}
-														fontWeight={600}
-														textAnchor="middle"
-														x={midFanIn / 2}
-														y={20}
-													>
-														UTILITIES
-													</text>
-													{/* Bottom-right: Dependents */}
-													<text
-														fill="var(--color-primary)"
-														fillOpacity={0.4}
-														fontFamily="IBM Plex Mono"
-														fontSize={10}
-														fontWeight={600}
-														textAnchor="middle"
-														x={midFanIn + (maxFanIn - midFanIn) / 2}
-														y={400}
-													>
-														DEPENDENTS
-													</text>
-													{/* Bottom-left: Isolated */}
-													<text
-														fill="var(--color-accent)"
-														fillOpacity={0.4}
-														fontFamily="IBM Plex Mono"
-														fontSize={10}
-														fontWeight={600}
-														textAnchor="middle"
-														x={midFanIn / 2}
-														y={400}
-													>
-														ISOLATED
-													</text>
-												</>
-											);
-										})()}
+										{/* Tooltip and Scatter */}
 										<Tooltip
 											content={({ active, payload }) => {
 												if (active && payload?.length && payload[0]) {
