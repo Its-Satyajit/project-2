@@ -27,7 +27,8 @@ interface TreemapData {
 
 interface TreemapProps {
 	repoId: string;
-	colorMode: "language" | "hotspot";
+	colorMode: "language" | "hotspot" | "fanIn" | "fanOut";
+	sizeMode?: "loc" | "fanIn" | "fanOut";
 	onFileClick?: (file: TreemapFile) => void;
 }
 
@@ -35,7 +36,12 @@ interface TreemapNode extends d3.HierarchyRectangularNode<TreemapFile> {
 	data: TreemapFile;
 }
 
-export function Treemap({ repoId, colorMode, onFileClick }: TreemapProps) {
+export function Treemap({
+	repoId,
+	colorMode,
+	sizeMode = "loc",
+	onFileClick,
+}: TreemapProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 	const { resolvedTheme } = useTheme();
