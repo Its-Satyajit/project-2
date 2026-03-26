@@ -1,10 +1,11 @@
 "use client";
 
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { escape as htmlEscape } from "es-toolkit";
 import { Copy, FileCode, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
-import { Suspense, use, useMemo, useState } from "react";
+import React, { Suspense, use, useMemo, useState } from "react";
 import { codeToHtml } from "shiki";
 import { Button } from "~/components/ui/button";
 
@@ -70,28 +71,46 @@ async function highlightLine(
 
 function HighlightedLines({
 	promise,
-	filePath,
-}: { promise: Promise<string[]>; filePath: string }) {
+	parentRef,
+}: { promise: Promise<string[]>; parentRef: React.RefObject<HTMLDivElement | null> }) {
 	const lines = use(promise);
 
+	const rowVirtualizer = useVirtualizer({
+		count: lines.length,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => 24,
+		overscan: 20,
+	});
+
 	return (
-		<div className="w-full py-2">
-			{lines.map((html, i) => (
-				<div
-					className="flex transition-colors hover:bg-muted/50"
-					// biome-ignore lint/suspicious/noArrayIndexKey: Line numbers are stable mapping
-					key={`${filePath}-line-${i + 1}`}
-				>
-					<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
-						{i + 1}
-					</div>
+		<div
+			className="relative w-full"
+			style={{
+				height: `${rowVirtualizer.getTotalSize()}px`,
+			}}
+		>
+			{rowVirtualizer.getVirtualItems().map((virtualRow) => {
+				const html = lines[virtualRow.index];
+				return (
 					<div
-						className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6 [&>span]:bg-transparent!"
-						// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for Shiki
-						dangerouslySetInnerHTML={{ __html: html }}
-					/>
-				</div>
-			))}
+						className="absolute top-0 left-0 flex w-full transition-colors hover:bg-muted/50"
+						key={virtualRow.key}
+						style={{
+							height: `${virtualRow.size}px`,
+							transform: `translateY(${virtualRow.start}px)`,
+						}}
+					>
+						<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
+							{virtualRow.index + 1}
+						</div>
+						<div
+							className="flex-1 whitespace-pre px-3 py-0.5 font-mono text-sm leading-6 [&>span]:bg-transparent!"
+							// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for Shiki
+							dangerouslySetInnerHTML={{ __html: html ?? " " }}
+						/>
+					</div>
+				);
+			})}
 		</div>
 	);
 }
@@ -123,6 +142,8 @@ export function FileViewer({
 	);
 
 	const lines = useMemo(() => (content ? content.split("\n") : []), [content]);
+
+	const scrollParentRef = React.useRef<HTMLDivElement>(null);
 
 	const highlightingPromise = useMemo(() => {
 		if (!content || isImage) return null;
@@ -221,7 +242,10 @@ export function FileViewer({
 					</Button>
 				)}
 			</div>
-			<div className="flex h-full min-h-0 overflow-auto bg-card">
+			<div
+				className="flex h-full min-h-0 overflow-auto bg-card"
+				ref={scrollParentRef}
+			>
 				{isImage ? (
 					<div className="relative flex h-full min-h-[400px] w-full items-center justify-center bg-card/50 p-8">
 						{repo && !repo.isPrivate ? (
@@ -242,44 +266,18 @@ export function FileViewer({
 					<Suspense
 						fallback={
 							<div className="w-full py-2">
-								{lines.map((line, i) => (
-									<div
-										className="flex transition-colors hover:bg-muted/50"
-										// biome-ignore lint/suspicious/noArrayIndexKey: Fallback uses index as line number
-										key={`${filePath}-fallback-${i}`}
-									>
-										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
-											{i + 1}
-										</div>
-										<div className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6">
-											{line}
-										</div>
-									</div>
-								))}
+								<Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
 							</div>
 						}
 					>
 						{highlightingPromise ? (
 							<HighlightedLines
-								filePath={filePath}
+								parentRef={scrollParentRef}
 								promise={highlightingPromise}
 							/>
 						) : (
-							<div className="w-full py-2">
-								{lines.map((line, i) => (
-									<div
-										className="flex transition-colors hover:bg-muted/50"
-										// biome-ignore lint/suspicious/noArrayIndexKey: Fallback uses index as line number
-										key={`${filePath}-no-highlight-${i}`}
-									>
-										<div className="w-12 shrink-0 select-none border-border border-r py-0.5 pr-3 text-right font-mono text-muted-foreground text-xs leading-6">
-											{i + 1}
-										</div>
-										<div className="flex-1 whitespace-pre-wrap break-all px-3 py-0.5 font-mono text-sm leading-6">
-											{line}
-										</div>
-									</div>
-								))}
+							<div className="w-full py-2 px-4 font-mono text-sm whitespace-pre">
+								{content}
 							</div>
 						)}
 					</Suspense>

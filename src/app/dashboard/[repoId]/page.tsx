@@ -1,12 +1,14 @@
 "use client";
+
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Code2, FolderTree, GitBranch, GitGraph, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, use, useState } from "react";
+import React, { Suspense, use, useState } from "react";
 import type { FileTreeItem } from "~/components/CollapsibleFileTree";
 import { AnalysisProgress } from "~/components/dashboard/AnalysisProgress";
+import { ContributorsList } from "~/components/dashboard/ContributorsList";
 import { DashboardHero } from "~/components/dashboard/DashboardHero";
 import { FileViewer } from "~/components/dashboard/FileViewer";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
@@ -52,6 +54,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 	const [contributorsSort, setContributorsSort] = useState<
 		"contributions" | "newest"
 	>("contributions");
+	const contributorsParentRef = React.useRef<HTMLDivElement>(null);
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["repo-dashboard", repoId],
@@ -316,63 +319,14 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 								</div>
 							) : contributorsData && contributorsData.length > 0 ? (
 								<div
-									className="grid gap-4"
-									style={{
-										gridTemplateColumns:
-											"repeat(auto-fill, minmax(280px, 1fr))",
-									}}
+									className="relative w-full overflow-auto"
+									ref={contributorsParentRef}
+									style={{ height: "calc(100vh - 400px)" }}
 								>
-									{contributorsData.map(
-										(contributor: {
-											id: string;
-											githubLogin: string;
-											avatarUrl: string | null;
-											htmlUrl: string | null;
-											contributions: number;
-										}) => (
-											<div
-												className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-4 transition-colors hover:bg-muted/40"
-												key={contributor.id}
-											>
-												{contributor.avatarUrl ? (
-													<Image
-														alt={contributor.githubLogin}
-														className="rounded-full"
-														height={48}
-														src={contributor.avatarUrl}
-														width={48}
-													/>
-												) : (
-													<div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-														<GitBranch className="h-6 w-6 text-muted-foreground" />
-													</div>
-												)}
-												<div className="min-w-0 flex-1">
-													<p className="truncate font-medium font-mono">
-														{contributor.githubLogin}
-													</p>
-													{contributor.htmlUrl && (
-														<a
-															className="block truncate font-mono text-muted-foreground text-xs hover:underline"
-															href={contributor.htmlUrl}
-															rel="noopener noreferrer"
-															target="_blank"
-														>
-															{contributor.htmlUrl}
-														</a>
-													)}
-												</div>
-												<div className="text-right">
-													<p className="font-bold font-mono text-foreground text-lg">
-														{contributor.contributions}
-													</p>
-													<p className="font-mono text-muted-foreground text-xs">
-														contributions
-													</p>
-												</div>
-											</div>
-										),
-									)}
+									<ContributorsList
+										contributors={contributorsData}
+										parentRef={contributorsParentRef}
+									/>
 								</div>
 							) : (
 								<div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
