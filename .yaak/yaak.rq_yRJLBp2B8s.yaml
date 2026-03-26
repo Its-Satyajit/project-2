@@ -1,0 +1,39 @@
+type: http_request
+model: http_request
+id: rq_yRJLBp2B8s
+createdAt: 2026-03-26T12:16:14.724500536
+updatedAt: 2026-03-26T12:16:16.241078904
+workspaceId: wk_dPMYXCvCgM
+folderId: null
+authentication: {}
+authenticationType: null
+body:
+  form:
+  - enabled: true
+    id: MwZNIN98ak
+    name: githubUrl
+    value: https://github.com/Its-Satyajit/nextjs_template_tanstack_query_drizzle_Eeysia_better-auth_shadcn-ui
+  - enabled: true
+    id: PZwVnN39sg
+    name: ''
+    value: ''
+bodyType: multipart/form-data
+description: ''
+headers:
+- enabled: true
+  name: Content-Type
+  value: multipart/form-data
+  id: KQ5hICRpAQ
+method: GET
+name: localhost:3000/api/analyze Copy 4
+sortPriority: -1774015248234.996
+url: https://gia-its-satyajit.vercel.app/api/dashboard/09fcea68-cc41-4622-a0d6-9ad82010bdc6
+urlParameters:
+- enabled: true
+  name: ''
+  value: ''
+  id: M6xWRPMh4F
+- enabled: true
+  name: ''
+  value: ''
+  id: Xy9PcF5NCq
