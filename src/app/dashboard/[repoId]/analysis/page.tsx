@@ -111,7 +111,7 @@ function AnalysisContent() {
 		yAxis: "fanOut" as "fanIn" | "fanOut" | "loc" | "score",
 		colorBy: "language" as "risk" | "language",
 	});
-	const [scatterLimit, setScatterLimit] = useState(50);
+	const [scatterLimit, setScatterLimit] = useState(200);
 
 	const graph = status?.analysis?.dependencyGraph;
 	const hotSpotData = status?.analysis?.hotSpotData;
@@ -185,11 +185,10 @@ function AnalysisContent() {
 	}, [graph?.nodes]);
 
 	const languageData = useMemo(() => {
-		if (!graph?.metadata.languageBreakdown) return [];
-		return Object.entries(graph.metadata.languageBreakdown)
+		return Object.entries(graph?.metadata?.languageBreakdown ?? {})
 			.map(([name, value]) => ({ name, value }))
 			.sort((a, b) => b.value - a.value);
-	}, [graph?.metadata.languageBreakdown]);
+	}, [graph?.metadata?.languageBreakdown]);
 
 	const filesByLanguage = useMemo(() => {
 		if (!graph?.nodes) return [];
@@ -310,20 +309,20 @@ function AnalysisContent() {
 							<div className="flex gap-3">
 								<div className="stat-card">
 									<p className="stat-value">
-										{graph?.metadata.totalNodes ?? 0}
+										{status?.analysis?.totalFiles ?? graph?.metadata?.totalNodes ?? graph?.nodes?.length ?? 0}
 									</p>
 									<p className="stat-label">Files</p>
 								</div>
 								<div className="stat-card">
 									<p className="stat-value">
-										{graph?.metadata.totalEdges ?? 0}
+										{graph?.metadata?.totalEdges ?? graph?.edges?.length ?? 0}
 									</p>
 									<p className="stat-label">Connections</p>
 								</div>
 								<div className="stat-card">
 									<p className="stat-value">
 										{
-											Object.keys(graph?.metadata.languageBreakdown ?? {})
+											Object.keys(status?.analysis?.fileTypeBreakdown ?? graph?.metadata?.languageBreakdown ?? {})
 												.length
 										}
 									</p>
@@ -842,7 +841,7 @@ function AnalysisContent() {
 							<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 								<div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
 									<p className="font-data font-semibold text-2xl text-primary">
-										{graph?.metadata.totalNodes ?? 0}
+										{graph?.metadata?.totalNodes ?? 0}
 									</p>
 									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Total Files
@@ -850,7 +849,7 @@ function AnalysisContent() {
 								</div>
 								<div className="rounded-lg border border-accent/20 bg-accent/5 p-4 text-center">
 									<p className="font-data font-semibold text-2xl text-accent">
-										{graph?.metadata.totalEdges ?? 0}
+										{graph?.metadata?.totalEdges ?? 0}
 									</p>
 									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Dependencies
@@ -858,7 +857,7 @@ function AnalysisContent() {
 								</div>
 								<div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
 									<p className="font-data font-semibold text-2xl text-primary">
-										{graph?.metadata.unresolvedImports ?? 0}
+										{graph?.metadata?.unresolvedImports ?? 0}
 									</p>
 									<p className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
 										Unresolved
@@ -867,7 +866,7 @@ function AnalysisContent() {
 								<div className="rounded-lg border border-accent/20 bg-accent/5 p-4 text-center">
 									<p className="font-data font-semibold text-2xl text-accent">
 										{
-											Object.keys(graph?.metadata.languageBreakdown ?? {})
+											Object.keys(graph?.metadata?.languageBreakdown ?? {})
 												.length
 										}
 									</p>
@@ -1277,7 +1276,7 @@ function AnalysisContent() {
 													Math.sqrt(payload.loc || 1) / Math.sqrt(maxLoc),
 													1,
 												);
-												const baseRadius = 6 + normalizedLoc * 29;
+												const baseRadius = 4 + normalizedLoc * 20;
 
 												const severity =
 													payload.score >= 8
@@ -1336,6 +1335,7 @@ function AnalysisContent() {
 															cy={cy}
 															fill={fillColor}
 															fillOpacity={0.6}
+															r={baseRadius}
 														/>
 													</g>
 												);

@@ -17,15 +17,38 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 });
 
 vi.mock("../../db", () => {
-	const mockResult = Object.assign(Promise.resolve([]), {
-		where: vi.fn().mockImplementation(() => mockResult),
-		orderBy: vi.fn().mockImplementation(() => mockResult),
-		limit: vi.fn().mockImplementation(() => mockResult),
-		offset: vi.fn().mockImplementation(() => mockResult),
-		values: vi.fn().mockImplementation(() => Promise.resolve([])),
-		set: vi.fn().mockImplementation(() => mockResult),
-		from: vi.fn().mockImplementation(() => mockResult),
-	});
+	const mockResult = {
+		where: vi.fn(),
+		orderBy: vi.fn(),
+		limit: vi.fn(),
+		offset: vi.fn(),
+		values: vi.fn(),
+		set: vi.fn(),
+		from: vi.fn(),
+		innerJoin: vi.fn(),
+		onConflictDoUpdate: vi.fn(),
+		returning: vi.fn(),
+		then: vi.fn(),
+		catch: vi.fn(),
+		finally: vi.fn(),
+	};
+
+	// Make mock functions return the builder for chaining
+	for (const key of Object.keys(mockResult)) {
+		const fn = (mockResult as any)[key];
+		if (vi.isMockFunction(fn) && key !== "then") {
+			fn.mockImplementation(() => mockResult);
+		}
+	}
+
+	// returning() and values() should behave specifically
+	mockResult.returning.mockImplementation(() => Promise.resolve([]));
+	mockResult.values.mockImplementation(() => mockResult);
+
+	// Make the builder thenable so it can be awaited
+	mockResult.then.mockImplementation((onFulfilled: any) =>
+		Promise.resolve([]).then(onFulfilled),
+	);
 
 	return {
 		db: {
@@ -38,9 +61,8 @@ vi.mock("../../db", () => {
 });
 
 vi.mock("../../db/schema", () => ({
-	contributors: {
-		// Mock table definition
-	},
+	githubUsers: {},
+	repositoryContributors: {},
 }));
 
 import {
@@ -48,7 +70,6 @@ import {
 	getContributorByLogin,
 	getContributorCount,
 	getContributors,
-	insertContributors,
 	upsertContributors,
 } from "../contributors";
 
@@ -67,26 +88,21 @@ describe("contributors DAL", () => {
 		vi.clearAllMocks();
 	});
 
-	describe("insertContributors", () => {
-		it("should insert a single contributor", async () => {
-			await insertContributors(mockContributor);
+	describe("upsertContributors", () => {
+		it("should handle upsert operation for a single contributor", async () => {
+			await upsertContributors([mockContributor]);
 		});
 
-		it("should insert multiple contributors", async () => {
+		it("should handle upserting multiple contributors", async () => {
 			const contributors = [
 				{ ...mockContributor, githubLogin: "user1" },
 				{ ...mockContributor, githubLogin: "user2" },
 			];
-			await insertContributors(contributors);
+			await upsertContributors(contributors);
 		});
 
 		it("should handle empty array", async () => {
-			await insertContributors([]);
-		});
-
-		it("should handle null/undefined", async () => {
-			await insertContributors(null);
-			await insertContributors(undefined);
+			await upsertContributors([]);
 		});
 	});
 
@@ -125,17 +141,7 @@ describe("contributors DAL", () => {
 		});
 	});
 
-	describe("upsertContributors", () => {
-		it("should handle upsert operation", async () => {
-			await upsertContributors([
-				{
-					...mockContributor,
-					githubLogin: "upsert-user",
-					contributions: 50,
-				},
-			]);
-		});
-	});
+	// upsertContributors already tested above
 
 	describe("deleteContributorsByRepoId", () => {
 		it("should delete all contributors for a repo", async () => {

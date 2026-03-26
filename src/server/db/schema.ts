@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import {
 	boolean,
+	index,
 	integer,
 	json,
 	pgTable,
@@ -12,6 +13,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const createTable = pgTableCreator((name) => `pg-drizzle_${name}`);
+
 
 export const user = pgTable("user", {
 	id: text("id").primaryKey(),
@@ -111,17 +113,16 @@ export const repositories = pgTable(
 			.$defaultFn(() => /* @__PURE__ */ new Date())
 			.notNull(),
 	},
-	(t) => [unique().on(t.owner, t.name)],
+	(t) => [
+		unique().on(t.owner, t.name),
+		index("repositories_user_id_idx").on(t.userId),
+	],
 );
 
-export const repositoriesRelations = relations(
-	repositories,
-	({ many }) => ({
-		analysisResults: many(analysisResults),
-		contributors: many(contributors),
-	}),
-);
-
+export const repositoriesRelations = relations(repositories, ({ many }) => ({
+	analysisResults: many(analysisResults),
+	contributors: many(repositoryContributors),
+}));
 
 export const analysisResults = pgTable(
 	"analysis_results",
@@ -153,19 +154,26 @@ export const analysisResultsRelations = relations(
 	}),
 );
 
-export const analysisLogs = pgTable("analysis_logs", {
-	id: uuid("id").defaultRandom().primaryKey(),
-	repositoryId: uuid("repository_id").references(() => repositories.id),
-	event: text("event").notNull(),
-	status: text("status").notNull(),
-	phase: text("phase"),
-	message: text("message"),
-	metadata: json("metadata"),
-	durationMs: integer("duration_ms"),
-	createdAt: timestamp("created_at")
-		.$defaultFn(() => /* @__PURE__ */ new Date())
-		.notNull(),
-});
+export const analysisLogs = pgTable(
+	"analysis_logs",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		repositoryId: uuid("repository_id").references(() => repositories.id),
+		event: text("event").notNull(),
+		status: text("status").notNull(),
+		phase: text("phase"),
+		message: text("message"),
+		metadata: json("metadata"),
+		durationMs: integer("duration_ms"),
+		createdAt: timestamp("created_at")
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(t) => [
+		index("analysis_logs_repo_id_idx").on(t.repositoryId),
+		index("analysis_logs_created_at_idx").on(t.createdAt),
+	],
+);
 
 export const analysisLogsRelations = relations(analysisLogs, ({ one }) => ({
 	repositories: one(repositories, {
@@ -174,15 +182,11 @@ export const analysisLogsRelations = relations(analysisLogs, ({ one }) => ({
 	}),
 }));
 
-export const contributors = pgTable("contributors", {
+export const githubUsers = pgTable("github_users", {
 	id: uuid("id").defaultRandom().primaryKey(),
-	repositoryId: uuid("repository_id").references(() => repositories.id),
-	githubLogin: text("github_login").notNull(),
+	githubLogin: text("github_login").notNull().unique(),
 	avatarUrl: text("avatar_url"),
 	htmlUrl: text("html_url"),
-	contributions: integer("contributions").default(0),
-	firstContributionAt: timestamp("first_contribution_at"),
-	lastContributionAt: timestamp("last_contribution_at"),
 	createdAt: timestamp("created_at")
 		.$defaultFn(() => /* @__PURE__ */ new Date())
 		.notNull(),
@@ -191,25 +195,48 @@ export const contributors = pgTable("contributors", {
 		.notNull(),
 });
 
-export const contributorsRelations = relations(contributors, ({ one }) => ({
-	repositories: one(repositories, {
-		fields: [contributors.repositoryId],
-		references: [repositories.id],
-	}),
+export const repositoryContributors = pgTable(
+	"repository_contributors",
+	{
+		id: uuid("id").defaultRandom().primaryKey(),
+		repositoryId: uuid("repository_id").references(() => repositories.id, {
+			onDelete: "cascade",
+		}),
+		userId: uuid("user_id").references(() => githubUsers.id, {
+			onDelete: "cascade",
+		}),
+		contributions: integer("contributions").default(0),
+		firstContributionAt: timestamp("first_contribution_at"),
+		lastContributionAt: timestamp("last_contribution_at"),
+		createdAt: timestamp("created_at")
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
+		updatedAt: timestamp("updated_at")
+			.$defaultFn(() => /* @__PURE__ */ new Date())
+			.notNull(),
+	},
+	(t) => [
+		unique().on(t.repositoryId, t.userId),
+		index("repo_contributor_repo_id_idx").on(t.repositoryId),
+	],
+);
+
+export const githubUsersRelations = relations(githubUsers, ({ many }) => ({
+	repositoryContributors: many(repositoryContributors),
 }));
 
-// export const contributors = pgTable("contributors", {
-// 	//table for later
-// });
-// export const fileChanges = pgTable("file_changes", {
-// 	//table for later
-// });
-// export const analysisRuns = pgTable("analysis_runs", {
-// 	//table for later
-// });
-// export const tags = pgTable("tags", {
-// 	//table for later
-// });
-// export const bookmarks = pgTable("bookmarks", {
-// 	//table for later
-// });
+export const repositoryContributorsRelations = relations(
+	repositoryContributors,
+	({ one }) => ({
+		repository: one(repositories, {
+			fields: [repositoryContributors.repositoryId],
+			references: [repositories.id],
+		}),
+		user: one(githubUsers, {
+			fields: [repositoryContributors.userId],
+			references: [githubUsers.id],
+		}),
+	}),
+);
+
+

@@ -1,17 +1,6 @@
-import { count, desc, eq } from "drizzle-orm";
-import type { Static } from "elysia";
-import type { dbSchema } from "../api/dbSchema";
+import { and, count, desc, eq } from "drizzle-orm";
 import { db } from "../db";
-import { contributors } from "../db/schema";
-
-type Insert = Static<typeof dbSchema.contributors.insert>;
-
-export async function insertContributors(data: Insert | Insert[] | null | undefined) {
-	if (!data) return;
-	const values = Array.isArray(data) ? data : [data];
-	if (values.length === 0) return;
-	await db.insert(contributors).values(values);
-}
+import { githubUsers, repositoryContributors } from "../db/schema";
 
 export async function getContributors(
 	repositoryId: string,
@@ -19,35 +8,58 @@ export async function getContributors(
 	limit: number = 100,
 ) {
 	const query = db
-		.select()
-		.from(contributors)
-		.where(eq(contributors.repositoryId, repositoryId));
+		.select({
+			id: repositoryContributors.id,
+			githubLogin: githubUsers.githubLogin,
+			avatarUrl: githubUsers.avatarUrl,
+			htmlUrl: githubUsers.htmlUrl,
+			contributions: repositoryContributors.contributions,
+			firstContributionAt: repositoryContributors.firstContributionAt,
+			lastContributionAt: repositoryContributors.lastContributionAt,
+			createdAt: repositoryContributors.createdAt,
+			updatedAt: repositoryContributors.updatedAt,
+		})
+		.from(repositoryContributors)
+		.innerJoin(githubUsers, eq(repositoryContributors.userId, githubUsers.id))
+		.where(eq(repositoryContributors.repositoryId, repositoryId));
 
 	if (sort === "newest") {
-		return query.orderBy(desc(contributors.createdAt)).limit(limit);
+		return query.orderBy(desc(repositoryContributors.createdAt)).limit(limit);
 	}
-	return query.orderBy(desc(contributors.contributions)).limit(limit);
+	return query.orderBy(desc(repositoryContributors.contributions)).limit(limit);
 }
-
 export async function getContributorByLogin(
 	repositoryId: string,
 	githubLogin: string,
 ) {
-	const result = await db
-		.select()
-		.from(contributors)
+	const [result] = await db
+		.select({
+			id: repositoryContributors.id,
+			githubLogin: githubUsers.githubLogin,
+			avatarUrl: githubUsers.avatarUrl,
+			htmlUrl: githubUsers.htmlUrl,
+			contributions: repositoryContributors.contributions,
+			firstContributionAt: repositoryContributors.firstContributionAt,
+			lastContributionAt: repositoryContributors.lastContributionAt,
+			createdAt: repositoryContributors.createdAt,
+			updatedAt: repositoryContributors.updatedAt,
+		})
+		.from(repositoryContributors)
+		.innerJoin(githubUsers, eq(repositoryContributors.userId, githubUsers.id))
 		.where(
-			eq(contributors.repositoryId, repositoryId) &&
-				eq(contributors.githubLogin, githubLogin),
+			and(
+				eq(repositoryContributors.repositoryId, repositoryId),
+				eq(githubUsers.githubLogin, githubLogin),
+			),
 		);
-	return result[0] ?? null;
+	return result ?? null;
 }
 
 export async function getContributorCount(repositoryId: string) {
 	const [result] = await db
 		.select({ value: count() })
-		.from(contributors)
-		.where(eq(contributors.repositoryId, repositoryId));
+		.from(repositoryContributors)
+		.where(eq(repositoryContributors.repositoryId, repositoryId));
 	return result?.value ?? 0;
 }
 
@@ -62,31 +74,55 @@ export async function upsertContributors(
 		lastContributionAt?: Date | null;
 	}>,
 ) {
-	for (const contributor of data) {
-		const existing = await getContributorByLogin(
-			contributor.repositoryId,
-			contributor.githubLogin,
-		);
-		if (existing) {
-			await db
-				.update(contributors)
-				.set({
-					avatarUrl: contributor.avatarUrl,
-					htmlUrl: contributor.htmlUrl,
-					contributions: contributor.contributions,
-					firstContributionAt: contributor.firstContributionAt,
-					lastContributionAt: contributor.lastContributionAt,
+	for (const item of data) {
+		// 1. Ensure global user exists (Normalization)
+		const [user] = await db
+			.insert(githubUsers)
+			.values({
+				githubLogin: item.githubLogin,
+				avatarUrl: item.avatarUrl,
+				htmlUrl: item.htmlUrl,
+			})
+			.onConflictDoUpdate({
+				target: githubUsers.githubLogin,
+				set: {
+					avatarUrl: item.avatarUrl,
+					htmlUrl: item.htmlUrl,
 					updatedAt: new Date(),
-				})
-				.where(eq(contributors.id, existing.id));
-		} else {
-			await db.insert(contributors).values(contributor);
-		}
+				},
+			})
+			.returning({ id: githubUsers.id });
+
+		if (!user) continue;
+
+		// 2. Link user to repository with metrics
+		await db
+			.insert(repositoryContributors)
+			.values({
+				repositoryId: item.repositoryId,
+				userId: user.id,
+				contributions: item.contributions,
+				firstContributionAt: item.firstContributionAt,
+				lastContributionAt: item.lastContributionAt,
+			})
+			.onConflictDoUpdate({
+				target: [
+					repositoryContributors.repositoryId,
+					repositoryContributors.userId,
+				],
+				set: {
+					contributions: item.contributions,
+					firstContributionAt: item.firstContributionAt,
+					lastContributionAt: item.lastContributionAt,
+					updatedAt: new Date(),
+				},
+			});
 	}
 }
 
 export async function deleteContributorsByRepoId(repositoryId: string) {
 	await db
-		.delete(contributors)
-		.where(eq(contributors.repositoryId, repositoryId));
+		.delete(repositoryContributors)
+		.where(eq(repositoryContributors.repositoryId, repositoryId));
 }
+

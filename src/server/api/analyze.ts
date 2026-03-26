@@ -56,7 +56,7 @@ export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 		try {
 			console.log(`[API] Sending Inngest event for ${repoRecord.id}`);
 			await inngest.send({
-				name: "repo/analyze",
+				name: "analysis/repo.requested",
 				data: {
 					repoId: repoRecord.id,
 					owner: parseResult.owner,

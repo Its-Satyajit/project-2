@@ -44,6 +44,12 @@ export interface AnalysisData {
 			source: string;
 			target: string;
 		}>;
+		metadata?: {
+			totalNodes: number;
+			totalEdges: number;
+			languageBreakdown: Record<string, number>;
+			unresolvedImports?: number;
+		};
 	};
 	hotSpotData?: Array<{
 		path: string;

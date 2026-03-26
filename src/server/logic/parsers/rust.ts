@@ -142,7 +142,10 @@ export function resolveRustImport(
 
 	const baseImport = source.split("::")[0] || source;
 
-	if (isExternalCrate(baseImport)) {
+	// Check if it's a known local crate first
+	const isLocalCrate = options?.crateMapping?.[baseImport] !== undefined;
+
+	if (isExternalCrate(baseImport) && !isLocalCrate) {
 		return { resolved: null, isExternal: true };
 	}
 

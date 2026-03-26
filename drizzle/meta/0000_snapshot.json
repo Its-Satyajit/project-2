@@ -1,5 +1,5 @@
 {
-  "id": "3b7c6320-9abf-4527-afa1-5096049155f5",
+  "id": "299ebeec-5e96-4986-9984-7ad6cf1d9135",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -169,7 +169,38 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "analysis_logs_repo_id_idx": {
+          "name": "analysis_logs_repo_id_idx",
+          "columns": [
+            {
+              "expression": "repository_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "analysis_logs_created_at_idx": {
+          "name": "analysis_logs_created_at_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "analysis_logs_repository_id_repositories_id_fk": {
           "name": "analysis_logs_repository_id_repositories_id_fk",
@@ -281,8 +312,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.contributors": {
-      "name": "contributors",
+    "public.github_users": {
+      "name": "github_users",
       "schema": "",
       "columns": {
         "id": {
@@ -291,12 +322,6 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
-        },
-        "repository_id": {
-          "name": "repository_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         },
         "github_login": {
           "name": "github_login",
@@ -316,25 +341,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "contributions": {
-          "name": "contributions",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "default": 0
-        },
-        "first_contribution_at": {
-          "name": "first_contribution_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_contribution_at": {
-          "name": "last_contribution_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -349,23 +355,17 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "contributors_repository_id_repositories_id_fk": {
-          "name": "contributors_repository_id_repositories_id_fk",
-          "tableFrom": "contributors",
-          "tableTo": "repositories",
-          "columnsFrom": [
-            "repository_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "github_users_github_login_unique": {
+          "name": "github_users_github_login_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "github_login"
+          ]
         }
       },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -480,7 +480,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "repositories_user_id_idx": {
+          "name": "repositories_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "repositories_user_id_user_id_fk": {
           "name": "repositories_user_id_user_id_fk",
@@ -504,6 +520,121 @@
           "columns": [
             "owner",
             "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.repository_contributors": {
+      "name": "repository_contributors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "repository_id": {
+          "name": "repository_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "contributions": {
+          "name": "contributions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "first_contribution_at": {
+          "name": "first_contribution_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_contribution_at": {
+          "name": "last_contribution_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "repo_contributor_repo_id_idx": {
+          "name": "repo_contributor_repo_id_idx",
+          "columns": [
+            {
+              "expression": "repository_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "repository_contributors_repository_id_repositories_id_fk": {
+          "name": "repository_contributors_repository_id_repositories_id_fk",
+          "tableFrom": "repository_contributors",
+          "tableTo": "repositories",
+          "columnsFrom": [
+            "repository_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "repository_contributors_user_id_github_users_id_fk": {
+          "name": "repository_contributors_user_id_github_users_id_fk",
+          "tableFrom": "repository_contributors",
+          "tableTo": "github_users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "repository_contributors_repository_id_user_id_unique": {
+          "name": "repository_contributors_repository_id_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "repository_id",
+            "user_id"
           ]
         }
       },

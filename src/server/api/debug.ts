@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
+import { fetchAnalysisData } from "../dal/s3";
 import { db } from "../db";
 import { analysisResults, repositories } from "../db/schema";
-import { fetchAnalysisData } from "../dal/s3";
 
 export const debugRoute = new Elysia().post(
 	"/debug",
@@ -76,7 +76,7 @@ export const debugRoute = new Elysia().post(
 					const repoName = parts[1] ?? "";
 
 					await inngest.send({
-						name: "repo/analyze",
+						name: "analysis/repo.requested",
 						data: {
 							repoId: r.id,
 							owner,
