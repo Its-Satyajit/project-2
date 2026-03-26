@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import {
 	GitBranch,
 	GitFork,
+	Github,
 	Search,
 	Star,
 	Terminal,
@@ -348,11 +349,36 @@ export default function HomeClient() {
 				</motion.div>
 
 				<motion.footer
-					className="mt-20 flex items-center justify-between border-border border-t pt-8"
+					className="mt-20 flex flex-col items-center justify-between gap-4 border-border border-t pt-8 md:flex-row"
 					variants={itemVariants}
 				>
-					<div className="font-mono text-muted-foreground text-xs">
-						<span className="text-primary">▲</span> repo-analyzer v1.0.0
+					<div className="flex flex-col items-center gap-4 md:flex-row md:gap-6">
+						<div className="font-mono text-muted-foreground text-xs">
+							<span className="text-primary">▲</span> repo-analyzer v1.0.0
+						</div>
+						<div className="flex items-center gap-4 font-mono text-muted-foreground text-xs">
+							<a
+								className="flex items-center gap-1.5 transition-colors hover:text-primary"
+								href="https://github.com/Its-Satyajit/git-insights-analyzer"
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								<Github className="h-3 w-3" />
+								<span>Source</span>
+							</a>
+							<span className="text-border">|</span>
+							<span>
+								built by{" "}
+								<a
+									className="text-foreground transition-colors hover:text-primary"
+									href="https://github.com/Its-Satyajit"
+									rel="noopener noreferrer"
+									target="_blank"
+								>
+									Its-Satyajit
+								</a>
+							</span>
+						</div>
 					</div>
 					<div className="flex items-center gap-4 font-mono text-muted-foreground text-xs">
 						<span>

@@ -8,6 +8,7 @@ import {
 	FileCode,
 	FolderTree,
 	GitBranch,
+	Github,
 	GitGraph,
 	Loader2,
 } from "lucide-react";
@@ -299,12 +300,12 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 								VIEW_MODE
 							</span>
 						</div>
-						<TabsList variant="line">
-							<TabsTrigger className="gap-2" value="explorer">
+						<TabsList className="bg-transparent p-0">
+							<TabsTrigger className="tab-pill" value="explorer">
 								<FolderTree className="h-4 w-4" />
 								EXPLORER
 							</TabsTrigger>
-							<TabsTrigger className="gap-2" value="contributors">
+							<TabsTrigger className="tab-pill" value="contributors">
 								<GitGraph className="h-4 w-4" />
 								CONTRIBUTORS
 							</TabsTrigger>
@@ -356,32 +357,30 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					<TabsContent className="mt-0" value="contributors">
 						<div className="rounded-lg border border-border bg-card p-4">
 							{contributorsData && contributorsData.length > 0 && (
-								<div className="mb-4 flex items-center gap-2">
-									<span className="font-mono text-muted-foreground text-xs">
-										SORT_BY:
-									</span>
-									<button
-										className={`rounded px-2 py-1 font-mono text-xs transition-colors ${
-											contributorsSort === "contributions"
-												? "bg-primary/20 text-primary"
-												: "text-muted-foreground hover:text-foreground"
-										}`}
-										onClick={() => setContributorsSort("contributions")}
-										type="button"
+								<div className="mb-4 flex items-center justify-between">
+									<div className="flex items-center gap-2">
+										<span className="font-mono text-muted-foreground text-xs">
+											{"//"}
+										</span>
+										<span className="font-mono text-primary text-xs tracking-wider">
+											SORT_BY
+										</span>
+									</div>
+									<Tabs
+										onValueChange={(v) =>
+											setContributorsSort(v as typeof contributorsSort)
+										}
+										value={contributorsSort}
 									>
-										TOP_CONTRIBUTORS
-									</button>
-									<button
-										className={`rounded px-2 py-1 font-mono text-xs transition-colors ${
-											contributorsSort === "newest"
-												? "bg-primary/20 text-primary"
-												: "text-muted-foreground hover:text-foreground"
-										}`}
-										onClick={() => setContributorsSort("newest")}
-										type="button"
-									>
-										RECENTLY_ADDED
-									</button>
+										<TabsList className="bg-transparent p-0">
+											<TabsTrigger className="tab-pill" value="contributions">
+												TOP_CONTRIBUTORS
+											</TabsTrigger>
+											<TabsTrigger className="tab-pill" value="newest">
+												RECENTLY_ADDED
+											</TabsTrigger>
+										</TabsList>
+									</Tabs>
 								</div>
 							)}
 							{isContributorsLoading ? (
@@ -458,16 +457,44 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					</TabsContent>
 				</Tabs>
 			</section>
-			<footer className="mt-4 flex items-center justify-between border-border border-t pt-6">
-				<div className="font-mono text-muted-foreground text-xs">
-					<span className="text-primary">branch:</span>{" "}
-					{data.defaultBranch}
+			<footer className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-border py-6 md:flex-row">
+				<div className="flex items-center gap-6 font-mono text-muted-foreground text-xs">
+					<div>
+						<span className="text-primary font-bold">▲</span> repo-analyzer
+					</div>
+					<div className="flex items-center gap-4">
+						<a
+							className="flex items-center gap-1.5 transition-colors hover:text-primary"
+							href="https://github.com/Its-Satyajit/git-insights-analyzer"
+							rel="noopener noreferrer"
+							target="_blank"
+						>
+							<Github className="h-3 w-3" />
+							<span>Source</span>
+						</a>
+						<span className="text-border">|</span>
+						<span>
+							built by{" "}
+							<a
+								className="text-foreground transition-colors hover:text-primary"
+								href="https://github.com/Its-Satyajit"
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								Its-Satyajit
+							</a>
+						</span>
+					</div>
 				</div>
-				<div className="font-mono text-muted-foreground text-xs">
-					<span className="text-accent">status:</span>{" "}
-					analyzed
+				<div className="flex items-center gap-6 font-mono text-muted-foreground text-xs">
+					<div>
+						<span className="text-primary">branch:</span> {data.defaultBranch}
+					</div>
+					<div>
+						<span className="text-accent">status:</span> analyzed
+					</div>
 				</div>
-			</footer>{" "}
+			</footer>
 		</div>
 	);
 }
