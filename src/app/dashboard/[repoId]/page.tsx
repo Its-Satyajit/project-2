@@ -1,29 +1,18 @@
 "use client";
+import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useQuery } from "@tanstack/react-query";
-import {
-	ArrowRight,
-	BarChart3,
-	Code2,
-	Database,
-	FileCode,
-	FolderTree,
-	GitBranch,
-	Github,
-	GitGraph,
-	Loader2,
-} from "lucide-react";
+import { Code2, FolderTree, GitBranch, GitGraph, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import type React from "react";
 import { Suspense, use, useState } from "react";
 import type { FileTreeItem } from "~/components/CollapsibleFileTree";
 import { AnalysisProgress } from "~/components/dashboard/AnalysisProgress";
+import { DashboardHero } from "~/components/dashboard/DashboardHero";
 import { FileViewer } from "~/components/dashboard/FileViewer";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
 import { VirtualizedFileTree } from "~/components/dashboard/VirtualizedFileTree";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-
 import { api } from "~/lib/eden";
 
 export default function RepoPage({
@@ -175,17 +164,19 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 			</div>
 		);
 	}
-
-	const data = response.data as {
+	const data = response.data as unknown as {
 		id: string;
 		owner: string;
 		name: string;
 		fullName: string;
+		url?: string;
 		defaultBranch: string;
 		isPrivate: boolean;
 		primaryLanguage: string;
 		description?: string;
 		avatarUrl?: string;
+		stars?: number;
+		forks?: number;
 		fileTree: FileTreeItem[];
 		analysisResults: Array<{
 			totalFiles: number;
@@ -193,6 +184,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 			totalLines: number;
 		}>;
 		fileTypeBreakdown?: Record<string, number>;
+		contributorCount?: number;
 	};
 	const analysis = data.analysisResults?.[0];
 
@@ -202,88 +194,23 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 
 	return (
 		<div className="flex flex-col gap-8">
-			<header className="mb-2">
-				<div className="flex items-start justify-between">
-					<div>
-						<div className="mb-3 flex items-center gap-3">
-							{data.avatarUrl ? (
-								<Image
-									alt={data.owner}
-									className="rounded-full border border-primary/30"
-									height={36}
-									src={data.avatarUrl}
-									width={36}
-								/>
-							) : (
-								<div className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/10">
-									<GitBranch className="h-4 w-4 text-primary" />
-								</div>
-							)}
-							<h1 className="font-bold font-mono text-2xl text-foreground tracking-tight">
-								<span className="text-primary">{data.owner}</span>
-								<span className="text-muted-foreground">/</span>
-								<span className="text-foreground">{data.name}</span>
-							</h1>
-							{data.isPrivate && (
-								<span className="rounded border border-primary/30 bg-primary/10 px-2 py-0.5 font-mono text-primary text-xs">
-									PRIVATE
-								</span>
-							)}
-						</div>
-						{data.description && (
-							<p className="max-w-2xl font-mono text-muted-foreground text-sm leading-relaxed">
-								{data.description}
-							</p>
-						)}
-					</div>
-					<Link href={`/dashboard/${repoId}/analysis`}>
-						<Button className="gap-2 border border-accent/30 bg-accent/10 font-mono text-accent text-sm hover:bg-accent/20">
-							<BarChart3 className="h-4 w-4" />
-							<span>DEEP_ANALYSIS</span>
-							<ArrowRight className="h-4 w-4" />
-						</Button>
-					</Link>
-				</div>
-			</header>
+			<DashboardHero
+				analysis={analysis}
+				contributorCount={data.contributorCount ?? contributorsData?.length}
+				repo={data}
+			/>
+
 			<section>
 				<div className="mb-4 flex items-center gap-2">
 					<span className="font-mono text-muted-foreground text-xs">
 						{"//"}
 					</span>
 					<span className="font-mono text-accent text-xs tracking-wider">
-						REPOSITORY_OVERVIEW
+						ANALYSIS_STATUS
 					</span>
 				</div>
-				<div className="grid gap-6 lg:grid-cols-[1fr_400px]">
-					<div className="grid gap-4 md:grid-cols-2">
-						<StatCard
-							color="sky"
-							icon={FileCode}
-							label="TOTAL_FILES"
-							value={analysis?.totalFiles ?? 0}
-						/>
-						<StatCard
-							color="blue"
-							icon={FolderTree}
-							label="DIRECTORIES"
-							value={analysis?.totalDirectories ?? 0}
-						/>
-						<StatCard
-							color="emerald"
-							icon={Database}
-							label="LINES_OF_CODE"
-							value={(analysis?.totalLines ?? 0).toLocaleString()}
-						/>
-						<StatCard
-							color="violet"
-							icon={Code2}
-							label="PRIMARY_LANG"
-							value={data.primaryLanguage || "N/A"}
-						/>
-					</div>
-					<div className="flex h-full flex-col justify-center">
-						<AnalysisProgress repoId={repoId} />
-					</div>
+				<div className="rounded-xl border border-white/5 bg-black/10 p-6">
+					<AnalysisProgress repoId={repoId} />
 				</div>
 			</section>
 			<section>
@@ -457,10 +384,10 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					</TabsContent>
 				</Tabs>
 			</section>
-			<footer className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-border py-6 md:flex-row">
+			<footer className="mt-8 flex flex-col items-center justify-between gap-4 border-border border-t py-6 md:flex-row">
 				<div className="flex items-center gap-6 font-mono text-muted-foreground text-xs">
 					<div>
-						<span className="text-primary font-bold">▲</span> repo-analyzer
+						<span className="font-bold text-primary">▲</span> repo-analyzer
 					</div>
 					<div className="flex items-center gap-4">
 						<a
@@ -469,7 +396,7 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 							rel="noopener noreferrer"
 							target="_blank"
 						>
-							<Github className="h-3 w-3" />
+							<SiGithub className="h-3 w-3" />
 							<span>Source</span>
 						</a>
 						<span className="text-border">|</span>
@@ -495,54 +422,6 @@ function DashboardData({ params }: { params: Promise<{ repoId: string }> }) {
 					</div>
 				</div>
 			</footer>
-		</div>
-	);
-}
-
-function StatCard({
-	icon: Icon,
-	label,
-	value,
-	color,
-}: {
-	icon: React.ElementType;
-	label: string;
-	value: string | number;
-	color: "sky" | "blue" | "emerald" | "violet";
-}) {
-	const colorClasses = {
-		sky: "text-primary border-primary/30 bg-primary/5",
-		blue: "text-primary border-primary/30 bg-primary/5",
-		emerald: "text-accent border-accent/30 bg-accent/5",
-		violet: "text-accent border-accent/30 bg-accent/5",
-	};
-
-	const iconBgClasses = {
-		sky: "bg-primary/10",
-		blue: "bg-primary/10",
-		emerald: "bg-accent/10",
-		violet: "bg-accent/10",
-	};
-
-	return (
-		<div
-			className={`group relative rounded-lg border p-4 transition-all hover:scale-[1.02] ${colorClasses[color]}`}
-		>
-			<div className="flex items-start justify-between">
-				<div>
-					<p className="mb-1 font-mono text-muted-foreground text-xs tracking-wider">
-						{label}
-					</p>
-					<p className="font-bold font-mono text-2xl text-foreground">
-						{value}
-					</p>
-				</div>
-				<div
-					className={`flex h-10 w-10 items-center justify-center rounded ${iconBgClasses[color]}`}
-				>
-					<Icon className="h-5 w-5" />
-				</div>
-			</div>
 		</div>
 	);
 }

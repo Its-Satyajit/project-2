@@ -4,7 +4,7 @@ import { getContributors } from "../dal/contributors";
 export const contributorsRoute = new Elysia().get(
 	"/repos/:repoId/contributors",
 	async ({ params: { repoId }, query }) => {
-		const limit = query.limit ?? 100;
+		const limit = query.limit ?? 1000;
 		const sort = query.sort ?? "contributions";
 		const contributors = await getContributors(
 			repoId,
@@ -23,7 +23,7 @@ export const contributorsRoute = new Elysia().get(
 	},
 	{
 		query: t.Object({
-			limit: t.Number({ default: 100 }),
+			limit: t.Number({ default: 1000 }),
 			sort: t.Union([t.Literal("contributions"), t.Literal("newest")], {
 				default: "contributions",
 			}),

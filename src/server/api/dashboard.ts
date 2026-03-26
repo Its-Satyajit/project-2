@@ -1,6 +1,7 @@
 import Elysia, { t } from "elysia";
 import type { FileTreeItem } from "~/lib/treeUtils";
 import { getRepositoryData } from "../dal/repositories";
+import { getContributorCount } from "../dal/contributors";
 import { fetchAnalysisData } from "../dal/s3";
 import type { CommitData } from "../types/analysis";
 
@@ -37,10 +38,13 @@ export const dashboardRoute = new Elysia().get(
 			}
 		}
 
+		const contributorCount = await getContributorCount(params.repoId);
+
 		return {
 			...data,
 			...additionalData,
 			fileTree,
+			contributorCount,
 		};
 	},
 	{

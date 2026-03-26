@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { count, desc, eq } from "drizzle-orm";
 import type { Static } from "elysia";
 import type { dbSchema } from "../api/dbSchema";
 import { db } from "../db";
@@ -44,11 +44,11 @@ export async function getContributorByLogin(
 }
 
 export async function getContributorCount(repositoryId: string) {
-	const result = await db
-		.select({ count: contributors.id })
+	const [result] = await db
+		.select({ value: count() })
 		.from(contributors)
 		.where(eq(contributors.repositoryId, repositoryId));
-	return result.length;
+	return result?.value ?? 0;
 }
 
 export async function upsertContributors(

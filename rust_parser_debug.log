@@ -33,3 +33,8 @@
 [RustParser] WASM Buffer size: 1113644
 [RustParser] Language loaded: true
 [RustParser] Language set.
+[RustParser] Initializing Parser.init()...
+[RustParser] Loading WASM from /home/satyajit/Documents/GitHub/OSS/project-2/node_modules/@vscode/tree-sitter-wasm/wasm/tree-sitter-rust.wasm...
+[RustParser] WASM Buffer size: 1113644
+[RustParser] Language loaded: true
+[RustParser] Language set.

@@ -61,6 +61,7 @@ export async function getTopRepositoriesByStars(limit: number = 10) {
 		},
 		with: {
 			contributors: {
+				limit: 1000,
 				columns: { contributions: true },
 			},
 		},

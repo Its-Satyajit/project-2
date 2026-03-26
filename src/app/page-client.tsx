@@ -1,11 +1,10 @@
 "use client";
+import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useForm } from "@tanstack/react-form-nextjs";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "motion/react";
 import {
 	GitBranch,
 	GitFork,
-	Github,
 	Search,
 	Star,
 	Terminal,
@@ -14,7 +13,9 @@ import {
 	Workflow,
 	Zap,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { redirect } from "next/navigation";
+// import { SiGithub } from "react-simple-icons";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
@@ -327,9 +328,7 @@ export default function HomeClient() {
 															<div className="flex items-center gap-1.5 text-violet-500 dark:text-violet-400">
 																<Users className="h-3 w-3" />
 																<span>
-																	{repo.contributorCount >= 100
-																		? "100+"
-																		: repo.contributorCount}
+																	{repo.contributorCount}
 																</span>
 															</div>
 														)}
@@ -363,7 +362,7 @@ export default function HomeClient() {
 								rel="noopener noreferrer"
 								target="_blank"
 							>
-								<Github className="h-3 w-3" />
+								<SiGithub className="h-4 w-4" />
 								<span>Source</span>
 							</a>
 							<span className="text-border">|</span>
