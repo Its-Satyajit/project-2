@@ -7,7 +7,9 @@ import Image from "next/image";
 import { useTheme } from "next-themes";
 import React, { Suspense, use, useMemo, useState } from "react";
 import { codeToHtml } from "shiki";
+import { AIExplainButton } from "~/components/ai";
 import { Button } from "~/components/ui/button";
+import { env } from "~/env";
 
 interface FileViewerProps {
 	filePath: string;
@@ -72,7 +74,10 @@ async function highlightLine(
 function HighlightedLines({
 	promise,
 	parentRef,
-}: { promise: Promise<string[]>; parentRef: React.RefObject<HTMLDivElement | null> }) {
+}: {
+	promise: Promise<string[]>;
+	parentRef: React.RefObject<HTMLDivElement | null>;
+}) {
 	const lines = use(promise);
 
 	const rowVirtualizer = useVirtualizer({
@@ -137,7 +142,8 @@ export function FileViewer({
 	);
 	const language = languageMap[extension] || "text";
 	const isImage = useMemo(
-		() => ["png", "jpg", "jpeg", "gif", "svg", "webp", "ico"].includes(extension),
+		() =>
+			["png", "jpg", "jpeg", "gif", "svg", "webp", "ico"].includes(extension),
 		[extension],
 	);
 
@@ -148,7 +154,9 @@ export function FileViewer({
 	const highlightingPromise = useMemo(() => {
 		if (!content || isImage) return null;
 		// Return promise for highlighting all lines
-		return Promise.all(lines.map((line) => highlightLine(line, language, isDark)));
+		return Promise.all(
+			lines.map((line) => highlightLine(line, language, isDark)),
+		);
 	}, [content, lines, language, isDark, isImage]);
 
 	const handleCopy = () => {
@@ -228,18 +236,28 @@ export function FileViewer({
 					</span>
 				</div>
 				{!isImage && (
-					<Button
-						className="h-7 px-2 font-mono text-xs"
-						onClick={handleCopy}
-						size="sm"
-						variant="ghost"
-					>
-						{copied ? (
-							<span className="text-accent">Copied!</span>
-						) : (
-							<Copy className="mr-1 h-3 w-3" />
+					<div className="flex items-center gap-1">
+						{env.NEXT_PUBLIC_AI_ENABLED && (
+							<AIExplainButton
+								code={content}
+								language={language}
+								size="sm"
+								variant="ghost"
+							/>
 						)}
-					</Button>
+						<Button
+							className="h-7 px-2 font-mono text-xs"
+							onClick={handleCopy}
+							size="sm"
+							variant="ghost"
+						>
+							{copied ? (
+								<span className="text-accent">Copied!</span>
+							) : (
+								<Copy className="mr-1 h-3 w-3" />
+							)}
+						</Button>
+					</div>
 				)}
 			</div>
 			<div
@@ -276,7 +294,7 @@ export function FileViewer({
 								promise={highlightingPromise}
 							/>
 						) : (
-							<div className="w-full py-2 px-4 font-mono text-sm whitespace-pre">
+							<div className="w-full whitespace-pre px-4 py-2 font-mono text-sm">
 								{content}
 							</div>
 						)}
