@@ -200,6 +200,7 @@ export function Navigation() {
 							</span>
 
 							<Button
+								aria-label="Re-run analysis"
 								className="h-6 border-0 bg-transparent px-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider hover:text-accent"
 								disabled={isPending}
 								onClick={triggerAnalysis}
@@ -214,6 +215,7 @@ export function Navigation() {
 							</Button>
 
 							<Button
+								aria-label="View graph"
 								className="h-6 border-0 bg-transparent px-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider hover:text-accent"
 								disabled={isPending}
 								onClick={viewDependencyGraph}
@@ -226,6 +228,7 @@ export function Navigation() {
 							</Button>
 
 							<Button
+								aria-label="Clear analysis"
 								className="h-6 border-0 bg-transparent px-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider hover:text-accent"
 								disabled={isPending}
 								onClick={clearAnalysis}
@@ -238,6 +241,7 @@ export function Navigation() {
 							</Button>
 
 							<Button
+								aria-label="Reset database"
 								className="h-6 border-0 bg-transparent px-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider hover:text-accent"
 								disabled={isPending}
 								onClick={resetDatabase}
@@ -250,6 +254,7 @@ export function Navigation() {
 							</Button>
 
 							<Button
+								aria-label="Reset status"
 								className="h-6 border-0 bg-transparent px-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider hover:text-accent"
 								disabled={isPending}
 								onClick={resetStatus}
@@ -260,6 +265,7 @@ export function Navigation() {
 								<span className="hidden lg:inline">Status</span>
 							</Button>
 							<Button
+								aria-label="Check queue"
 								className="h-6 border-0 bg-transparent px-2 font-mono text-[10px] text-muted-foreground uppercase tracking-wider hover:text-accent"
 								disabled={isPending}
 								onClick={checkQueueStatus}
@@ -275,6 +281,7 @@ export function Navigation() {
 
 					<div className="flex items-center">
 						<Button
+							aria-label="Toggle theme"
 							className="h-7 w-7 border-0 bg-transparent p-0 text-muted-foreground hover:text-foreground"
 							onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
 							size="icon"

@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Parser, Language } from "web-tree-sitter";
-import { ensureParserInit, type ImportStatement, type ParsedFile } from "./index";
+import { Language, Parser } from "web-tree-sitter";
+import {
+	ensureParserInit,
+	type ImportStatement,
+	type ParsedFile,
+} from "./index";
 
 let tsLanguage: Language | null = null;
 let parser: Parser | null = null;
@@ -41,7 +45,12 @@ export async function parseTypescript(
 
 		const imports: ImportStatement[] = [];
 
-		const walkImportStatements = (node: { type: string; startIndex: number; endIndex: number; children: any[] }) => {
+		const walkImportStatements = (node: {
+			type: string;
+			startIndex: number;
+			endIndex: number;
+			children: any[];
+		}) => {
 			const nodeType = node.type;
 
 			if (

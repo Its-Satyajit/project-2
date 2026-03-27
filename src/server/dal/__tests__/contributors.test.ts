@@ -1,9 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockEq, mockDesc } = vi.hoisted(() => ({
-	mockEq: vi
-		.fn()
-		.mockImplementation((col, val) => ({ type: "eq", col, val })),
+	mockEq: vi.fn().mockImplementation((col, val) => ({ type: "eq", col, val })),
 	mockDesc: vi.fn().mockImplementation((col) => ({ type: "desc", col })),
 }));
 

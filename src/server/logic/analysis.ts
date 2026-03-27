@@ -74,7 +74,7 @@ export async function performBasicAnalysis({
 	// Fetch exact counts for top 10 files + 20 random samples to get a better CPL average
 	const topFiles = codeFiles.slice(0, 10);
 	const remainingFiles = codeFiles.slice(10);
-	
+
 	const sampledFiles = [...topFiles];
 	if (remainingFiles.length > 0) {
 		const numExtraSamples = Math.min(remainingFiles.length, 20);
@@ -102,10 +102,11 @@ export async function performBasicAnalysis({
 	}
 
 	// Dynamic Heuristic: Average characters per line from samples
-	const averageCPL = totalSampledLines > 0 ? totalSampledSize / totalSampledLines : 45;
-	
+	const averageCPL =
+		totalSampledLines > 0 ? totalSampledSize / totalSampledLines : 45;
+
 	// Apply heuristic to all non-sampled files
-	const sampledPaths = new Set(sampledFiles.map(f => f.path));
+	const sampledPaths = new Set(sampledFiles.map((f) => f.path));
 	for (const file of codeFiles) {
 		if (!sampledPaths.has(file.path)) {
 			totalLines += Math.round(file.size / averageCPL);

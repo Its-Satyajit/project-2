@@ -163,10 +163,22 @@ export async function coreAnalysisLogic(
 			branch,
 			"--single-branch",
 		]);
-		await logEvent(repoId, "clone.complete", "success", "initializing", `Shallow cloned to ${tempDir}`);
+		await logEvent(
+			repoId,
+			"clone.complete",
+			"success",
+			"initializing",
+			`Shallow cloned to ${tempDir}`,
+		);
 	} catch (error) {
 		console.error("[ShallowClone] Failed, falling back to API:", error);
-		await logEvent(repoId, "clone.failed", "warning", "initializing", `Clone failed: ${error instanceof Error ? error.message : "unknown"}`);
+		await logEvent(
+			repoId,
+			"clone.failed",
+			"warning",
+			"initializing",
+			`Clone failed: ${error instanceof Error ? error.message : "unknown"}`,
+		);
 	}
 
 	try {
@@ -225,7 +237,6 @@ export async function coreAnalysisLogic(
 			fileTree,
 		});
 
-
 		// 3. Dependency analysis
 		await updateStatus(
 			repoId,
@@ -271,7 +282,7 @@ export async function coreAnalysisLogic(
 			const batchResults = await Promise.all(
 				batch.map(async (file) => {
 					if (!file.path) return null;
-					
+
 					let content: string | null = null;
 					// Try local FS first (Shallow Clone)
 					try {
@@ -322,7 +333,9 @@ export async function coreAnalysisLogic(
 			samplingCoverage: {
 				analyzedFiles: codeFiles.length,
 				totalFiles: basicResults.totalCodeFiles,
-				percentage: Math.round((codeFiles.length / basicResults.totalCodeFiles) * 100),
+				percentage: Math.round(
+					(codeFiles.length / basicResults.totalCodeFiles) * 100,
+				),
 			},
 		});
 
@@ -387,7 +400,7 @@ export async function coreAnalysisLogic(
 		}
 	}
 
-return { success: true, repoId };
+	return { success: true, repoId };
 }
 
 // 7-day Log Cleanup Job

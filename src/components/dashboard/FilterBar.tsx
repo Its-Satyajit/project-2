@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
 import { Check, Search, SlidersHorizontal, X } from "lucide-react";
+import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";

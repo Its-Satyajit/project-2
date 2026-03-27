@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { env } from "~/env";
 
 export async function generateMetadata({
 	params,
@@ -6,6 +7,8 @@ export async function generateMetadata({
 	params: Promise<{ repoId: string }>;
 }): Promise<Metadata> {
 	const { repoId } = await params;
+	const baseUrl = env.NEXT_PUBLIC_BASE_URL;
+	const url = `${baseUrl}/dashboard/${repoId}`;
 
 	return {
 		title: `Repository ${repoId}`,
@@ -13,6 +16,10 @@ export async function generateMetadata({
 		openGraph: {
 			title: `Repository ${repoId} Analysis`,
 			description: `View detailed analysis for ${repoId}`,
+			url,
+		},
+		alternates: {
+			canonical: url,
 		},
 	};
 }

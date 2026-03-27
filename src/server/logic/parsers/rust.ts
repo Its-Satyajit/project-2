@@ -250,7 +250,12 @@ export async function parseRust(
 		const tree = p.parse(content);
 
 		if (tree && tree.rootNode) {
-			const walkTree = (node: { type: string; text: string; childCount: number; child: (i: number) => any }) => {
+			const walkTree = (node: {
+				type: string;
+				text: string;
+				childCount: number;
+				child: (i: number) => any;
+			}) => {
 				const type = node.type;
 				if (type === "use_declaration") {
 					const text = node.text.trim();

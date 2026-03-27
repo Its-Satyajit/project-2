@@ -125,4 +125,3 @@ export async function deleteContributorsByRepoId(repositoryId: string) {
 		.delete(repositoryContributors)
 		.where(eq(repositoryContributors.repositoryId, repositoryId));
 }
-
