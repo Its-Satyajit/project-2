@@ -3,6 +3,7 @@
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import {
 	Calendar,
+	Check,
 	ExternalLink,
 	FileCode,
 	GitBranch,
@@ -16,6 +17,15 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import { Button } from "~/components/ui/button";
+
+type AnalysisStatus =
+	| "complete"
+	| "pending"
+	| "queued"
+	| "fetching"
+	| "basic-analysis"
+	| "dependency-analysis"
+	| "failed";
 
 interface RepositoryHeroProps {
 	id: string;
@@ -34,6 +44,7 @@ interface RepositoryHeroProps {
 	createdAt?: string;
 	updatedAt?: string;
 	contributorCount?: number;
+	status?: AnalysisStatus;
 }
 
 const containerVariants = {
@@ -80,7 +91,7 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 	id: _id,
 	owner,
 	name,
-	fullName,
+	fullName: _fullName,
 	url,
 	description,
 	avatarUrl,
@@ -93,6 +104,7 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 	createdAt,
 	updatedAt,
 	contributorCount,
+	status,
 }: RepositoryHeroProps) {
 	const displayStars = stars?.toLocaleString() ?? "0";
 	const displayForks = forks?.toLocaleString() ?? "0";
@@ -190,6 +202,15 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 									<span className="font-mono text-muted-foreground/60 text-xs">
 										Updated {formatRelativeTime(updatedAt)}
 									</span>
+								)}
+
+								{status && (
+									<div className="flex items-center gap-1.5">
+										<Check className="h-3 w-3 text-accent" />
+										<span className="font-mono text-accent text-xs">
+											Analyzed
+										</span>
+									</div>
 								)}
 							</div>
 						</div>

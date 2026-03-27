@@ -6,7 +6,6 @@ import { GitBranch, GitGraph, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import React, { Suspense, use, useState } from "react";
 import { ActivitySummary } from "~/components/dashboard/ActivitySummary";
-import { AnalysisProgress } from "~/components/dashboard/AnalysisProgress";
 import { CodeQualityMetrics } from "~/components/dashboard/CodeQualityMetrics";
 import { CommitsTimeline } from "~/components/dashboard/CommitsTimeline";
 import { ContributorsList } from "~/components/dashboard/ContributorsList";
@@ -203,6 +202,7 @@ function DashboardData({
 				owner={data.owner}
 				primaryLanguage={data.primaryLanguage}
 				stars={data.stars}
+				status="complete"
 				updatedAt={data.updatedAt}
 				url={data.url}
 			/>
@@ -372,14 +372,6 @@ function DashboardData({
 						</div>
 					)}
 				</div>
-			</section>
-
-			{/* Analysis Status */}
-			<section className="flex items-center gap-4 border-border border-t py-3">
-				<span className="shrink-0 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-					Status
-				</span>
-				<AnalysisProgress repoId={data.id} />
 			</section>
 
 			{/* Contributors Section */}
