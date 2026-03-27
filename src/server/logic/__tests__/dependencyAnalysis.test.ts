@@ -227,16 +227,14 @@ describe("performDependencyAnalysis", () => {
 	});
 
 	it("should respect max files limit", async () => {
-		const files = Array.from({ length: 1001 }, (_, i) => ({
-			path: `src/file${i}.ts`,
-			content: "export {}",
+		const files = Array.from({ length: 3001 }, (_, i) => ({
+			path: `file${i}.ts`,
+			content: "import { a } from './b'",
 			language: "typescript",
-			loc: 1,
 		}));
-
 		const result = await performDependencyAnalysis(files);
 
-		expect(result.processedFiles).toBeLessThanOrEqual(1000);
+		expect(result.processedFiles).toBeLessThanOrEqual(3000);
 	});
 
 	it("should detect language from extension", () => {

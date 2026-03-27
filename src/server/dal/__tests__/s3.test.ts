@@ -56,7 +56,7 @@ describe("S3 DAL", () => {
 			const key = await uploadAnalysisData("repo-123", mockData);
 
 			expect(key).toContain("analysis/repo-123/");
-			expect(key).toContain(".json");
+			expect(key).toContain(".bin");
 			expect(mockS3Send).toHaveBeenCalledWith(expect.any(Object));
 		});
 	});
@@ -70,13 +70,16 @@ describe("S3 DAL", () => {
 				fileTypeBreakdown: { ts: 10 },
 			};
 
+			const { packAnalysisData } = await import("../serialization");
+			const packed = packAnalysisData(mockData);
+
 			const mockBody = {
-				transformToString: vi.fn().mockResolvedValue(JSON.stringify(mockData)),
+				transformToByteArray: vi.fn().mockResolvedValue(new Uint8Array(packed)),
 			};
 
 			mockS3Send.mockResolvedValueOnce({ Body: mockBody });
 
-			const result = await fetchAnalysisData("test-key.json");
+			const result = await fetchAnalysisData("test-key.bin");
 
 			expect(result).toEqual(mockData);
 			expect(mockS3Send).toHaveBeenCalledWith(expect.any(Object));
@@ -85,7 +88,7 @@ describe("S3 DAL", () => {
 		it("should throw error if Body is missing", async () => {
 			mockS3Send.mockResolvedValueOnce({ Body: null });
 
-			await expect(fetchAnalysisData("test-key.json")).rejects.toThrow(
+			await expect(fetchAnalysisData("test-key.bin")).rejects.toThrow(
 				"No body in S3 response",
 			);
 		});
