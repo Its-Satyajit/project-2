@@ -10,10 +10,16 @@ vi.mock("@aws-sdk/client-s3", () => {
 		S3Client: vi.fn().mockImplementation(function (this: any) {
 			this.send = mockS3Send;
 		}),
-		PutObjectCommand: vi.fn().mockImplementation(function (this: any, args: any) {
+		PutObjectCommand: vi.fn().mockImplementation(function (
+			this: any,
+			args: any,
+		) {
 			Object.assign(this, args);
 		}),
-		GetObjectCommand: vi.fn().mockImplementation(function (this: any, args: any) {
+		GetObjectCommand: vi.fn().mockImplementation(function (
+			this: any,
+			args: any,
+		) {
 			Object.assign(this, args);
 		}),
 	};

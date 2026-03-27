@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { env } from "~/env";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-	const baseUrl = "https://repo-analyzer.dev";
+	const baseUrl = env.NEXT_PUBLIC_BASE_URL;
 
 	return [
 		{
@@ -11,10 +12,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
 			priority: 1,
 		},
 		{
-			url: `${baseUrl}/about`,
+			url: `${baseUrl}/legal`,
 			lastModified: new Date(),
 			changeFrequency: "monthly",
-			priority: 0.5,
+			priority: 0.3,
 		},
 	];
 }

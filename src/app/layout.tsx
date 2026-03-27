@@ -6,6 +6,7 @@ import {
 	IBM_Plex_Mono,
 	IBM_Plex_Sans,
 } from "next/font/google";
+import Script from "next/script";
 import { Suspense } from "react";
 import Navigation from "~/components/Navigation";
 import QueryProvider from "~/components/QueryProvider";
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
 	openGraph: {
 		type: "website",
 		locale: "en_US",
-		url: "https://analyze.dev",
+		url: env.NEXT_PUBLIC_BASE_URL,
 		siteName: "Analyze",
 		title: "Analyze — Code Intelligence",
 		description:
@@ -47,9 +48,9 @@ export const metadata: Metadata = {
 		],
 	},
 	alternates: {
-		canonical: "https://analyze.dev",
+		canonical: env.NEXT_PUBLIC_BASE_URL,
 		languages: {
-			en: "https://analyze.dev",
+			en: env.NEXT_PUBLIC_BASE_URL,
 		},
 	},
 	twitter: {
@@ -111,6 +112,29 @@ export default function RootLayout({
 			lang="en"
 			suppressHydrationWarning
 		>
+			{/* eslint-disable-next-line react/no-danger */}
+			<Script
+				dangerouslySetInnerHTML={{
+					__html: JSON.stringify({
+						"@context": "https://schema.org",
+						"@type": "WebApplication",
+						name: "Analyze",
+						description:
+							"A precise repository analyzer for the modern developer. Visualize architecture, identify hotspots, and understand your codebase with editorial clarity.",
+						url: env.NEXT_PUBLIC_BASE_URL,
+						applicationCategory: "DeveloperApplication",
+						operatingSystem: "Any",
+						offers: {
+							"@type": "Offer",
+							price: "0",
+							priceCurrency: "USD",
+						},
+					}),
+				}}
+				id="jsonld"
+				strategy="afterInteractive"
+				type="application/ld+json"
+			/>
 			<body className="font-sans antialiased" suppressHydrationWarning>
 				<ThemeProvider attribute="class" defaultTheme="light" enableSystem>
 					<QueryProvider>

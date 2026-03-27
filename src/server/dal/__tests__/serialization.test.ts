@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { AnalysisData } from "../../types/analysis";
 import { packAnalysisData, unpackAnalysisData } from "../serialization";
 
@@ -62,7 +62,9 @@ describe("AnalysisData Serialization", () => {
 		expect(unpacked.dependencyGraph?.edges[0]?.source).toBe(
 			mockData.dependencyGraph?.edges[0]?.source,
 		);
-		expect(unpacked.hotSpotData?.[0]?.path).toBe(mockData.hotSpotData?.[0]?.path);
+		expect(unpacked.hotSpotData?.[0]?.path).toBe(
+			mockData.hotSpotData?.[0]?.path,
+		);
 	});
 
 	it("should handle legacy JSON data", () => {

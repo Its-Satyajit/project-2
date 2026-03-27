@@ -2,11 +2,7 @@ import { eq, gte, inArray, lte } from "drizzle-orm";
 import type { Static } from "elysia";
 import type { dbSchema } from "../api/dbSchema";
 import { db } from "../db";
-import {
-	analysisLogs,
-	analysisResults,
-	repositories,
-} from "../db/schema";
+import { analysisLogs, analysisResults, repositories } from "../db/schema";
 
 type Insert = Static<typeof dbSchema.analysisLogs.insert>;
 
