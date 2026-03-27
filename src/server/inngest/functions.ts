@@ -149,12 +149,26 @@ export async function coreAnalysisLogic(
 		`Starting analysis for ${owner}/${repo}`,
 	);
 
-	const tempDir = path.join(process.cwd(), ".tmp", repoId);
+	// Bypass Turbopack static fs tracing
+	const getCwd = () => process.cwd();
+	const tmpPath = [getCwd(), ".tmp", repoId];
+	const tempDir = tmpPath.join("/");
+
+	async function safeCleanup(dir: string): Promise<void> {
+		try {
+			await fs.rm(dir, { recursive: true, force: true });
+			console.log(`[Cleanup] Removed ${dir}`);
+		} catch (error) {
+			console.error(`[Cleanup] Failed to remove ${dir}:`, error);
+		}
+	}
+
+	// Defensive cleanup at start - clean any stale directories
+	await safeCleanup(tempDir);
 
 	// 0. Shallow Clone (Optimized content access)
 	try {
 		await fs.mkdir(path.dirname(tempDir), { recursive: true });
-		await fs.rm(tempDir, { recursive: true, force: true }); // Clean start
 		const git = simpleGit();
 		await git.clone(data.githubUrl, tempDir, [
 			"--depth",
@@ -286,7 +300,8 @@ export async function coreAnalysisLogic(
 					let content: string | null = null;
 					// Try local FS first (Shallow Clone)
 					try {
-						const localPath = path.join(tempDir, file.path);
+						// Bypass static analysis path tracing
+						const localPath = [tempDir, file.path].join("/");
 						content = await fs.readFile(localPath, "utf8");
 					} catch (_e) {
 						// Fallback to API
@@ -392,12 +407,7 @@ export async function coreAnalysisLogic(
 		await updateStatus(repoId, "complete", "Analysis complete");
 	} finally {
 		// Final Cleanup
-		try {
-			await fs.rm(tempDir, { recursive: true, force: true });
-			console.log(`[Cleanup] Removed ${tempDir}`);
-		} catch (error) {
-			console.error("[Cleanup] Failed to remove temp dir:", error);
-		}
+		await safeCleanup(tempDir);
 	}
 
 	return { success: true, repoId };

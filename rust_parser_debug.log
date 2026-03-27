@@ -38,3 +38,4 @@
 [RustParser] WASM Buffer size: 1113644
 [RustParser] Language loaded: true
 [RustParser] Language set.
+[RustParser] Error during Tree-sitter parsing: Incompatible language version 0. Compatibility range 13 through 15.. Falling back to regex.

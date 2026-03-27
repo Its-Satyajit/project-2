@@ -1,41 +1,65 @@
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { env } from "~/env";
 import { getCachedRepoByPath } from "~/lib/server/data";
 import { AnalysisPageClient } from "./AnalysisPageClient";
-
-interface AnalysisPageProps {
-	params: Promise<{ owner: string; repo: string }>;
-}
+import { AnalysisPageHeader } from "./AnalysisPageHeader";
 
 export async function generateMetadata({
 	params,
-}: AnalysisPageProps): Promise<Metadata> {
+}: {
+	params: Promise<{ owner: string; repo: string }>;
+}): Promise<Metadata> {
 	const { owner, repo } = await params;
-	const repoData = await getCachedRepoByPath(owner, repo);
-
-	if (!repoData) {
-		return {
-			title: "Repository Not Found",
-		};
-	}
+	const title = `${owner}/${repo} Analysis — Analyze`;
+	const description = `Detailed code analysis for ${owner}/${repo}. Explore hotspots, complexity metrics, dependency analysis, and architectural insights.`;
+	const url = `${env.NEXT_PUBLIC_BASE_URL}/${owner}/${repo}/analysis`;
 
 	return {
-		title: `${repoData.fullName} - Code Analysis & Hotspots`,
-		description: `Comprehensive code analysis for ${repoData.fullName}: dependency graph, hotspot detection, file structure, and ${repoData.primaryLanguage || "multi-language"} codebase insights.`,
-		openGraph: {
-			title: `${repoData.fullName} Analysis - Git Insights`,
-			description: `Deep code analysis for ${repoData.fullName}`,
-			images: repoData.avatarUrl ? [repoData.avatarUrl] : undefined,
+		title,
+		description,
+		alternates: {
+			canonical: url,
 		},
-		keywords: [
-			`${owner} ${repo}`,
-			"code analysis",
-			"dependency graph",
-			"hotspot detection",
-			repoData.primaryLanguage || "",
-		].filter(Boolean),
+		openGraph: {
+			type: "website",
+			locale: "en_US",
+			url,
+			siteName: "Analyze",
+			title,
+			description,
+			images: [
+				{
+					url: "/og-image.png",
+					width: 1200,
+					height: 630,
+					alt: `${owner}/${repo} Analysis`,
+				},
+			],
+		},
+		twitter: {
+			card: "summary_large_image",
+			title,
+			description,
+			images: ["/og-image.png"],
+		},
+		robots: {
+			index: true,
+			follow: true,
+			googleBot: {
+				index: true,
+				follow: true,
+				"max-video-preview": -1,
+				"max-image-preview": "large",
+				"max-snippet": -1,
+			},
+		},
 	};
+}
+
+interface AnalysisPageProps {
+	params: Promise<{ owner: string; repo: string }>;
 }
 
 async function AnalysisContent({
@@ -57,9 +81,9 @@ async function AnalysisContent({
 								<span className="text-destructive text-lg">!</span>
 							</div>
 						</div>
-						<h2 className="font-(family-name:--font-display) mb-2 text-2xl text-foreground">
+						<h1 className="font-(family-name:--font-display) mb-2 text-2xl text-foreground">
 							Repository Not Found
-						</h2>
+						</h1>
 						<p className="mb-6 font-mono text-muted-foreground text-xs uppercase tracking-wider">
 							{owner}/{repo} has not been analyzed yet.
 						</p>
@@ -75,7 +99,17 @@ async function AnalysisContent({
 		);
 	}
 
-	return <AnalysisPageClient owner={owner} repo={repo} repoId={repoData.id} />;
+	return (
+		<>
+			<AnalysisPageHeader owner={owner} repo={repo} />
+			<AnalysisPageClient
+				owner={owner}
+				repo={repo}
+				repoId={repoData.id}
+				showHeader={false}
+			/>
+		</>
+	);
 }
 
 export default async function AnalysisPage({ params }: AnalysisPageProps) {

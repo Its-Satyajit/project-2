@@ -43,18 +43,39 @@ export const dashboardRoute = new Elysia().get(
 
 		const RE_ANALYSIS_WINDOW = 24 * 60 * 60 * 1000;
 		const now = new Date();
-		const lastAnalyzed = result ? new Date(result.createdAt) : null;
+		const lastUpdated = data.updatedAt ? new Date(data.updatedAt) : null;
+		const hoursSinceUpdate = lastUpdated
+			? (now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60)
+			: null;
+		const timeDiff = lastUpdated ? now.getTime() - lastUpdated.getTime() : null;
+		const isWithinWindow = timeDiff !== null && timeDiff <= RE_ANALYSIS_WINDOW;
+
+		console.log(
+			`[Dashboard] Repo: ${data.owner}/${data.name}, Status: ${data.analysisStatus}, ` +
+				`Repository updatedAt: ${lastUpdated?.toISOString() ?? "never"}, ` +
+				`Hours ago: ${hoursSinceUpdate?.toFixed(1) ?? "N/A"}, ` +
+				`Time diff: ${timeDiff ? (timeDiff / 1000 / 60).toFixed(1) + "min" : "N/A"}, ` +
+				`Within 24h cooldown: ${isWithinWindow}`,
+		);
 
 		// Trigger re-analysis if:
-		// 1. Last analysis is older than 24h
-		// 2. Or if there's no analysis result yet
-		// 3. AND the repository is currently in 'complete' status (not already analyzing)
-		if (
+		// 1. Status is 'complete'
+		// 2. Repository hasn't been updated in the last 24h
+		// 3. OR there are no analysis results (something went wrong)
+		const shouldReanalyze =
 			data.analysisStatus === "complete" &&
-			(!lastAnalyzed ||
-				now.getTime() - lastAnalyzed.getTime() > RE_ANALYSIS_WINDOW)
-		) {
+			(!lastUpdated ||
+				isNaN(lastUpdated.getTime()) ||
+				now.getTime() - lastUpdated.getTime() > RE_ANALYSIS_WINDOW ||
+				!result);
+
+		console.log(`[Dashboard] shouldReanalyze: ${shouldReanalyze}`);
+
+		if (shouldReanalyze) {
 			// Update status immediately to prevent re-triggers on refresh
+			console.log(
+				`[Dashboard] Re-analysis triggered for ${data.owner}/${data.name}`,
+			);
 			await updateRepositoryStatus(
 				data.id,
 				"queued",
@@ -62,7 +83,7 @@ export const dashboardRoute = new Elysia().get(
 			);
 
 			console.log(
-				`[Dashboard] Triggering auto re-analysis for ${data.owner}/${data.name} (last: ${lastAnalyzed?.toISOString() ?? "never"})`,
+				`[Dashboard] Triggering auto re-analysis for ${data.owner}/${data.name} (last updated: ${lastUpdated?.toISOString() ?? "never"})`,
 			);
 			await inngest.send({
 				name: "analysis/repo.requested",
@@ -75,6 +96,10 @@ export const dashboardRoute = new Elysia().get(
 						data.url ?? `https://github.com/${data.owner}/${data.name}`,
 				},
 			});
+		} else {
+			console.log(
+				`[Dashboard] Re-analysis skipped for ${data.owner}/${data.name}: within 24h cooldown`,
+			);
 		}
 
 		return {

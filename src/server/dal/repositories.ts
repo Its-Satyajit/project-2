@@ -49,6 +49,7 @@ export async function updateRepositoryStatus(
 		.set({
 			analysisStatus: status,
 			analysisPhase: phase ?? null,
+			updatedAt: new Date(),
 		})
 		.where(eq(repositories.id, repoId));
 }

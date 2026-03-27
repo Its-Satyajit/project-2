@@ -20,7 +20,8 @@ interface FileTreeVisualizerProps {
 }
 
 interface TreemapNode {
-	name: string;
+	name: string;        // full path — used as unique key by recharts
+	displayName: string; // basename — used for rendering labels
 	size: number;
 	path: string;
 	extension?: string;
@@ -154,7 +155,8 @@ function convertToTreemapDataFlat(
 		if (isDirectory) {
 			dirs++;
 			flatData.push({
-				name: item.name,
+				name: path || item.name,      // unique full path as recharts key
+				displayName: item.name,        // basename for display
 				size: 1, // Will be recalculated by Recharts
 				path,
 				fill: `rgba(${isDark ? "232,228,220" : "26,29,46"}, ${0.08 - depth * 0.02})`,
@@ -175,7 +177,8 @@ function convertToTreemapDataFlat(
 			}
 
 			flatData.push({
-				name: item.name,
+				name: path,                    // unique full path as recharts key
+				displayName: item.name,        // basename for display
 				size,
 				path,
 				extension: ext,
@@ -196,6 +199,7 @@ const CustomContent = memo(function CustomContent(props: {
 	width?: number;
 	height?: number;
 	name?: string;
+	displayName?: string;
 	extension?: string;
 	fill?: string;
 	isDirectory?: boolean;
@@ -207,6 +211,7 @@ const CustomContent = memo(function CustomContent(props: {
 		width = 0,
 		height = 0,
 		name,
+		displayName: rawDisplayName,
 		extension,
 		fill = "#6b6d7a",
 		isDirectory,
@@ -217,7 +222,7 @@ const CustomContent = memo(function CustomContent(props: {
 
 	const isSmall = width < 40 || height < 22;
 	const showExt = width > 55 && height > 30 && !isDirectory;
-	const displayName = String(name || "");
+	const displayName = String(rawDisplayName || name || "");
 	const maxChars = Math.floor(width / 6);
 	const truncatedName =
 		displayName.length > maxChars
@@ -320,7 +325,7 @@ const CustomTooltip = memo(function CustomTooltip({
 						<FileCode className="h-3 w-3 text-muted-foreground" />
 					)}
 					<span className="truncate font-mono text-foreground text-xs">
-						{data.name}
+						{data.displayName || data.name}
 					</span>
 				</div>
 			</div>

@@ -5,30 +5,40 @@ import {
 	ArrowLeft,
 	BarChart3,
 	Brain,
+	Calendar,
 	Check,
 	Copy,
+	ExternalLink,
 	FileCode,
-	FileType,
-	FolderTree,
 	GitBranch,
-	GitCommitHorizontal,
-	Layers,
+	GitCommit,
+	GitFork,
+	History,
 	Loader2,
+	Lock,
+	LockOpen,
 	Network,
+	Scale,
+	Star,
 	Table2,
-	Target,
+	TrendingUp,
+	Users,
 	X,
 } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
 	Bar,
 	BarChart,
 	CartesianGrid,
 	Cell,
+	Tooltip as ChartTooltip,
 	Label,
+	Line,
+	LineChart,
 	Pie,
 	PieChart,
 	ReferenceArea,
@@ -36,7 +46,6 @@ import {
 	ResponsiveContainer,
 	Scatter,
 	ScatterChart,
-	Tooltip,
 	XAxis,
 	YAxis,
 	ZAxis,
@@ -53,10 +62,14 @@ import {
 } from "~/components/ui/dialog";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { env } from "~/env";
 import { useRepoStatus } from "~/hooks/useRepoStatus";
 import { api } from "~/lib/eden";
-import type { FileTreeItem } from "~/lib/treeUtils";
 import "~/styles/analysis.css";
 
 type HotspotDataPoint = {
@@ -95,17 +108,30 @@ export function AnalysisPageClient({
 	owner,
 	repo,
 	repoId,
+	showHeader = true,
 }: {
 	owner: string;
 	repo: string;
 	repoId: string;
+	showHeader?: boolean;
 }) {
 	const router = useRouter();
 
 	const { data: status, isLoading, error } = useRepoStatus(repoId);
 
+	// Fetch full repo details (commits, contributorCount, analysisResults, etc.)
+	const { data: fullData } = useQuery({
+		queryKey: ["repo-full-details", repoId],
+		queryFn: async () => {
+			const res = await api.dashboard({ repoId }).get();
+			if (res.error) throw new Error(String(res.error));
+			return res.data as any;
+		},
+		enabled: !!repoId,
+	});
+
 	const [activeTab, setActiveTab] = useState<
-		"overview" | "charts" | "hotspots" | "filetree"
+		"overview" | "insights" | "hotspots" | "filetree"
 	>("overview");
 	const [selectedHotspotFile, setSelectedHotspotFile] = useState<string | null>(
 		null,
@@ -170,17 +196,7 @@ export function AnalysisPageClient({
 			enabled: !!selectedHotspotFile,
 		});
 
-	const { data: fileTreeData } = useQuery<{ fileTree: FileTreeItem[] }>({
-		queryKey: ["file-tree", repoId],
-		queryFn: async () => {
-			const res = await api.dashboard({ repoId }).get();
-			if (res.error) throw new Error(String(res.error));
-			return res.data as { fileTree: FileTreeItem[] };
-		},
-		enabled: !!repoId,
-	});
-
-	const fileTree = fileTreeData?.fileTree ?? [];
+	const fileTree = fullData?.fileTree ?? [];
 
 	const topImportedFiles = useMemo(() => {
 		if (!graph?.nodes) return [];
@@ -221,6 +237,200 @@ export function AnalysisPageClient({
 			.map(([name, loc]) => ({ name, loc }))
 			.sort((a, b) => b.loc - a.loc);
 	}, [graph?.nodes]);
+
+	// --- Derived computations from API response ---
+
+	/** Hotspot risk bands derived from score distribution */
+	const riskBands = useMemo(() => {
+		if (!hotSpotData?.length) return [];
+		const bands = { Low: 0, Medium: 0, High: 0, Critical: 0 };
+		for (const h of hotSpotData) {
+			if (h.score < 25) bands.Low++;
+			else if (h.score < 50) bands.Medium++;
+			else if (h.score < 75) bands.High++;
+			else bands.Critical++;
+		}
+		return [
+			{ name: "Low", count: bands.Low, fill: "var(--color-accent)" },
+			{ name: "Medium", count: bands.Medium, fill: "#f59e0b" },
+			{ name: "High", count: bands.High, fill: "#f97316" },
+			{ name: "Critical", count: bands.Critical, fill: "#ef4444" },
+		];
+	}, [hotSpotData]);
+
+	/** Top commit authors by frequency */
+	const commitsByAuthor = useMemo(() => {
+		if (!fullData?.commits?.length) return [];
+		const counts: Record<string, number> = {};
+		for (const c of fullData.commits) {
+			const name = c.authorName || "Unknown";
+			counts[name] = (counts[name] || 0) + 1;
+		}
+		return Object.entries(counts)
+			.map(([name, commits]) => ({ name, commits }))
+			.sort((a, b) => b.commits - a.commits)
+			.slice(0, 8);
+	}, [fullData?.commits]);
+
+	/** LOC growth across analysis snapshots */
+	const locGrowth = useMemo(() => {
+		if (!fullData?.analysisResults?.length) return [];
+		return [...fullData.analysisResults]
+			.sort(
+				(a: { createdAt: string }, b: { createdAt: string }) =>
+					new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+			)
+			.map((r: { totalLines: number; createdAt: string }, i: number) => ({
+				label: `#${i + 1}`,
+				date: new Date(r.createdAt).toLocaleDateString(undefined, {
+					month: "short",
+					day: "numeric",
+				}),
+				loc: r.totalLines,
+			}));
+	}, [fullData?.analysisResults]);
+
+	/** Coupling density = edges / nodes (avg imports per file) */
+	const couplingDensity = useMemo(() => {
+		const nodes = graph?.metadata?.totalNodes ?? 0;
+		const edges = graph?.metadata?.totalEdges ?? 0;
+		if (!nodes) return 0;
+		return (edges / nodes).toFixed(2);
+	}, [graph?.metadata]);
+
+	/** Unresolved import percentage */
+	const unresolvedPct = useMemo(() => {
+		const total = graph?.metadata?.totalEdges ?? 0;
+		const unresolved = graph?.metadata?.unresolvedImports ?? 0;
+		if (!total) return 0;
+		return ((unresolved / total) * 100).toFixed(1);
+	}, [graph?.metadata]);
+
+	/** Isolated nodes: files with 0 imports AND no inbound edges */
+	const isolatedNodeCount = useMemo(() => {
+		if (!graph?.nodes || !graph?.edges) return 0;
+		const hasInbound = new Set(
+			graph.edges.map((e: { target: string }) => e.target),
+		);
+		return graph.nodes.filter(
+			(n: { imports: number; id: string }) =>
+				n.imports === 0 && !hasInbound.has(n.id),
+		).length;
+	}, [graph?.nodes, graph?.edges]);
+
+	/** God files: highest fanIn (depended upon by many) */
+	const godFiles = useMemo(() => {
+		if (!hotSpotData?.length) return [];
+		return [...hotSpotData]
+			.sort((a, b) => b.fanIn - a.fanIn)
+			.slice(0, 5)
+			.map((h) => ({
+				name: h.path.split("/").pop() || h.path,
+				path: h.path,
+				fanIn: h.fanIn,
+				fanOut: h.fanOut,
+				loc: h.loc,
+			}));
+	}, [hotSpotData]);
+
+	/** Directory depth distribution from file paths */
+	const directoryDepth = useMemo(() => {
+		if (!graph?.nodes?.length) return [];
+		const depthCounts: Record<number, number> = {};
+		for (const node of graph.nodes) {
+			const depth = (node.path.match(/\//g) || []).length;
+			depthCounts[depth] = (depthCounts[depth] || 0) + 1;
+		}
+		return Object.entries(depthCounts)
+			.map(([depth, count]) => ({ depth: Number(depth), count }))
+			.sort((a, b) => a.depth - b.depth);
+	}, [graph?.nodes]);
+
+	/** Import complexity histogram - distribution of imports per file */
+	const importComplexity = useMemo(() => {
+		if (!graph?.nodes?.length) return [];
+		const buckets = {
+			"0": 0,
+			"1-5": 0,
+			"6-10": 0,
+			"11-25": 0,
+			"26-50": 0,
+			"50+": 0,
+		};
+		for (const node of graph.nodes) {
+			const imp = node.imports || 0;
+			if (imp === 0) buckets["0"]++;
+			else if (imp <= 5) buckets["1-5"]++;
+			else if (imp <= 10) buckets["6-10"]++;
+			else if (imp <= 25) buckets["11-25"]++;
+			else if (imp <= 50) buckets["26-50"]++;
+			else buckets["50+"]++;
+		}
+		return Object.entries(buckets).map(([range, count]) => ({ range, count }));
+	}, [graph?.nodes]);
+
+	/** LOC distribution histogram */
+	const locDistribution = useMemo(() => {
+		if (!graph?.nodes?.length) return [];
+		const buckets = {
+			"1-50": 0,
+			"51-100": 0,
+			"101-250": 0,
+			"251-500": 0,
+			"501-1000": 0,
+			"1000+": 0,
+		};
+		for (const node of graph.nodes) {
+			const loc = node.loc || 0;
+			if (loc <= 50) buckets["1-50"]++;
+			else if (loc <= 100) buckets["51-100"]++;
+			else if (loc <= 250) buckets["101-250"]++;
+			else if (loc <= 500) buckets["251-500"]++;
+			else if (loc <= 1000) buckets["501-1000"]++;
+			else buckets["1000+"]++;
+		}
+		return Object.entries(buckets).map(([range, count]) => ({ range, count }));
+	}, [graph?.nodes]);
+
+	/** Day of week commit heatmap */
+	const commitHeatmap = useMemo(() => {
+		if (!fullData?.commits?.length) return [];
+		const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+		const dayCounts = new Array(7).fill(0);
+		for (const commit of fullData.commits) {
+			const day = new Date(commit.committedAt).getDay();
+			dayCounts[day]++;
+		}
+		return days.map((day, i) => ({ day, count: dayCounts[i] }));
+	}, [fullData?.commits]);
+
+	/** Language LOC vs Files scatter data */
+	const languageLocVsFiles = useMemo(() => {
+		if (!graph?.nodes?.length) return [];
+		const langStats: Record<string, { files: number; loc: number }> = {};
+		for (const node of graph.nodes) {
+			const lang = node.language || "Unknown";
+			if (!langStats[lang]) langStats[lang] = { files: 0, loc: 0 };
+			langStats[lang].files++;
+			langStats[lang].loc += node.loc || 0;
+		}
+		return Object.entries(langStats)
+			.map(([language, stats]) => ({ language, ...stats }))
+			.sort((a, b) => b.loc - a.loc);
+	}, [graph?.nodes]);
+
+	/** File extension treemap data */
+	const extensionData = useMemo(() => {
+		if (!status?.analysis?.fileTypeBreakdown) return [];
+		const breakdown = status.analysis.fileTypeBreakdown;
+		return Object.entries(breakdown)
+			.filter(([, count]) => count > 0)
+			.map(([ext, count]) => ({
+				name: ext.startsWith(".") ? ext : `.${ext}`,
+				value: count,
+			}))
+			.sort((a, b) => b.value - a.value);
+	}, [status?.analysis?.fileTypeBreakdown]);
 
 	if (isLoading) {
 		return (
@@ -309,17 +519,75 @@ export function AnalysisPageClient({
 										<h1 className="font-(family-name:--font-display) truncate text-3xl text-foreground leading-[1.15] tracking-tight md:text-4xl">
 											{metadata?.fullName ?? "..."}
 										</h1>
-										<p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-											{status?.analysis?.summary
-												? "Comprehensive Analysis"
-												: "Dependency Analysis"}
-										</p>
+										{/* Description tagline */}
+										{fullData?.description && (
+											<p className="mt-1 max-w-xl font-mono text-[11px] text-muted-foreground leading-relaxed">
+												{fullData.description}
+											</p>
+										)}
+										{/* Info strip */}
+										<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
+											<span>
+												{status?.analysis?.summary
+													? "Full Architectural Analysis"
+													: "Dependency Analysis"}
+											</span>
+											{/* Privacy badge */}
+											<span className="text-border">|</span>
+											<span
+												className={`flex items-center gap-1 ${metadata?.isPrivate ? "text-amber-500" : "text-emerald-500"}`}
+											>
+												{metadata?.isPrivate ? (
+													<>
+														<Lock className="h-2 w-2" /> Private
+													</>
+												) : (
+													<>
+														<LockOpen className="h-2 w-2" /> Public
+													</>
+												)}
+											</span>
+											{/* Primary language */}
+											{metadata?.primaryLanguage && (
+												<>
+													<span className="text-border">|</span>
+													<span className="flex items-center gap-1">
+														<FileCode className="h-2 w-2" />
+														{metadata.primaryLanguage}
+													</span>
+												</>
+											)}
+											{/* License */}
+											{fullData?.license && (
+												<>
+													<span className="text-border">|</span>
+													<span className="flex items-center gap-1">
+														<Scale className="h-2 w-2" />
+														{fullData.license}
+													</span>
+												</>
+											)}
+											{/* Stars & Forks */}
+											{(fullData?.stars ?? metadata?.stars) !== undefined && (
+												<>
+													<span className="text-border">|</span>
+													<span className="flex items-center gap-1">
+														<Star className="h-2 w-2" />
+														{fullData?.stars ?? metadata?.stars}
+													</span>
+													<span className="flex items-center gap-1">
+														<GitFork className="h-2 w-2" />
+														{fullData?.forks ?? metadata?.forks}
+													</span>
+												</>
+											)}
+										</div>
 									</div>
 								</div>
 							</div>
 
 							{/* Inline stats - architectural style */}
-							<div className="flex items-center gap-8 lg:pt-4">
+							<div className="flex flex-wrap items-center gap-6 lg:pt-4">
 								<div className="flex flex-col gap-0.5">
 									<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
 										Files
@@ -355,6 +623,21 @@ export function AnalysisPageClient({
 										}
 									</span>
 								</div>
+								{/* Default Branch stat */}
+								{metadata?.defaultBranch && (
+									<>
+										<div className="h-8 w-px bg-border" />
+										<div className="flex flex-col gap-0.5">
+											<span className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
+												Branch
+											</span>
+											<span className="flex items-center gap-1 font-mono text-foreground text-sm">
+												<GitBranch className="h-3 w-3 text-accent" />
+												{metadata.defaultBranch}
+											</span>
+										</div>
+									</>
+								)}
 							</div>
 						</div>
 
@@ -368,8 +651,8 @@ export function AnalysisPageClient({
 									<TabsTrigger className="tab-pill" value="overview">
 										Overview
 									</TabsTrigger>
-									<TabsTrigger className="tab-pill" value="charts">
-										Charts
+									<TabsTrigger className="tab-pill" value="insights">
+										Insights
 									</TabsTrigger>
 									<TabsTrigger className="tab-pill" value="hotspots">
 										Hotspots
@@ -528,52 +811,68 @@ export function AnalysisPageClient({
 										className="animate-fade-in-up border-r border-b p-6 lg:border-b-0"
 										style={{ animationDelay: "0.25s" }}
 									>
-										<div className="mb-5">
+										<div className="mb-5 flex items-center justify-between">
 											<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
 												Dependencies
 											</span>
+											<Network className="h-3 w-3 text-muted-foreground/30" />
 										</div>
 										<div className="space-y-4">
 											<div className="flex items-baseline justify-between border-border border-b pb-3">
 												<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
-													Total Files
-												</span>
-												<span className="font-(family-name:--font-display) text-2xl text-foreground">
-													{summary.dependencies.totalNodes}
-												</span>
-											</div>
-											<div className="flex items-baseline justify-between border-border border-b pb-3">
-												<span className="font-mono text-muted-foreground text-xs uppercase tracking-wider">
-													Connections
+													Connectivity
 												</span>
 												<span className="font-(family-name:--font-display) text-2xl text-foreground">
 													{summary.dependencies.totalEdges}
 												</span>
 											</div>
-											{summary.dependencies.mostDependedUpon.length > 0 && (
+
+											<div className="grid grid-cols-2 gap-4 pt-2">
 												<div>
-													<h4 className="mb-3 font-mono text-muted-foreground text-xs uppercase tracking-wider">
+													<h4 className="mb-3 font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
 														Most Depended Upon
 													</h4>
 													<div className="space-y-2">
 														{summary.dependencies.mostDependedUpon
-															.slice(0, 5)
+															.slice(0, 3)
 															.map((item) => (
 																<div
-																	className="flex items-center justify-between border-border/50 border-b pb-2"
+																	className="flex items-center justify-between border-border/50 border-b pb-1"
 																	key={item.path}
 																>
-																	<span className="max-w-[180px] truncate font-mono text-muted-foreground text-xs">
+																	<span className="max-w-[80px] truncate font-mono text-[10px] text-muted-foreground">
 																		{item.path.split("/").pop()}
 																	</span>
-																	<span className="font-(family-name:--font-display) text-foreground text-lg">
+																	<span className="font-mono text-foreground text-xs">
 																		{item.fanIn}
 																	</span>
 																</div>
 															))}
 													</div>
 												</div>
-											)}
+												<div>
+													<h4 className="mb-3 font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
+														Most Dependent
+													</h4>
+													<div className="space-y-2">
+														{summary.dependencies.mostDependent
+															?.slice(0, 3)
+															.map((item: { path: string; fanOut: number }) => (
+																<div
+																	className="flex items-center justify-between border-border/50 border-b pb-1"
+																	key={item.path}
+																>
+																	<span className="max-w-[80px] truncate font-mono text-[10px] text-muted-foreground">
+																		{item.path.split("/").pop()}
+																	</span>
+																	<span className="font-mono text-foreground text-xs">
+																		{item.fanOut}
+																	</span>
+																</div>
+															))}
+													</div>
+												</div>
+											</div>
 										</div>
 									</motion.div>
 
@@ -624,23 +923,42 @@ export function AnalysisPageClient({
 									>
 										<div className="mb-5">
 											<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-												File Types
+												System Pulse
 											</span>
 										</div>
-										<div className="space-y-2">
-											{summary.fileTypes.topExtensions.map((ext) => (
-												<div
-													className="flex items-center justify-between border-border/50 border-b py-2"
-													key={ext.extension}
-												>
-													<span className="font-mono text-muted-foreground text-xs">
-														.{ext.extension}
+										<div className="space-y-4">
+											<div className="flex items-center justify-between border-border border-b pb-3">
+												<div className="flex flex-col">
+													<span className="font-mono text-[10px] text-muted-foreground uppercase">
+														Evolution
 													</span>
-													<span className="font-mono text-muted-foreground text-xs tabular-nums">
-														{ext.count}
+													<span className="font-mono text-foreground text-xs">
+														{fullData?.analysisResults?.length ?? 0} Snapshots
 													</span>
 												</div>
-											))}
+												<TrendingUp className="h-4 w-4 text-emerald-500" />
+											</div>
+											<div className="flex items-center justify-between border-border border-b pb-3">
+												<div className="flex flex-col">
+													<span className="font-mono text-[10px] text-muted-foreground uppercase">
+														Contributors
+													</span>
+													<span className="font-mono text-foreground text-xs">
+														{fullData?.contributorCount ?? 0} Developers
+													</span>
+												</div>
+												<Users className="h-4 w-4 text-accent" />
+											</div>
+											<div className="pt-2">
+												<Link
+													className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground uppercase hover:text-foreground"
+													href={fullData?.url || "#"}
+													target="_blank"
+												>
+													<ExternalLink className="h-3 w-3" />
+													View on GitHub
+												</Link>
+											</div>
 										</div>
 									</motion.div>
 								</div>
@@ -659,7 +977,7 @@ export function AnalysisPageClient({
 								</div>
 							)}
 						</motion.div>
-					) : activeTab === "charts" ? (
+					) : activeTab === "insights" ? (
 						<div className="space-y-0">
 							<div className="grid gap-0 lg:grid-cols-2">
 								{/* Top Imported Files */}
@@ -690,7 +1008,7 @@ export function AnalysisPageClient({
 												type="category"
 												width={90}
 											/>
-											<Tooltip
+											<ChartTooltip
 												content={({ active, payload }) => {
 													if (
 														active &&
@@ -751,13 +1069,9 @@ export function AnalysisPageClient({
 													/>
 												))}
 											</Pie>
-											<Tooltip
+											<ChartTooltip
 												content={({ active, payload }) => {
-													if (
-														active &&
-														payload?.length &&
-														payload[0]?.payload
-													) {
+													if (active && payload?.length) {
 														return (
 															<div className="border border-border bg-card p-3 shadow-lg">
 																<p className="font-mono text-foreground text-xs">
@@ -801,13 +1115,9 @@ export function AnalysisPageClient({
 													fontSize: 11,
 												}}
 											/>
-											<Tooltip
+											<ChartTooltip
 												content={({ active, payload }) => {
-													if (
-														active &&
-														payload?.length &&
-														payload[0]?.payload
-													) {
+													if (active && payload?.length) {
 														return (
 															<div className="border border-border bg-card p-3 shadow-lg">
 																<p className="font-mono text-foreground text-xs">
@@ -864,13 +1174,9 @@ export function AnalysisPageClient({
 													fontSize: 11,
 												}}
 											/>
-											<Tooltip
+											<ChartTooltip
 												content={({ active, payload }) => {
-													if (
-														active &&
-														payload?.length &&
-														payload[0]?.payload
-													) {
+													if (active && payload?.length) {
 														return (
 															<div className="border border-border bg-card p-3 shadow-lg">
 																<p className="font-mono text-foreground text-xs">
@@ -903,6 +1209,138 @@ export function AnalysisPageClient({
 									</ResponsiveContainer>
 								</motion.div>
 							</div>
+
+							{/* Hotspot Risk Distribution */}
+							{riskBands.length > 0 && (
+								<motion.div
+									className="animate-fade-in-up border-border border-t p-6 lg:col-span-2"
+									style={{ animationDelay: "0.28s" }}
+								>
+									<div className="mb-6 flex items-start justify-between">
+										<div>
+											<h3 className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+												Hotspot Risk Distribution
+											</h3>
+											<p className="mt-1 font-mono text-[9px] text-muted-foreground/60">
+												Files grouped by risk score bands
+											</p>
+										</div>
+										<div className="flex gap-3">
+											{riskBands.map((b) => (
+												<div className="text-center" key={b.name}>
+													<p
+														className="font-(family-name:--font-display) text-xl"
+														style={{ color: b.fill }}
+													>
+														{b.count}
+													</p>
+													<p className="font-mono text-[9px] text-muted-foreground uppercase">
+														{b.name}
+													</p>
+												</div>
+											))}
+										</div>
+									</div>
+									<ResponsiveContainer height={120} width="100%">
+										<BarChart barSize={48} data={riskBands}>
+											<CartesianGrid
+												stroke="var(--color-border)"
+												strokeOpacity={0.5}
+												vertical={false}
+											/>
+											<XAxis
+												dataKey="name"
+												tick={{
+													fontSize: 9,
+													fontFamily: "monospace",
+													fill: "var(--color-muted-foreground)",
+												}}
+												tickLine={false}
+											/>
+											<YAxis hide />
+											<ChartTooltip
+												contentStyle={{
+													background: "var(--color-card)",
+													border: "1px solid var(--color-border)",
+													borderRadius: 0,
+													fontFamily: "monospace",
+													fontSize: 11,
+												}}
+											/>
+											<Bar dataKey="count" radius={0}>
+												{riskBands.map((b) => (
+													<Cell fill={b.fill} fillOpacity={0.85} key={b.name} />
+												))}
+											</Bar>
+										</BarChart>
+									</ResponsiveContainer>
+								</motion.div>
+							)}
+
+							{/* Commit Author Frequency */}
+							{commitsByAuthor.length > 0 && (
+								<motion.div
+									className="animate-fade-in-up border-border border-t p-6 lg:col-span-2"
+									style={{ animationDelay: "0.32s" }}
+								>
+									<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+										Commit Authorship
+									</h3>
+									<ResponsiveContainer height={160} width="100%">
+										<BarChart
+											data={commitsByAuthor}
+											layout="vertical"
+											margin={{ left: 8, right: 8 }}
+										>
+											<CartesianGrid
+												horizontal={false}
+												stroke="var(--color-border)"
+												strokeOpacity={0.5}
+											/>
+											<XAxis
+												axisLine={false}
+												tick={{
+													fontSize: 9,
+													fontFamily: "monospace",
+													fill: "var(--color-muted-foreground)",
+												}}
+												tickLine={false}
+												type="number"
+											/>
+											<YAxis
+												axisLine={false}
+												dataKey="name"
+												tick={{
+													fontSize: 9,
+													fontFamily: "monospace",
+													fill: "var(--color-muted-foreground)",
+												}}
+												tickLine={false}
+												type="category"
+												width={90}
+											/>
+											<ChartTooltip
+												contentStyle={{
+													background: "var(--color-card)",
+													border: "1px solid var(--color-border)",
+													borderRadius: 0,
+													fontFamily: "monospace",
+													fontSize: 11,
+												}}
+											/>
+											<Bar dataKey="commits" radius={0}>
+												{commitsByAuthor.map((entry, i) => (
+													<Cell
+														fill={CHART_COLORS[i % CHART_COLORS.length]}
+														fillOpacity={0.8}
+														key={`cell-author-${entry.name}`}
+													/>
+												))}
+											</Bar>
+										</BarChart>
+									</ResponsiveContainer>
+								</motion.div>
+							)}
 
 							{/* Dependency Overview */}
 							<motion.div
@@ -950,6 +1388,358 @@ export function AnalysisPageClient({
 									</div>
 								</div>
 							</motion.div>
+
+							{/* Derived Insights Charts */}
+							<div className="grid gap-0 lg:grid-cols-2">
+								{/* Directory Depth */}
+								{directoryDepth.length > 0 && (
+									<motion.div
+										className="animate-fade-in-up border-border border-t border-r p-6"
+										style={{ animationDelay: "0.35s" }}
+									>
+										<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+											Directory Depth Distribution
+										</h3>
+										<ResponsiveContainer height={200} width="100%">
+											<BarChart data={directoryDepth}>
+												<CartesianGrid
+													stroke="var(--color-border)"
+													strokeOpacity={0.3}
+													vertical={false}
+												/>
+												<XAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													dataKey="depth"
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 10,
+													}}
+													tickLine={false}
+												/>
+												<YAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 10,
+													}}
+													tickLine={false}
+												/>
+												<ChartTooltip
+													contentStyle={{
+														background: "var(--color-card)",
+														border: "1px solid var(--color-border)",
+														borderRadius: 0,
+														fontFamily: "monospace",
+														fontSize: 11,
+													}}
+													formatter={(value) => [`${value} files`, "Count"]}
+													labelFormatter={(label) => `Depth ${label}`}
+												/>
+												<Bar
+													dataKey="count"
+													fill="var(--color-primary)"
+													radius={[2, 2, 0, 0]}
+												>
+													{directoryDepth.map((entry, i) => (
+														<Cell
+															fill={CHART_COLORS[i % CHART_COLORS.length]}
+															key={`cell-depth-${entry.depth}`}
+														/>
+													))}
+												</Bar>
+											</BarChart>
+										</ResponsiveContainer>
+									</motion.div>
+								)}
+
+								{/* Import Complexity */}
+								{importComplexity.length > 0 && (
+									<motion.div
+										className="animate-fade-in-up border-border border-t p-6"
+										style={{ animationDelay: "0.38s" }}
+									>
+										<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+											Import Complexity
+										</h3>
+										<ResponsiveContainer height={200} width="100%">
+											<BarChart data={importComplexity}>
+												<CartesianGrid
+													stroke="var(--color-border)"
+													strokeOpacity={0.3}
+													vertical={false}
+												/>
+												<XAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													dataKey="range"
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 9,
+													}}
+													tickLine={false}
+												/>
+												<YAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 10,
+													}}
+													tickLine={false}
+												/>
+												<ChartTooltip
+													contentStyle={{
+														background: "var(--color-card)",
+														border: "1px solid var(--color-border)",
+														borderRadius: 0,
+														fontFamily: "monospace",
+														fontSize: 11,
+													}}
+													formatter={(value) => [`${value} files`, "Count"]}
+												/>
+												<Bar
+													dataKey="count"
+													fill="var(--color-accent)"
+													radius={[2, 2, 0, 0]}
+												>
+													{importComplexity.map((entry, i) => (
+														<Cell
+															fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]}
+															key={`cell-imp-${entry.range}`}
+														/>
+													))}
+												</Bar>
+											</BarChart>
+										</ResponsiveContainer>
+									</motion.div>
+								)}
+
+								{/* LOC Distribution */}
+								{locDistribution.length > 0 && (
+									<motion.div
+										className="animate-fade-in-up border-border border-t border-r p-6"
+										style={{ animationDelay: "0.41s" }}
+									>
+										<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+											File Size Distribution
+										</h3>
+										<ResponsiveContainer height={200} width="100%">
+											<BarChart data={locDistribution}>
+												<CartesianGrid
+													stroke="var(--color-border)"
+													strokeOpacity={0.3}
+													vertical={false}
+												/>
+												<XAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													dataKey="range"
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 9,
+													}}
+													tickLine={false}
+												/>
+												<YAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 10,
+													}}
+													tickLine={false}
+												/>
+												<ChartTooltip
+													contentStyle={{
+														background: "var(--color-card)",
+														border: "1px solid var(--color-border)",
+														borderRadius: 0,
+														fontFamily: "monospace",
+														fontSize: 11,
+													}}
+													formatter={(value) => [`${value} files`, "Count"]}
+												/>
+												<Bar
+													dataKey="count"
+													fill="var(--color-primary)"
+													radius={[2, 2, 0, 0]}
+												>
+													{locDistribution.map((entry, i) => (
+														<Cell
+															fill={CHART_COLORS[(i + 1) % CHART_COLORS.length]}
+															key={`cell-loc-${entry.range}`}
+														/>
+													))}
+												</Bar>
+											</BarChart>
+										</ResponsiveContainer>
+									</motion.div>
+								)}
+
+								{/* Commit Heatmap */}
+								{commitHeatmap.length > 0 && (
+									<motion.div
+										className="animate-fade-in-up border-border border-t p-6"
+										style={{ animationDelay: "0.44s" }}
+									>
+										<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+											Commits by Day of Week
+										</h3>
+										<ResponsiveContainer height={200} width="100%">
+											<BarChart data={commitHeatmap}>
+												<CartesianGrid
+													stroke="var(--color-border)"
+													strokeOpacity={0.3}
+													vertical={false}
+												/>
+												<XAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													dataKey="day"
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 10,
+													}}
+													tickLine={false}
+												/>
+												<YAxis
+													axisLine={{ stroke: "var(--color-border)" }}
+													tick={{
+														fill: "var(--color-muted-foreground)",
+														fontSize: 10,
+													}}
+													tickLine={false}
+												/>
+												<ChartTooltip
+													contentStyle={{
+														background: "var(--color-card)",
+														border: "1px solid var(--color-border)",
+														borderRadius: 0,
+														fontFamily: "monospace",
+														fontSize: 11,
+													}}
+													formatter={(value) => [`${value} commits`, "Count"]}
+												/>
+												<Bar dataKey="count" radius={[2, 2, 0, 0]}>
+													{commitHeatmap.map((entry, i) => (
+														<Cell
+															fill={CHART_COLORS[(i + 3) % CHART_COLORS.length]}
+															key={`cell-heat-${entry.day}`}
+														/>
+													))}
+												</Bar>
+											</BarChart>
+										</ResponsiveContainer>
+									</motion.div>
+								)}
+							</div>
+
+							{/* Language LOC vs Files Scatter */}
+							{languageLocVsFiles.length > 0 && (
+								<motion.div
+									className="animate-fade-in-up border-border border-t p-6"
+									style={{ animationDelay: "0.47s" }}
+								>
+									<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+										Language: LOC vs Files
+									</h3>
+									<ResponsiveContainer height={280} width="100%">
+										<ScatterChart
+											margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+										>
+											<CartesianGrid
+												stroke="var(--color-border)"
+												strokeDasharray="3 3"
+											/>
+											<XAxis
+												axisLine={{ stroke: "var(--color-border)" }}
+												dataKey="files"
+												name="Files"
+												tick={{
+													fill: "var(--color-muted-foreground)",
+													fontSize: 10,
+												}}
+												type="number"
+											/>
+											<YAxis
+												axisLine={{ stroke: "var(--color-border)" }}
+												dataKey="loc"
+												name="LOC"
+												tick={{
+													fill: "var(--color-muted-foreground)",
+													fontSize: 10,
+												}}
+												type="number"
+											/>
+											<ChartTooltip
+												contentStyle={{
+													background: "var(--color-card)",
+													border: "1px solid var(--color-border)",
+													borderRadius: 0,
+													fontFamily: "monospace",
+													fontSize: 11,
+												}}
+												formatter={(value, name) => [
+													name === "files"
+														? `${value} files`
+														: `${Number(value).toLocaleString()} lines`,
+													name === "files" ? "Files" : "LOC",
+												]}
+												labelFormatter={(label) => label}
+											/>
+											<Scatter data={languageLocVsFiles}>
+												{languageLocVsFiles.map((entry, i) => (
+													<Cell
+														fill={CHART_COLORS[i % CHART_COLORS.length]}
+														key={`cell-lang-${entry.language}`}
+													/>
+												))}
+											</Scatter>
+										</ScatterChart>
+									</ResponsiveContainer>
+								</motion.div>
+							)}
+
+							{/* File Extensions */}
+							{extensionData.length > 0 && (
+								<motion.div
+									className="animate-fade-in-up border-border border-t p-6"
+									style={{ animationDelay: "0.5s" }}
+								>
+									<h3 className="mb-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+										File Types
+									</h3>
+									<ResponsiveContainer height={200} width="100%">
+										<PieChart>
+											<Pie
+												cx="50%"
+												cy="50%"
+												data={extensionData.slice(0, 8)}
+												dataKey="value"
+												innerRadius={40}
+												label={({ name, percent = 0 }) =>
+													`${name} ${(percent * 100).toFixed(0)}%`
+												}
+												labelLine={false}
+												outerRadius={80}
+												paddingAngle={2}
+											>
+												{extensionData.slice(0, 8).map((entry, i) => (
+													<Cell
+														fill={CHART_COLORS[i % CHART_COLORS.length]}
+														key={`cell-ext-${entry.name}`}
+													/>
+												))}
+											</Pie>
+											<ChartTooltip
+												contentStyle={{
+													background: "var(--color-card)",
+													border: "1px solid var(--color-border)",
+													borderRadius: 0,
+													fontFamily: "monospace",
+													fontSize: 11,
+												}}
+												formatter={(value) => [`${value} files`, "Count"]}
+											/>
+										</PieChart>
+									</ResponsiveContainer>
+								</motion.div>
+							)}
 						</div>
 					) : activeTab === "hotspots" ? (
 						<motion.div variants={itemVariants}>
@@ -963,7 +1753,7 @@ export function AnalysisPageClient({
 										onClick={() => setHotspotViewMode("scatter")}
 										type="button"
 									>
-										<GitCommitHorizontal className="h-3 w-3" />
+										<GitCommit className="h-3 w-3" />
 										<span>Scatter</span>
 									</button>
 									<button
@@ -1252,7 +2042,7 @@ export function AnalysisPageClient({
 												name="LOC"
 												range={[80, 500]}
 											/>
-											<Tooltip
+											<ChartTooltip
 												content={({ active, payload }) => {
 													if (active && payload?.length && payload[0]) {
 														const data = payload[0].payload as HotspotDataPoint;
@@ -1675,22 +2465,6 @@ export function AnalysisPageClient({
 				)}
 			</div>
 		</motion.div>
-	);
-}
-
-function LoadingFallback() {
-	return (
-		<div className="flex min-h-screen items-center justify-center bg-background pt-14">
-			<div className="flex flex-col items-center gap-6">
-				<div className="relative">
-					<div className="absolute inset-0 animate-pulse rounded-full bg-accent/10 blur-xl" />
-					<Loader2 className="relative h-10 w-10 animate-spin text-foreground" />
-				</div>
-				<p className="font-mono text-muted-foreground text-xs uppercase tracking-widest">
-					Loading Analysis
-				</p>
-			</div>
-		</div>
 	);
 }
 

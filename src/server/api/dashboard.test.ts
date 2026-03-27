@@ -1,7 +1,10 @@
-import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
-import { getContributorCount } from "~/server/dal/contributors";
-import { getRepositoryData, updateRepositoryStatus } from "~/server/dal/repositories";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { dashboardRoute } from "~/server/api/dashboard";
+import { getContributorCount } from "~/server/dal/contributors";
+import {
+	getRepositoryData,
+	updateRepositoryStatus,
+} from "~/server/dal/repositories";
 import { inngest } from "~/server/inngest/client";
 
 // Mock dependencies
@@ -31,7 +34,7 @@ describe("Dashboard API - Re-analysis Logic", () => {
 		vi.clearAllMocks();
 	});
 
-	it("should trigger re-analysis if status is complete and last analysis > 24h ago", async () => {
+	it("should trigger re-analysis if status is complete and last update > 24h ago", async () => {
 		const moreThan24hAgo = new Date();
 		moreThan24hAgo.setDate(moreThan24hAgo.getDate() - 2);
 
@@ -43,6 +46,7 @@ describe("Dashboard API - Re-analysis Logic", () => {
 			defaultBranch: "main",
 			url: "https://github.com/test-owner/test-repo",
 			analysisStatus: "complete",
+			updatedAt: moreThan24hAgo.toISOString(),
 			analysisResults: [
 				{
 					createdAt: moreThan24hAgo.toISOString(),
@@ -69,7 +73,7 @@ describe("Dashboard API - Re-analysis Logic", () => {
 		);
 	});
 
-	it("should NOT trigger re-analysis if status is complete and last analysis < 24h ago", async () => {
+	it("should NOT trigger re-analysis if status is complete and last update < 24h ago", async () => {
 		const lessThan24hAgo = new Date();
 		lessThan24hAgo.setHours(lessThan24hAgo.getHours() - 1);
 
@@ -79,6 +83,7 @@ describe("Dashboard API - Re-analysis Logic", () => {
 			name: "test-repo",
 			fullName: "test-owner/test-repo",
 			analysisStatus: "complete",
+			updatedAt: lessThan24hAgo.toISOString(),
 			analysisResults: [
 				{
 					createdAt: lessThan24hAgo.toISOString(),
@@ -101,7 +106,8 @@ describe("Dashboard API - Re-analysis Logic", () => {
 			name: "test-repo",
 			fullName: "test-owner/test-repo",
 			analysisStatus: "complete",
-			analysisResults: [], // Empty results
+			updatedAt: new Date().toISOString(),
+			analysisResults: [],
 		});
 
 		const request = new Request(`http://localhost/dashboard/${mockRepoId}`);
@@ -121,7 +127,8 @@ describe("Dashboard API - Re-analysis Logic", () => {
 			owner: "test-owner",
 			name: "test-repo",
 			fullName: "test-owner/test-repo",
-			analysisStatus: "queued", // Already queued
+			analysisStatus: "queued",
+			updatedAt: new Date().toISOString(),
 			analysisResults: [],
 		});
 
