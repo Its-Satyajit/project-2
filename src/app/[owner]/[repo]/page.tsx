@@ -2,13 +2,7 @@
 
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useQuery } from "@tanstack/react-query";
-import {
-	FolderTree,
-	GitBranch,
-	GitGraph,
-	Loader2,
-	Sparkles,
-} from "lucide-react";
+import { GitBranch, GitGraph, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import React, { Suspense, use, useState } from "react";
 import { ActivitySummary } from "~/components/dashboard/ActivitySummary";
@@ -377,24 +371,6 @@ function DashboardData({
 							</span>
 						</div>
 					)}
-				</div>
-			</section>
-
-			{/* Browse Files CTA */}
-			<section className="border-border border-t bg-card/50">
-				<div className="flex items-center justify-between px-6 py-4">
-					<div className="flex items-center gap-3">
-						<FolderTree className="h-4 w-4 text-muted-foreground" />
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-							Explore Source
-						</span>
-					</div>
-					<Link href={`/${owner}/${repo}/files`}>
-						<Button className="gap-2" size="sm" variant="outline">
-							<FolderTree className="h-3.5 w-3.5" />
-							Browse Files
-						</Button>
-					</Link>
 				</div>
 			</section>
 
