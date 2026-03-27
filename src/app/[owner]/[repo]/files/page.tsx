@@ -17,7 +17,7 @@ export default function FilesPage({
 	params: Promise<{ owner: string; repo: string }>;
 }) {
 	return (
-		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background pt-14">
+		<main className="blueprint-grid relative mx-auto min-h-screen max-w-7xl overflow-hidden bg-background pt-14">
 			<Suspense
 				fallback={
 					<div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
@@ -165,7 +165,7 @@ function FilesContent({
 	};
 
 	return (
-		<div className="flex h-[calc(100vh-3.5rem)] flex-col">
+		<div className="flex h-[calc(100vh-3.5rem)] flex-col border-border border-r border-l">
 			{/* Header */}
 			<header className="shrink-0 border-border border-b bg-card/50">
 				<div className="flex items-center justify-between px-4 py-3">

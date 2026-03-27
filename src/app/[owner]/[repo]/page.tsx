@@ -140,6 +140,7 @@ function DashboardData({
 		license?: string | null;
 		createdAt?: string;
 		updatedAt?: string;
+		analysisStatus: string;
 		analysisResults: Array<{
 			totalFiles: number;
 			totalDirectories: number;
@@ -202,7 +203,7 @@ function DashboardData({
 				owner={data.owner}
 				primaryLanguage={data.primaryLanguage}
 				stars={data.stars}
-				status="complete"
+				status={data.analysisStatus as any}
 				updatedAt={data.updatedAt}
 				url={data.url}
 			/>

@@ -1,7 +1,10 @@
 import Elysia, { t } from "elysia";
 import { getOwnerRepo } from "~/lib/getOwnerRepo";
 import { rateLimit } from "~/server/middleware/rate-limit";
-import { insertRepositories } from "../dal/repositories";
+import {
+	getRepositoryByOwnerAndName,
+	insertRepositories,
+} from "../dal/repositories";
 import { inngest } from "../inngest/client";
 import { getRepoMetadata } from "../octokit";
 
@@ -32,6 +35,30 @@ export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 				error:
 					"Private repositories are not supported yet. Only public repositories can be analyzed.",
 			};
+		}
+
+		// Strictly enforce 24h analysis window
+		const existing = await getRepositoryByOwnerAndName(
+			parseResult.owner,
+			parseResult.repo,
+		);
+		if (existing?.analysisStatus === "complete") {
+			const result = existing.analysisResults[0];
+			const lastAnalyzed = result ? new Date(result.createdAt) : null;
+			const RE_ANALYSIS_WINDOW = 24 * 60 * 60 * 1000;
+			if (
+				lastAnalyzed &&
+				Date.now() - lastAnalyzed.getTime() < RE_ANALYSIS_WINDOW
+			) {
+				return {
+					success: true,
+					repoId: existing.id,
+					owner: existing.owner,
+					name: existing.name,
+					status: "complete",
+					message: "Repository analyzed recently.",
+				};
+			}
 		}
 
 		const repoRecord = await insertRepositories({

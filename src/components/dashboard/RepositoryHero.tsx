@@ -205,11 +205,26 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 								)}
 
 								{status && (
-									<div className="flex items-center gap-1.5">
-										<Check className="h-3 w-3 text-accent" />
-										<span className="font-mono text-accent text-xs">
-											Analyzed
-										</span>
+									<div className="flex items-center gap-1.5 border border-accent/20 bg-accent/5 px-2 py-0.5">
+										{status === "complete" ? (
+											<>
+												<Check className="h-3 w-3 text-accent" />
+												<span className="font-mono text-[10px] text-accent uppercase tracking-wider">
+													Analyzed
+												</span>
+											</>
+										) : status === "failed" ? (
+											<span className="font-mono text-[10px] text-destructive uppercase tracking-wider">
+												Failed
+											</span>
+										) : (
+											<>
+												<div className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+												<span className="font-mono text-[10px] text-accent uppercase tracking-wider">
+													{status === "queued" ? "Queued" : "Analyzing..."}
+												</span>
+											</>
+										)}
 									</div>
 								)}
 							</div>
