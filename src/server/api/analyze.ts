@@ -78,6 +78,8 @@ export const analyzeRoute = new Elysia().use(analyzeRateLimit).post(
 		return {
 			success: true,
 			repoId: repoRecord.id,
+			owner: repoRecord.owner,
+			name: repoRecord.name,
 			metadata: repoMetadata,
 			status: "queued",
 		};

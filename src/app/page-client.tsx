@@ -82,7 +82,11 @@ export default function HomeClient() {
 
 		onSubmit: async ({ value }) => {
 			const res = await api.analyze.post({ githubUrl: value.githubUrl });
-			const data = res.data as { repoId?: string } | null;
+			const data = res.data as {
+				repoId?: string;
+				owner?: string;
+				name?: string;
+			} | null;
 			if (res.error || !data?.repoId) {
 				toast.error(
 					"Unable to analyze repository. Check the URL and try again.",
@@ -90,6 +94,9 @@ export default function HomeClient() {
 				return;
 			}
 			queryClient.invalidateQueries({ queryKey: ["top-repos"] });
+			if (data.owner && data.name) {
+				redirect(`/${data.owner}/${data.name}`);
+			}
 			redirect(`/dashboard/${data.repoId}`);
 		},
 	});
@@ -286,7 +293,7 @@ export default function HomeClient() {
 							{topRepos?.map((repo, i) => (
 								<motion.a
 									className="group relative flex items-baseline justify-between border-border border-b py-5 transition-colors hover:bg-secondary/20"
-									href={`/dashboard/${repo.id}`}
+									href={`/${repo.owner}/${repo.name}`}
 									key={repo.id}
 									whileHover={{ x: 4 }}
 								>

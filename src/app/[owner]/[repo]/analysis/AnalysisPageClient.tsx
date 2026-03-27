@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import {
 	Bar,
@@ -91,10 +91,16 @@ const itemVariants = {
 	visible: { opacity: 1, y: 0 },
 };
 
-function AnalysisContent() {
-	const params = useParams();
+export function AnalysisPageClient({
+	owner,
+	repo,
+	repoId,
+}: {
+	owner: string;
+	repo: string;
+	repoId: string;
+}) {
 	const router = useRouter();
-	const repoId = params.repoId as string;
 
 	const { data: status, isLoading, error } = useRepoStatus(repoId);
 
@@ -1688,10 +1694,4 @@ function LoadingFallback() {
 	);
 }
 
-export default function AnalysisPage() {
-	return (
-		<Suspense fallback={<LoadingFallback />}>
-			<AnalysisContent />
-		</Suspense>
-	);
-}
+// AnalysisPageClient is exported and used by page.tsx
