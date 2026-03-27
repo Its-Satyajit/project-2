@@ -49,8 +49,8 @@ export function packAnalysisData(data: AnalysisData): Buffer {
 		})),
 	};
 
-	const msgpacked = encode(internedData);
-	return brotliCompressSync(Buffer.from(msgpacked));
+	const packedMsgpack = encode(internedData);
+	return brotliCompressSync(Buffer.from(packedMsgpack));
 }
 
 type PackedAnalysisData = Omit<
@@ -95,29 +95,29 @@ export function unpackAnalysisData(buffer: Buffer): AnalysisData {
 			throw new Error(`Unsupported serialization version: ${unpacked._v}`);
 		}
 
-		const { stringTable } = unpacked;
+		const { stringTable, _v, ...rest } = unpacked;
 		const getStr = (idx: number) => stringTable[idx] ?? "";
 
 		const result: AnalysisData = {
-			...unpacked,
-			files: unpacked.files.map((f) => ({
+			...rest,
+			files: rest.files.map((f) => ({
 				...f,
 				path: getStr(f.path),
 			})),
-			dependencyGraph: unpacked.dependencyGraph
+			dependencyGraph: rest.dependencyGraph
 				? {
-						...unpacked.dependencyGraph,
-						nodes: unpacked.dependencyGraph.nodes.map((n) => ({
+						...rest.dependencyGraph,
+						nodes: rest.dependencyGraph.nodes.map((n) => ({
 							...n,
 							path: getStr(n.path),
 						})),
-						edges: unpacked.dependencyGraph.edges.map((e) => ({
+						edges: rest.dependencyGraph.edges.map((e) => ({
 							source: getStr(e.source),
 							target: getStr(e.target),
 						})),
 					}
 				: undefined,
-			hotSpotData: unpacked.hotSpotData?.map((h) => ({
+			hotSpotData: rest.hotSpotData?.map((h) => ({
 				...h,
 				path: getStr(h.path),
 			})),
