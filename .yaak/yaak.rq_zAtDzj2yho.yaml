@@ -1,8 +1,8 @@
 type: http_request
 model: http_request
-id: rq_vxkyJM7CM5
-createdAt: 2026-03-23T15:49:33.205198868
-updatedAt: 2026-03-27T13:32:34.148234205
+id: rq_zAtDzj2yho
+createdAt: 2026-03-27T13:15:57.693546537
+updatedAt: 2026-03-27T13:16:00.149083236
 workspaceId: wk_dPMYXCvCgM
 folderId: null
 authentication: {}
@@ -25,15 +25,12 @@ headers:
   value: multipart/form-data
   id: KQ5hICRpAQ
 method: GET
-name: localhost:3000/api/analyze Copy 3
-sortPriority: -1774015248234.997
-url: http://localhost:3000/api/dashboard/867bf926-f4be-448d-a452-b96d60df6942
+name: localhost:3000/api/analyze Copy 6
+sortPriority: -1774015248234.995
+url: http://localhost:3000/api/repos/top
 urlParameters:
 - enabled: true
-  name: ''
-  value: ''
-  id: M6xWRPMh4F
-- enabled: true
-  name: ''
-  value: ''
-  id: Xy9PcF5NCq
+  name: limit
+  value: |
+    10
+  id: 4MpnaKj0i8

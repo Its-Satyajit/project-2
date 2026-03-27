@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Static } from "elysia";
 import type { dbSchema } from "../api/dbSchema";
 import { db } from "../db";
@@ -20,6 +20,17 @@ export async function insertRepositories(data: Insert) {
 export async function getRepositoryData(repoId: string) {
 	const result = await db.query.repositories.findFirst({
 		where: (t) => eq(t.id, repoId),
+		with: {
+			analysisResults: true,
+		},
+	});
+	if (!result) return null;
+	return result;
+}
+
+export async function getRepositoryByOwnerAndName(owner: string, name: string) {
+	const result = await db.query.repositories.findFirst({
+		where: (t) => and(eq(t.owner, owner), eq(t.name, name)),
 		with: {
 			analysisResults: true,
 		},

@@ -25,6 +25,10 @@ export function Navigation() {
 	const params = useParams();
 	const pathname = usePathname();
 	const repoId = params.repoId as string | undefined;
+	const owner = params.owner as string | undefined;
+	const repo = params.repo as string | undefined;
+	// Support both old (/dashboard/[repoId]) and new (/[owner]/[repo]) routes
+	const hasRepoParams = owner && repo;
 	const isDev = process.env.NODE_ENV === "development";
 	const { theme, setTheme } = useTheme();
 	const [isPending, startTransition] = React.useTransition();
@@ -151,19 +155,19 @@ export function Navigation() {
 						)}
 					</Link>
 
-					{repoId && (
+					{hasRepoParams && (
 						<>
 							<span className="mx-2 text-border">/</span>
 							<Link
 								className={`group flex items-center gap-2 px-2 py-1 font-mono text-xs uppercase tracking-widest transition-colors ${
-									pathname === `/dashboard/${repoId}`
+									pathname === `/${owner}/${repo}`
 										? "text-foreground"
 										: "text-muted-foreground hover:text-foreground"
 								}`}
-								href={`/dashboard/${repoId}`}
+								href={`/${owner}/${repo}`}
 							>
 								<span>Dashboard</span>
-								{pathname === `/dashboard/${repoId}` && (
+								{pathname === `/${owner}/${repo}` && (
 									<motion.div
 										className="ml-1 h-1 w-1 bg-accent"
 										layoutId="nav-indicator"
@@ -174,14 +178,14 @@ export function Navigation() {
 							<span className="mx-2 text-border">/</span>
 							<Link
 								className={`group flex items-center gap-2 px-2 py-1 font-mono text-xs uppercase tracking-widest transition-colors ${
-									pathname === `/dashboard/${repoId}/analysis`
+									pathname === `/${owner}/${repo}/analysis`
 										? "text-foreground"
 										: "text-muted-foreground hover:text-foreground"
 								}`}
-								href={`/dashboard/${repoId}/analysis`}
+								href={`/${owner}/${repo}/analysis`}
 							>
 								<span>Analysis</span>
-								{pathname === `/dashboard/${repoId}/analysis` && (
+								{pathname === `/${owner}/${repo}/analysis` && (
 									<motion.div
 										className="ml-1 h-1 w-1 bg-accent"
 										layoutId="nav-indicator"

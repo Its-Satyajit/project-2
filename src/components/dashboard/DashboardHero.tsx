@@ -159,7 +159,7 @@ export function DashboardHero({
 
 				{/* Analysis button */}
 				<div className="shrink-0 lg:pt-2">
-					<Link href={`/dashboard/${repo.id}/analysis`}>
+					<Link href={`/${repo.owner}/${repo.name}/analysis`}>
 						<Button className="h-10 gap-2 border-foreground/20 bg-transparent px-6 font-mono text-foreground text-xs uppercase tracking-widest hover:bg-foreground hover:text-background">
 							<BarChart3 className="h-3.5 w-3.5" />
 							<span>Deep Analysis</span>
