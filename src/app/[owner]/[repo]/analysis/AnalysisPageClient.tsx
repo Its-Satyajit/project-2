@@ -68,6 +68,7 @@ import {
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
 import { env } from "~/env";
+import type { RepoStatus } from "~/hooks/useRepoStatus";
 import { useRepoStatus } from "~/hooks/useRepoStatus";
 import { api } from "~/lib/eden";
 import "~/styles/analysis.css";
@@ -109,17 +110,25 @@ export function AnalysisPageClient({
 	repo,
 	repoId,
 	showHeader = true,
+	initialStatus,
+	initialFullData,
 }: {
 	owner: string;
 	repo: string;
 	repoId: string;
 	showHeader?: boolean;
+	initialStatus?: RepoStatus;
+	initialFullData?: any;
 }) {
 	const router = useRouter();
 
 	const { data: status, isLoading, error } = useRepoStatus(repoId);
 
+	const serverStatus = initialStatus ?? status;
+	const serverFullData = initialFullData;
+
 	// Fetch full repo details (commits, contributorCount, analysisResults, etc.)
+	// Only refetch if we don't have server data
 	const { data: fullData } = useQuery({
 		queryKey: ["repo-full-details", repoId],
 		queryFn: async () => {
@@ -127,8 +136,13 @@ export function AnalysisPageClient({
 			if (res.error) throw new Error(String(res.error));
 			return res.data as any;
 		},
-		enabled: !!repoId,
+		enabled: !!repoId && !initialFullData,
+		initialData: initialFullData,
 	});
+
+	// Use server data initially, fall back to client-fetched data
+	const displayStatus = serverStatus ?? status ?? ({} as RepoStatus);
+	const displayFullData = serverFullData ?? fullData ?? {};
 
 	const [activeTab, setActiveTab] = useState<
 		"overview" | "insights" | "hotspots" | "filetree"
@@ -149,15 +163,15 @@ export function AnalysisPageClient({
 	const [scatterLimit, setScatterLimit] = useState(200);
 	const [showAIPanel, setShowAIPanel] = useState(false);
 
-	const graph = status?.analysis?.dependencyGraph;
-	const hotSpotData = status?.analysis?.hotSpotData;
+	const graph = displayStatus?.analysis?.dependencyGraph;
+	const hotSpotData = displayStatus?.analysis?.hotSpotData;
 
 	const slicedHotSpotData = useMemo(() => {
 		if (!hotSpotData) return [];
 		return hotSpotData.slice(0, scatterLimit);
 	}, [hotSpotData, scatterLimit]);
-	const summary = status?.analysis?.summary;
-	const { metadata } = status ?? {};
+	const summary = displayStatus?.analysis?.summary;
+	const { metadata } = displayStatus ?? {};
 
 	const { data: hotspotFileContent, isLoading: isHotspotContentLoading } =
 		useQuery({
@@ -196,7 +210,7 @@ export function AnalysisPageClient({
 			enabled: !!selectedHotspotFile,
 		});
 
-	const fileTree = fullData?.fileTree ?? [];
+	const fileTree = displayFullData?.fileTree ?? [];
 
 	const topImportedFiles = useMemo(() => {
 		if (!graph?.nodes) return [];
@@ -260,9 +274,9 @@ export function AnalysisPageClient({
 
 	/** Top commit authors by frequency */
 	const commitsByAuthor = useMemo(() => {
-		if (!fullData?.commits?.length) return [];
+		if (!displayFullData?.commits?.length) return [];
 		const counts: Record<string, number> = {};
-		for (const c of fullData.commits) {
+		for (const c of displayFullData.commits) {
 			const name = c.authorName || "Unknown";
 			counts[name] = (counts[name] || 0) + 1;
 		}
@@ -270,12 +284,12 @@ export function AnalysisPageClient({
 			.map(([name, commits]) => ({ name, commits }))
 			.sort((a, b) => b.commits - a.commits)
 			.slice(0, 8);
-	}, [fullData?.commits]);
+	}, [displayFullData?.commits]);
 
 	/** LOC growth across analysis snapshots */
 	const locGrowth = useMemo(() => {
-		if (!fullData?.analysisResults?.length) return [];
-		return [...fullData.analysisResults]
+		if (!displayFullData?.analysisResults?.length) return [];
+		return [...displayFullData.analysisResults]
 			.sort(
 				(a: { createdAt: string }, b: { createdAt: string }) =>
 					new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -288,7 +302,7 @@ export function AnalysisPageClient({
 				}),
 				loc: r.totalLines,
 			}));
-	}, [fullData?.analysisResults]);
+	}, [displayFullData?.analysisResults]);
 
 	/** Coupling density = edges / nodes (avg imports per file) */
 	const couplingDensity = useMemo(() => {
@@ -394,15 +408,15 @@ export function AnalysisPageClient({
 
 	/** Day of week commit heatmap */
 	const commitHeatmap = useMemo(() => {
-		if (!fullData?.commits?.length) return [];
+		if (!displayFullData?.commits?.length) return [];
 		const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 		const dayCounts = new Array(7).fill(0);
-		for (const commit of fullData.commits) {
+		for (const commit of displayFullData.commits) {
 			const day = new Date(commit.committedAt).getDay();
 			dayCounts[day]++;
 		}
 		return days.map((day, i) => ({ day, count: dayCounts[i] }));
-	}, [fullData?.commits]);
+	}, [displayFullData?.commits]);
 
 	/** Language LOC vs Files scatter data */
 	const languageLocVsFiles = useMemo(() => {
@@ -421,8 +435,8 @@ export function AnalysisPageClient({
 
 	/** File extension treemap data */
 	const extensionData = useMemo(() => {
-		if (!status?.analysis?.fileTypeBreakdown) return [];
-		const breakdown = status.analysis.fileTypeBreakdown;
+		if (!displayStatus?.analysis?.fileTypeBreakdown) return [];
+		const breakdown = displayStatus.analysis.fileTypeBreakdown;
 		return Object.entries(breakdown)
 			.filter(([, count]) => count > 0)
 			.map(([ext, count]) => ({
@@ -430,7 +444,7 @@ export function AnalysisPageClient({
 				value: count,
 			}))
 			.sort((a, b) => b.value - a.value);
-	}, [status?.analysis?.fileTypeBreakdown]);
+	}, [displayStatus?.analysis?.fileTypeBreakdown]);
 
 	if (isLoading) {
 		return (
@@ -520,15 +534,15 @@ export function AnalysisPageClient({
 											{metadata?.fullName ?? "..."}
 										</h1>
 										{/* Description tagline */}
-										{fullData?.description && (
+										{displayFullData?.description && (
 											<p className="mt-1 max-w-xl font-mono text-[11px] text-muted-foreground leading-relaxed">
-												{fullData.description}
+												{displayFullData.description}
 											</p>
 										)}
 										{/* Info strip */}
 										<div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
 											<span>
-												{status?.analysis?.summary
+												{displayStatus?.analysis?.summary
 													? "Full Architectural Analysis"
 													: "Dependency Analysis"}
 											</span>
@@ -558,26 +572,27 @@ export function AnalysisPageClient({
 												</>
 											)}
 											{/* License */}
-											{fullData?.license && (
+											{displayFullData?.license && (
 												<>
 													<span className="text-border">|</span>
 													<span className="flex items-center gap-1">
 														<Scale className="h-2 w-2" />
-														{fullData.license}
+														{displayFullData.license}
 													</span>
 												</>
 											)}
 											{/* Stars & Forks */}
-											{(fullData?.stars ?? metadata?.stars) !== undefined && (
+											{(displayFullData?.stars ?? metadata?.stars) !==
+												undefined && (
 												<>
 													<span className="text-border">|</span>
 													<span className="flex items-center gap-1">
 														<Star className="h-2 w-2" />
-														{fullData?.stars ?? metadata?.stars}
+														{displayFullData?.stars ?? metadata?.stars}
 													</span>
 													<span className="flex items-center gap-1">
 														<GitFork className="h-2 w-2" />
-														{fullData?.forks ?? metadata?.forks}
+														{displayFullData?.forks ?? metadata?.forks}
 													</span>
 												</>
 											)}
@@ -593,7 +608,7 @@ export function AnalysisPageClient({
 										Files
 									</span>
 									<span className="font-(family-name:--font-display) text-2xl text-foreground">
-										{status?.analysis?.totalFiles ??
+										{displayStatus?.analysis?.totalFiles ??
 											graph?.metadata?.totalNodes ??
 											graph?.nodes?.length ??
 											0}
@@ -616,7 +631,7 @@ export function AnalysisPageClient({
 									<span className="font-(family-name:--font-display) text-2xl text-foreground">
 										{
 											Object.keys(
-												status?.analysis?.fileTypeBreakdown ??
+												displayStatus?.analysis?.fileTypeBreakdown ??
 													graph?.metadata?.languageBreakdown ??
 													{},
 											).length
@@ -933,7 +948,8 @@ export function AnalysisPageClient({
 														Evolution
 													</span>
 													<span className="font-mono text-foreground text-xs">
-														{fullData?.analysisResults?.length ?? 0} Snapshots
+														{displayFullData?.analysisResults?.length ?? 0}{" "}
+														Snapshots
 													</span>
 												</div>
 												<TrendingUp className="h-4 w-4 text-emerald-500" />
@@ -944,7 +960,7 @@ export function AnalysisPageClient({
 														Contributors
 													</span>
 													<span className="font-mono text-foreground text-xs">
-														{fullData?.contributorCount ?? 0} Developers
+														{displayFullData?.contributorCount ?? 0} Developers
 													</span>
 												</div>
 												<Users className="h-4 w-4 text-accent" />
@@ -952,7 +968,7 @@ export function AnalysisPageClient({
 											<div className="pt-2">
 												<Link
 													className="flex items-center gap-2 font-mono text-[10px] text-muted-foreground uppercase hover:text-foreground"
-													href={fullData?.url || "#"}
+													href={displayFullData?.url || "#"}
 													target="_blank"
 												>
 													<ExternalLink className="h-3 w-3" />
@@ -1071,14 +1087,14 @@ export function AnalysisPageClient({
 											</Pie>
 											<ChartTooltip
 												content={({ active, payload }) => {
-													if (active && payload?.length) {
+													if (active && payload?.[0]) {
 														return (
 															<div className="border border-border bg-card p-3 shadow-lg">
 																<p className="font-mono text-foreground text-xs">
-																	{payload[0].name}
+																	{payload[0]!.name}
 																</p>
 																<p className="font-mono text-muted-foreground text-xs">
-																	{payload[0].value?.toLocaleString()} files
+																	{payload[0]!.value?.toLocaleString()} files
 																</p>
 															</div>
 														);
@@ -1117,14 +1133,14 @@ export function AnalysisPageClient({
 											/>
 											<ChartTooltip
 												content={({ active, payload }) => {
-													if (active && payload?.length) {
+													if (active && payload?.[0]) {
 														return (
 															<div className="border border-border bg-card p-3 shadow-lg">
 																<p className="font-mono text-foreground text-xs">
-																	{payload[0].payload.name}
+																	{payload[0]!.payload?.name}
 																</p>
 																<p className="font-mono text-muted-foreground text-xs">
-																	{payload[0].value} files
+																	{payload[0]!.value} files
 																</p>
 															</div>
 														);
@@ -1176,14 +1192,14 @@ export function AnalysisPageClient({
 											/>
 											<ChartTooltip
 												content={({ active, payload }) => {
-													if (active && payload?.length) {
+													if (active && payload?.[0]) {
 														return (
 															<div className="border border-border bg-card p-3 shadow-lg">
 																<p className="font-mono text-foreground text-xs">
-																	{payload[0].payload.name}
+																	{payload[0]!.payload?.name}
 																</p>
 																<p className="font-mono text-muted-foreground text-xs">
-																	{Number(payload[0].value).toLocaleString()}{" "}
+																	{Number(payload[0]!.value).toLocaleString()}{" "}
 																	lines
 																</p>
 															</div>
@@ -1667,20 +1683,25 @@ export function AnalysisPageClient({
 												type="number"
 											/>
 											<ChartTooltip
-												contentStyle={{
-													background: "var(--color-card)",
-													border: "1px solid var(--color-border)",
-													borderRadius: 0,
-													fontFamily: "monospace",
-													fontSize: 11,
+												content={({ active, payload }) => {
+													if (active && payload?.[0]?.payload) {
+														const data = payload[0].payload;
+														return (
+															<div className="border border-border bg-card p-3 shadow-lg">
+																<p className="font-bold font-mono text-foreground text-xs">
+																	{data.language}
+																</p>
+																<p className="font-mono text-muted-foreground text-xs">
+																	Files: {data.files.toLocaleString("en-US")}
+																</p>
+																<p className="font-mono text-muted-foreground text-xs">
+																	LOC: {data.loc.toLocaleString("en-US")}
+																</p>
+															</div>
+														);
+													}
+													return null;
 												}}
-												formatter={(value, name) => [
-													name === "files"
-														? `${value} files`
-														: `${Number(value).toLocaleString()} lines`,
-													name === "files" ? "Files" : "LOC",
-												]}
-												labelFormatter={(label) => label}
 											/>
 											<Scatter data={languageLocVsFiles}>
 												{languageLocVsFiles.map((entry, i) => (

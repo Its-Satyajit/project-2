@@ -322,7 +322,10 @@ export default function Home() {
 								a: "We use Tree-sitter AST parsing to generate precise syntax trees for every file, enabling accurate import/dependency detection across 100+ languages.",
 							},
 						].map((faq) => (
-							<div className="border-border border-r border-b p-6" key={faq.q}>
+							<div
+								className="faq-card border-border border-b p-6 md:border-r-[1px]"
+								key={faq.q}
+							>
 								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-lg">
 									{faq.q}
 								</h3>

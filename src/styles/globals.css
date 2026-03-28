@@ -280,3 +280,20 @@
 		@apply bg-background text-foreground;
 	}
 }
+
+@layer utilities {
+	.faq-card {
+		@apply border-border border-b;
+	}
+	.faq-card:last-child {
+		@apply border-b-0;
+	}
+	@media (min-width: 768px) {
+		.faq-card:nth-child(2n) {
+			@apply border-r-0;
+		}
+		.faq-card:nth-last-child(-n + 2) {
+			@apply border-b-0;
+		}
+	}
+}

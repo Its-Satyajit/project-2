@@ -1,10 +1,12 @@
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
 import { Suspense } from "react";
 import { env } from "~/env";
+import type { RepoStatus } from "~/hooks/useRepoStatus";
+import { api } from "~/lib/eden";
 import { getCachedRepoByPath } from "~/lib/server/data";
 import { AnalysisPageClient } from "./AnalysisPageClient";
-import { AnalysisPageHeader } from "./AnalysisPageHeader";
 
 export async function generateMetadata({
 	params,
@@ -62,6 +64,24 @@ interface AnalysisPageProps {
 	params: Promise<{ owner: string; repo: string }>;
 }
 
+async function getAnalysisStatus(repoId: string): Promise<RepoStatus | null> {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("status", `repo-${repoId}`);
+	const res = await api.dashboard({ repoId }).status.get();
+	if (res.error || !res.data) return null;
+	return res.data as RepoStatus;
+}
+
+async function getFullRepoDetails(repoId: string) {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("details", `repo-${repoId}`);
+	const res = await api.dashboard({ repoId }).get();
+	if (res.error || !res.data) return null;
+	return res.data;
+}
+
 async function AnalysisContent({
 	owner,
 	repo,
@@ -99,16 +119,46 @@ async function AnalysisContent({
 		);
 	}
 
+	const repoId = repoData.id;
+
 	return (
 		<div className="mx-auto max-w-7xl px-6">
-			<AnalysisPageHeader owner={owner} repo={repo} />
-			<AnalysisPageClient
-				owner={owner}
-				repo={repo}
-				repoId={repoData.id}
-				showHeader={false}
-			/>
+			<Suspense
+				fallback={
+					<div className="flex min-h-[200px] items-center justify-center">
+						<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+					</div>
+				}
+			>
+				<AnalysisDataFetcher owner={owner} repo={repo} repoId={repoId} />
+			</Suspense>
 		</div>
+	);
+}
+
+async function AnalysisDataFetcher({
+	owner,
+	repo,
+	repoId,
+}: {
+	owner: string;
+	repo: string;
+	repoId: string;
+}) {
+	const [status, fullData] = await Promise.all([
+		getAnalysisStatus(repoId),
+		getFullRepoDetails(repoId),
+	]);
+
+	return (
+		<AnalysisPageClient
+			initialFullData={fullData ?? undefined}
+			initialStatus={status ?? undefined}
+			owner={owner}
+			repo={repo}
+			repoId={repoId}
+			showHeader={true}
+		/>
 	);
 }
 

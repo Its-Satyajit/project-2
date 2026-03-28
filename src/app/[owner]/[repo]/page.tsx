@@ -1,10 +1,12 @@
-"use client";
-
 import { SiGithub } from "@icons-pack/react-simple-icons";
-import { useQuery } from "@tanstack/react-query";
 import { GitBranch, GitGraph, Loader2, Sparkles } from "lucide-react";
+import type { Metadata } from "next";
+import { cacheLife, cacheTag } from "next/cache";
+import Image from "next/image";
 import Link from "next/link";
-import React, { Suspense, use, useState } from "react";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+
 import { ActivitySummary } from "~/components/dashboard/ActivitySummary";
 import { CodeQualityMetrics } from "~/components/dashboard/CodeQualityMetrics";
 import { CommitsTimeline } from "~/components/dashboard/CommitsTimeline";
@@ -18,113 +20,197 @@ import { HotspotSummary } from "~/components/dashboard/HotspotSummary";
 import { RepositoryHero } from "~/components/dashboard/RepositoryHero";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
 import { Button } from "~/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { api } from "~/lib/eden";
+import { getRepositoryByOwnerAndName } from "~/server/dal/repositories";
 
-export default function RepoPage({
-	params,
-}: {
+interface RepoPageProps {
 	params: Promise<{ owner: string; repo: string }>;
-}) {
+}
+
+async function getRepoId(owner: string, repo: string) {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("repository", `repo-${owner}-${repo}`);
+	const repoData = await getRepositoryByOwnerAndName(owner, repo);
+	return repoData?.id ?? null;
+}
+
+async function getDashboardData(repoId: string) {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("dashboard", `repo-${repoId}`);
+	const res = await api.dashboard({ repoId }).get();
+	if (res.error || !res.data) return null;
+	return res.data;
+}
+
+async function getContributors(
+	repoId: string,
+	sort: "contributions" | "newest" = "contributions",
+) {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("contributors", `repo-${repoId}`);
+	const res = await api
+		.repos({ repoId })
+		.contributors.get({ query: { sort, limit: 100 } });
+	if (res.error) {
+		console.error("Failed to fetch contributors:", res.error);
+		return null;
+	}
+	const contributors =
+		res.data?.filter(
+			(
+				c,
+			): c is {
+				id: string;
+				githubLogin: string;
+				avatarUrl: string | null;
+				htmlUrl: string | null;
+				contributions: number;
+				firstContributionAt: string | null;
+				lastContributionAt: string | null;
+			} => c.contributions !== null,
+		) ?? null;
+	return contributors;
+}
+
+async function RepoNotFound({ owner, repo }: { owner: string; repo: string }) {
 	return (
-		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background pt-14">
-			<div className="mx-auto max-w-7xl px-6 py-8">
-				<Suspense fallback={<StatCardsSkeleton />}>
-					<DashboardData params={params} />
-				</Suspense>
+		<div className="flex flex-col items-center justify-center py-32">
+			<div className="mb-4 border border-destructive/30 bg-destructive/5 px-4 py-2 font-mono text-destructive text-sm">
+				ERROR: Repository {owner}/{repo} not found or not analyzed yet
 			</div>
-		</main>
+			<Link href="/">
+				<Button
+					className="font-mono text-xs uppercase tracking-wider"
+					variant="outline"
+				>
+					Analyze Repository
+				</Button>
+			</Link>
+		</div>
 	);
 }
 
-function DashboardData({
-	params,
+function LoadingState() {
+	return (
+		<div className="flex flex-col items-center justify-center py-32">
+			<div className="mb-6 flex items-center gap-3 font-mono text-muted-foreground text-sm">
+				<Loader2 className="h-4 w-4 animate-spin" />
+				<span className="uppercase tracking-widest">Loading Dashboard</span>
+			</div>
+		</div>
+	);
+}
+
+function ContributorsSection({
+	repoId,
+	initialSort,
 }: {
-	params: Promise<{ owner: string; repo: string }>;
+	repoId: string;
+	initialSort: "contributions" | "newest";
 }) {
-	const { owner, repo } = use(params);
-	const [contributorsSort, setContributorsSort] = useState<
-		"contributions" | "newest"
-	>("contributions");
-	const contributorsParentRef = React.useRef<HTMLDivElement>(null);
-
-	// First get the repo ID from owner/repo
-	const { data: repoLookup, isLoading: isLookingUp } = useQuery({
-		queryKey: ["repo-lookup", owner, repo],
-		queryFn: async () => {
-			const res = await fetch(`/api/repos/lookup?owner=${owner}&name=${repo}`);
-			if (!res.ok) throw new Error("Failed to lookup repository");
-			return res.json() as Promise<{ id: string }>;
-		},
-	});
-
-	const repoId = repoLookup?.id;
-
-	const { data: response, isLoading } = useQuery({
-		queryKey: ["repo-dashboard", repoId],
-		queryFn: async () => {
-			const res = await api.dashboard({ repoId: repoId! }).get();
-			return res;
-		},
-		enabled: !!repoId,
-		retry: false,
-	});
-
-	const {
-		data: contributorsData,
-		isLoading: isContributorsLoading,
-		isError,
-	} = useQuery<
-		Array<{
-			id: string;
-			githubLogin: string;
-			avatarUrl: string | null;
-			htmlUrl: string | null;
-			contributions: number;
-		}>
-	>({
-		queryKey: ["contributors", repoId, contributorsSort],
-		queryFn: async () => {
-			const res = await fetch(
-				`/api/repos/${repoId}/contributors?sort=${contributorsSort}`,
-			);
-			if (!res.ok) throw new Error("Failed to fetch contributors");
-			return res.json();
-		},
-		enabled: !!repoId,
-		retry: 2,
-	});
-
-	if (isLookingUp || isLoading) {
-		return (
-			<div className="flex flex-col items-center justify-center py-32">
-				<div className="mb-6 flex items-center gap-3 font-mono text-muted-foreground text-sm">
-					<Loader2 className="h-4 w-4 animate-spin" />
-					<span className="uppercase tracking-widest">Loading Dashboard</span>
+	return (
+		<Suspense
+			fallback={
+				<div className="flex items-center justify-center p-8">
+					<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
 				</div>
+			}
+		>
+			<ContributorsListInner initialSort={initialSort} repoId={repoId} />
+		</Suspense>
+	);
+}
+
+async function ContributorsListInner({
+	repoId,
+	initialSort,
+}: {
+	repoId: string;
+	initialSort: "contributions" | "newest";
+}) {
+	const contributors = await getContributors(repoId, initialSort);
+
+	if (!contributors || contributors.length === 0) {
+		return (
+			<div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
+				<GitGraph className="mb-4 h-8 w-8 opacity-20" />
+				<p className="font-mono text-xs uppercase tracking-wider">
+					No contributors found
+				</p>
 			</div>
 		);
 	}
 
-	if (!response?.data || typeof response.data !== "object") {
-		return (
-			<div className="flex flex-col items-center justify-center py-32">
-				<div className="mb-4 border border-destructive/30 bg-destructive/5 px-4 py-2 font-mono text-destructive text-sm">
-					ERROR: Repository {owner}/{repo} not found or not analyzed yet
+	return <ContributorsGrid contributors={contributors} />;
+}
+
+function ContributorsGrid({
+	contributors,
+}: {
+	contributors: Array<{
+		id: string;
+		githubLogin: string;
+		avatarUrl: string | null;
+		htmlUrl: string | null;
+		contributions: number;
+	}>;
+}) {
+	return (
+		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{contributors.map((contributor) => (
+				<div
+					className="flex items-center gap-4 rounded-lg border border-border bg-muted/20 p-4"
+					key={contributor.id}
+				>
+					{contributor.avatarUrl ? (
+						<Image
+							alt={contributor.githubLogin}
+							className="rounded-full"
+							height={48}
+							src={contributor.avatarUrl}
+							width={48}
+						/>
+					) : (
+						<div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+							<GitBranch className="h-6 w-6 text-muted-foreground" />
+						</div>
+					)}
+					<div className="min-w-0 flex-1">
+						<p className="truncate font-medium font-mono">
+							{contributor.githubLogin}
+						</p>
+					</div>
+					<div className="text-right">
+						<p className="font-bold font-mono text-foreground text-lg">
+							{contributor.contributions}
+						</p>
+						<p className="font-mono text-muted-foreground text-xs">
+							contributions
+						</p>
+					</div>
 				</div>
-				<Link href="/">
-					<Button
-						className="font-mono text-xs uppercase tracking-wider"
-						variant="outline"
-					>
-						Analyze Repository
-					</Button>
-				</Link>
-			</div>
-		);
+			))}
+		</div>
+	);
+}
+
+async function DashboardContent({
+	owner,
+	repo,
+}: {
+	owner: string;
+	repo: string;
+}) {
+	const repoId = await getRepoId(owner, repo);
+
+	if (!repoId) {
+		return <RepoNotFound owner={owner} repo={repo} />;
 	}
 
-	const data = response.data as unknown as {
+	const data = (await getDashboardData(repoId)) as {
 		id: string;
 		owner: string;
 		name: string;
@@ -141,7 +227,7 @@ function DashboardData({
 		createdAt?: string;
 		updatedAt?: string;
 		analysisStatus: string;
-		analysisResults: Array<{
+		analysisResults?: Array<{
 			totalFiles: number;
 			totalDirectories: number;
 			totalLines: number;
@@ -182,15 +268,19 @@ function DashboardData({
 			score: number;
 			rank: number;
 		}>;
-	};
+	} | null;
+
+	if (!data) {
+		return <RepoNotFound owner={owner} repo={repo} />;
+	}
+
 	const analysis = data.analysisResults?.[0];
 
 	return (
 		<div className="flex flex-col gap-0">
-			{/* Repository Hero Section */}
 			<RepositoryHero
 				avatarUrl={data.avatarUrl}
-				contributorCount={data.contributorCount ?? contributorsData?.length}
+				contributorCount={data.contributorCount}
 				createdAt={data.createdAt}
 				defaultBranch={data.defaultBranch}
 				description={data.description}
@@ -203,15 +293,24 @@ function DashboardData({
 				owner={data.owner}
 				primaryLanguage={data.primaryLanguage}
 				stars={data.stars}
-				status={data.analysisStatus as any}
+				status={
+					data.analysisStatus as
+						| "complete"
+						| "pending"
+						| "queued"
+						| "fetching"
+						| "basic-analysis"
+						| "dependency-analysis"
+						| "failed"
+						| undefined
+				}
 				updatedAt={data.updatedAt}
 				url={data.url}
 			/>
 
-			{/* Enhanced Stats Row */}
 			<section className="border-border border-t">
 				<EnhancedStatCards
-					contributorCount={data.contributorCount ?? contributorsData?.length}
+					contributorCount={data.contributorCount}
 					createdAt={data.createdAt}
 					defaultBranch={data.defaultBranch}
 					license={data.license}
@@ -223,9 +322,7 @@ function DashboardData({
 				/>
 			</section>
 
-			{/* Dependency Overview & Hotspots - Grid Layout */}
 			<section className="grid gap-0 border-border border-t lg:grid-cols-2">
-				{/* Dependency Stats */}
 				<div className="border-border border-r p-6">
 					{data.dependencyGraph?.metadata ? (
 						<DependencyOverview
@@ -247,7 +344,6 @@ function DashboardData({
 					)}
 				</div>
 
-				{/* Hotspots */}
 				<div className="p-6">
 					{data.hotSpotData && data.hotSpotData.length > 0 ? (
 						<HotspotRankings hotspots={data.hotSpotData} maxVisible={5} />
@@ -261,9 +357,7 @@ function DashboardData({
 				</div>
 			</section>
 
-			{/* File Type Breakdown & File Composition */}
 			<section className="grid gap-0 border-border border-t lg:grid-cols-2">
-				{/* File Types */}
 				<div className="border-border border-r p-6">
 					{data.fileTypeBreakdown ? (
 						<FileTypeChart data={data.fileTypeBreakdown} />
@@ -276,7 +370,6 @@ function DashboardData({
 					)}
 				</div>
 
-				{/* File Composition Insights */}
 				<div className="p-6">
 					{data.fileTypeBreakdown ? (
 						<FileInsights
@@ -293,7 +386,6 @@ function DashboardData({
 				</div>
 			</section>
 
-			{/* Computed Insights Header */}
 			<section className="border-border border-t bg-muted/20">
 				<div className="flex items-center gap-3 px-6 py-4">
 					<Sparkles className="h-4 w-4 text-amber-400" />
@@ -304,9 +396,7 @@ function DashboardData({
 				</div>
 			</section>
 
-			{/* Code Quality & Risk Summary */}
 			<section className="grid gap-0 border-border border-t lg:grid-cols-2">
-				{/* Code Quality Metrics */}
 				<div className="border-border border-r p-6">
 					{data.dependencyGraph?.nodes && data.hotSpotData ? (
 						<CodeQualityMetrics
@@ -325,7 +415,6 @@ function DashboardData({
 					)}
 				</div>
 
-				{/* Hotspot Summary */}
 				<div className="p-6">
 					{data.hotSpotData && data.hotSpotData.length > 0 ? (
 						<HotspotSummary hotspots={data.hotSpotData} />
@@ -339,9 +428,7 @@ function DashboardData({
 				</div>
 			</section>
 
-			{/* Activity Summary & Commits */}
 			<section className="grid gap-0 border-border border-t lg:grid-cols-2">
-				{/* Activity Summary */}
 				<div className="border-border border-r p-6">
 					{data.commits && data.commits.length > 0 ? (
 						<ActivitySummary
@@ -357,7 +444,6 @@ function DashboardData({
 					)}
 				</div>
 
-				{/* Recent Commits Timeline */}
 				<div className="p-6">
 					{data.commits && data.commits.length > 0 ? (
 						<CommitsTimeline
@@ -375,7 +461,6 @@ function DashboardData({
 				</div>
 			</section>
 
-			{/* Contributors Section */}
 			<section className="border-border border-t py-6">
 				<div className="mb-6 flex items-center justify-between">
 					<div className="flex items-center gap-3">
@@ -384,60 +469,21 @@ function DashboardData({
 						</span>
 						<div className="line-rule hidden flex-1 sm:block" />
 					</div>
-					{contributorsData && contributorsData.length > 0 && (
-						<Tabs
-							onValueChange={(v) =>
-								setContributorsSort(v as typeof contributorsSort)
-							}
-							value={contributorsSort}
-						>
-							<TabsList className="bg-transparent p-0">
-								<TabsTrigger className="tab-pill" value="contributions">
-									Top Contributors
-								</TabsTrigger>
-								<TabsTrigger className="tab-pill" value="newest">
-									Recently Added
-								</TabsTrigger>
-							</TabsList>
-						</Tabs>
-					)}
 				</div>
 
 				<div className="border border-border bg-card p-6">
-					{isContributorsLoading ? (
-						<div className="flex items-center justify-center p-8">
-							<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-						</div>
-					) : isError ? (
-						<div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-							<GitGraph className="mb-4 h-8 w-8 opacity-20" />
-							<p className="font-mono text-xs uppercase tracking-wider">
-								Failed to load contributors
-							</p>
-						</div>
-					) : contributorsData && contributorsData.length > 0 ? (
-						<div
-							className="relative w-full overflow-auto"
-							ref={contributorsParentRef}
-							style={{ maxHeight: "500px" }}
-						>
-							<ContributorsList
-								contributors={contributorsData}
-								parentRef={contributorsParentRef}
-							/>
-						</div>
-					) : (
-						<div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-							<GitGraph className="mb-4 h-8 w-8 opacity-20" />
-							<p className="font-mono text-xs uppercase tracking-wider">
-								No contributors found
-							</p>
-						</div>
-					)}
+					<Suspense
+						fallback={
+							<div className="flex items-center justify-center p-8">
+								<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+							</div>
+						}
+					>
+						<ContributorsSection initialSort="contributions" repoId={repoId} />
+					</Suspense>
 				</div>
 			</section>
 
-			{/* Footer */}
 			<footer className="mt-8 flex flex-col items-center justify-between gap-4 border-border border-t py-6 md:flex-row">
 				<div className="flex items-center gap-6">
 					<span className="font-(family-name:--font-display) text-foreground text-sm">
@@ -485,5 +531,27 @@ function DashboardData({
 				</div>
 			</footer>
 		</div>
+	);
+}
+
+export async function generateMetadata({ params }: RepoPageProps) {
+	const { owner, repo } = await params;
+	return {
+		title: `${owner}/${repo} — Analyze`,
+		description: `Comprehensive code analysis for ${owner}/${repo}. View repository structure, dependency graphs, hotspot analysis, and code quality metrics.`,
+	};
+}
+
+export default async function RepoPage({ params }: RepoPageProps) {
+	const { owner, repo } = await params;
+
+	return (
+		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background pt-14">
+			<div className="mx-auto max-w-7xl px-6 py-8">
+				<Suspense fallback={<LoadingState />}>
+					<DashboardContent owner={owner} repo={repo} />
+				</Suspense>
+			</div>
+		</main>
 	);
 }

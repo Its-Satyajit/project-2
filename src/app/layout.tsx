@@ -136,17 +136,19 @@ export default function RootLayout({
 				type="application/ld+json"
 			/>
 			<body className="font-sans antialiased" suppressHydrationWarning>
-				<ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-					<QueryProvider>
-						<TooltipProvider>
-							<Suspense>
-								<Navigation />
-							</Suspense>
-							<main className="min-h-[calc(100vh-56px)]">{children}</main>
-						</TooltipProvider>
-						<Toaster />
-					</QueryProvider>
-				</ThemeProvider>
+				<Suspense>
+					<ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+						<QueryProvider>
+							<TooltipProvider>
+								<Suspense>
+									<Navigation />
+								</Suspense>
+								<main className="min-h-[calc(100vh-56px)]">{children}</main>
+							</TooltipProvider>
+							<Toaster />
+						</QueryProvider>
+					</ThemeProvider>
+				</Suspense>
 			</body>
 		</html>
 	);

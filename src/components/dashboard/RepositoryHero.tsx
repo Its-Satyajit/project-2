@@ -106,8 +106,8 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 	contributorCount,
 	status,
 }: RepositoryHeroProps) {
-	const displayStars = stars?.toLocaleString() ?? "0";
-	const displayForks = forks?.toLocaleString() ?? "0";
+	const displayStars = stars?.toLocaleString("en-US") ?? "0";
+	const displayForks = forks?.toLocaleString("en-US") ?? "0";
 	const repoUrl = url || `https://github.com/${owner}/${name}`;
 
 	return (

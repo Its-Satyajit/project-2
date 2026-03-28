@@ -365,7 +365,7 @@ function DashboardData({ owner, repo }: { owner: string; repo: string }) {
 					)}
 				</div>
 
-				<div className="border border-border bg-card p-6">
+				<div className="px-1">
 					{isContributorsLoading ? (
 						<div className="flex items-center justify-center p-8">
 							<Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

@@ -1,7 +1,7 @@
 "server-only";
 
 import { and, desc, eq } from "drizzle-orm";
-import { unstable_cache } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import {
 	getRepositoryByOwnerAndName,
 	getRepositoryData,
@@ -12,33 +12,25 @@ import { repositories } from "~/server/db/schema";
 
 /**
  * Cached fetch for top repositories (used on home page)
- * Revalidates every 60 seconds
+ * Revalidates every 60 seconds using use cache directive
  */
-export const getTopRepositories = unstable_cache(
-	async (limit: number = 10) => {
-		return getTopRepositoriesByStars(limit);
-	},
-	["top-repositories"],
-	{
-		revalidate: 60,
-		tags: ["repositories"],
-	},
-);
+export async function getTopRepositories(limit: number = 10) {
+	"use cache";
+	cacheLife("minutes");
+	cacheTag("repositories");
+	return getTopRepositoriesByStars(limit);
+}
 
 /**
  * Cached fetch for repository data (used on dashboard)
  * Revalidates every 30 seconds for active repos
  */
-export const getCachedRepositoryData = unstable_cache(
-	async (repoId: string) => {
-		return getRepositoryData(repoId);
-	},
-	["repository-data"],
-	{
-		revalidate: 30,
-		tags: ["repository"],
-	},
-);
+export async function getCachedRepositoryData(repoId: string) {
+	"use cache";
+	cacheLife("minutes");
+	cacheTag("repository", `repo-${repoId}`);
+	return getRepositoryData(repoId);
+}
 
 /**
  * Get repository with analysis results for dashboard
@@ -95,30 +87,23 @@ export async function getRepoByPath(owner: string, name: string) {
 /**
  * Cached version of repository with analysis
  */
-export const getCachedRepositoryWithAnalysis = unstable_cache(
-	async (repoId: string) => {
-		return getRepositoryWithAnalysis(repoId);
-	},
-	["repository-with-analysis"],
-	{
-		revalidate: 30,
-		tags: ["repository", "analysis"],
-	},
-);
+export async function getCachedRepositoryWithAnalysis(repoId: string) {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("repository", "analysis", `repo-${repoId}`);
+	return getRepositoryWithAnalysis(repoId);
+}
 
 /**
  * Cached version of repository lookup by owner/name
+ * Uses 24h cache since repos aren't re-analyzed within 24h window
  */
-export const getCachedRepoByPath = unstable_cache(
-	async (owner: string, name: string) => {
-		return getRepoByPath(owner, name);
-	},
-	["repo-by-path"],
-	{
-		revalidate: 30,
-		tags: ["repository", "analysis"],
-	},
-);
+export async function getCachedRepoByPath(owner: string, name: string) {
+	"use cache";
+	cacheLife({ stale: 86400, revalidate: 86400, expire: 86400 });
+	cacheTag("repository", "analysis", `repo-${owner}-${name}`);
+	return getRepoByPath(owner, name);
+}
 
 /**
  * Get recent analyses for home page (most recently analyzed repos)
@@ -157,13 +142,9 @@ export async function getRecentAnalyses(limit: number = 5) {
 /**
  * Cached version of recent analyses
  */
-export const getCachedRecentAnalyses = unstable_cache(
-	async (limit: number = 5) => {
-		return getRecentAnalyses(limit);
-	},
-	["recent-analyses"],
-	{
-		revalidate: 120,
-		tags: ["repositories", "analysis"],
-	},
-);
+export async function getCachedRecentAnalyses(limit: number = 5) {
+	"use cache";
+	cacheLife("hours");
+	cacheTag("repositories", "analysis");
+	return getRecentAnalyses(limit);
+}

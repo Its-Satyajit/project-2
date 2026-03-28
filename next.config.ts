@@ -3,7 +3,8 @@ import "~/env";
 
 const config: NextConfig = {
 	reactCompiler: true,
-	experimental: {},
+	cacheComponents: true,
+	reactStrictMode: true,
 	images: {
 		formats: ["image/avif", "image/webp"],
 		remotePatterns: [
