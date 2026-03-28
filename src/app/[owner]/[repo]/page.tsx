@@ -483,53 +483,6 @@ async function DashboardContent({
 					</Suspense>
 				</div>
 			</section>
-
-			<footer className="mt-8 flex flex-col items-center justify-between gap-4 border-border border-t py-6 md:flex-row">
-				<div className="flex items-center gap-6">
-					<span className="font-(family-name:--font-display) text-foreground text-sm">
-						Analyze
-					</span>
-					<div className="flex items-center gap-4 font-mono text-muted-foreground text-xs">
-						<a
-							className="flex items-center gap-1.5 transition-colors hover:text-foreground"
-							href="https://github.com/Its-Satyajit/git-insights-analyzer"
-							rel="noopener noreferrer"
-							target="_blank"
-						>
-							<SiGithub className="h-3 w-3" />
-							<span>Source</span>
-						</a>
-						<span className="text-border">·</span>
-						<span>
-							Built by{" "}
-							<a
-								className="text-foreground transition-colors hover:text-accent"
-								href="https://github.com/Its-Satyajit"
-								rel="noopener noreferrer"
-								target="_blank"
-							>
-								Satyajit
-							</a>
-						</span>
-						<span className="text-border">·</span>
-						<Link
-							className="transition-colors hover:text-foreground"
-							href="/legal"
-						>
-							Legal
-						</Link>
-					</div>
-				</div>
-				<div className="flex items-center gap-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-					<span>
-						Branch <span className="text-foreground">{data.defaultBranch}</span>
-					</span>
-					<span className="text-border">·</span>
-					<span>
-						Status <span className="text-accent">Analyzed</span>
-					</span>
-				</div>
-			</footer>
 		</div>
 	);
 }
@@ -546,7 +499,7 @@ export default async function RepoPage({ params }: RepoPageProps) {
 	const { owner, repo } = await params;
 
 	return (
-		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background pt-14">
+		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background">
 			<div className="mx-auto max-w-7xl px-6 py-8">
 				<Suspense fallback={<LoadingState />}>
 					<DashboardContent owner={owner} repo={repo} />

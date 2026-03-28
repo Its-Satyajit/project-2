@@ -1,13 +1,17 @@
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import {
 	ArrowRight,
+	BarChart3,
 	Code2,
 	FileCode,
+	FolderTree,
 	GitBranch,
 	GitFork,
 	Network,
 	Search,
+	Shield,
 	Star,
+	Target,
 	Users,
 	Zap,
 } from "lucide-react";
@@ -117,6 +121,105 @@ const STEPS = [
 	},
 ];
 
+const FEATURES = [
+	{
+		icon: FolderTree,
+		title: "Complete File Structure",
+		description:
+			"Visualize your entire repository structure with an interactive file tree. See language breakdown, folder organization, and file counts at a glance.",
+		benefits: [
+			"Interactive file tree navigation",
+			"Language distribution analysis",
+			"Directory structure overview",
+			"File type categorization",
+		],
+	},
+	{
+		icon: Network,
+		title: "Dependency Graph",
+		description:
+			"Understand how files connect through imports and exports. Powered by Tree-sitter AST parsing for accurate dependency mapping.",
+		benefits: [
+			"AST-powered import detection",
+			"Visual dependency relationships",
+			"Circular dependency detection",
+			"Module isolation analysis",
+		],
+	},
+	{
+		icon: Target,
+		title: "Hotspot Detection",
+		description:
+			"Identify high-risk files based on complexity, dependency weights, and change frequency. Focus refactoring efforts where they matter most.",
+		benefits: [
+			"Risk score calculation",
+			"Churn analysis from git history",
+			"Complexity metrics",
+			"Prioritized refactoring targets",
+		],
+	},
+	{
+		icon: BarChart3,
+		title: "Visual Analytics",
+		description:
+			"Rich charts and visualizations help you understand your codebase composition, language distribution, and code metrics at a glance.",
+		benefits: [
+			"Lines of code by language",
+			"File distribution charts",
+			"Dependency scatter plots",
+			"Interactive data exploration",
+		],
+	},
+	{
+		icon: GitBranch,
+		title: "Contributor Insights",
+		description:
+			"See who contributes to your repository, their contribution patterns, and activity over time. Understand team dynamics and code ownership.",
+		benefits: [
+			"Top contributor ranking",
+			"Contribution timeline",
+			"Code ownership mapping",
+			"Activity patterns",
+		],
+	},
+	{
+		icon: Code2,
+		title: "Code Preview",
+		description:
+			"View file contents with syntax highlighting powered by Shiki. Supports both public and private repositories securely.",
+		benefits: [
+			"Syntax highlighting for 100+ languages",
+			"Secure private repo access",
+			"Quick file navigation",
+			"Line-by-line viewing",
+		],
+	},
+	{
+		icon: Zap,
+		title: "AI-Powered Insights",
+		description:
+			"Get intelligent summaries about your codebase structure, architecture patterns, and potential improvements powered by AI.",
+		benefits: [
+			"Architecture summaries",
+			"Code quality suggestions",
+			"Pattern recognition",
+			"Improvement recommendations",
+		],
+	},
+	{
+		icon: Shield,
+		title: "Privacy-First Design",
+		description:
+			"We never store your source code. Repository contents are fetched on-demand and displayed temporarily in your browser only.",
+		benefits: [
+			"No code storage",
+			"On-demand fetching",
+			"Temporary browser cache only",
+			"GDPR compliant",
+		],
+	},
+];
+
 export default function Home() {
 	return (
 		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background">
@@ -210,51 +313,38 @@ export default function Home() {
 				<div className="mb-16">
 					<div className="mb-8 flex items-center gap-3">
 						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-							What You Get
+							Deep Code Intelligence
 						</span>
 						<div className="line-rule flex-1" />
 					</div>
-					<div className="grid gap-0 md:grid-cols-2 lg:grid-cols-4">
-						<div className="border-border border-r border-b p-6">
-							<FileCode className="mb-4 h-5 w-5 text-primary" />
-							<h3 className="mb-2 font-mono text-foreground text-xs uppercase tracking-wider">
-								File Structure
-							</h3>
-							<p className="font-sans text-muted-foreground text-sm leading-relaxed">
-								Complete file tree with language breakdown, line counts, and
-								folder organization.
-							</p>
-						</div>
-						<div className="border-border border-r border-b p-6">
-							<GitBranch className="mb-4 h-5 w-5 text-accent" />
-							<h3 className="mb-2 font-mono text-foreground text-xs uppercase tracking-wider">
-								Dependency Graph
-							</h3>
-							<p className="font-sans text-muted-foreground text-sm leading-relaxed">
-								Visualize import relationships between files. Understand
-								dependencies and coupling.
-							</p>
-						</div>
-						<div className="border-border border-r border-b p-6">
-							<Zap className="mb-4 h-5 w-5 text-amber-400" />
-							<h3 className="mb-2 font-mono text-foreground text-xs uppercase tracking-wider">
-								Code Hotspots
-							</h3>
-							<p className="font-sans text-muted-foreground text-sm leading-relaxed">
-								Identify high-risk files based on complexity, dependencies, and
-								change frequency.
-							</p>
-						</div>
-						<div className="border-border border-b p-6">
-							<Star className="mb-4 h-5 w-5 text-blue-400" />
-							<h3 className="mb-2 font-mono text-foreground text-xs uppercase tracking-wider">
-								Metadata Insights
-							</h3>
-							<p className="font-sans text-muted-foreground text-sm leading-relaxed">
-								Stars, forks, contributors, license, and recent commit history
-								at a glance.
-							</p>
-						</div>
+					<div className="grid gap-0 md:grid-cols-2">
+						{FEATURES.map((feature, i) => (
+							<div
+								className="group border-border border-r border-b p-8 transition-colors hover:bg-secondary/30"
+								key={feature.title}
+							>
+								<div className="mb-4 flex h-10 w-10 items-center justify-center border border-border bg-secondary">
+									<feature.icon className="h-5 w-5 text-muted-foreground" />
+								</div>
+								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-xl">
+									{feature.title}
+								</h3>
+								<p className="mb-4 font-sans text-muted-foreground text-sm leading-relaxed">
+									{feature.description}
+								</p>
+								<ul className="space-y-2">
+									{feature.benefits.map((benefit) => (
+										<li
+											className="flex items-center gap-2 font-mono text-muted-foreground text-xs"
+											key={benefit}
+										>
+											<span className="h-1 w-1 bg-accent" />
+											{benefit}
+										</li>
+									))}
+								</ul>
+							</div>
+						))}
 					</div>
 				</div>
 
@@ -366,59 +456,6 @@ export default function Home() {
 						</a>
 					</div>
 				</div>
-
-				{/* ===================== */}
-				{/* Footer */}
-				{/* ===================== */}
-				<footer className="flex flex-col items-start justify-between gap-4 border-border border-t pt-8 md:flex-row md:items-center">
-					<div className="flex items-center gap-6">
-						<span className="font-(family-name:--font-display) text-foreground text-lg">
-							Analyze
-						</span>
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-							v1.0.0
-						</span>
-					</div>
-					<div className="flex items-center gap-6 font-mono text-muted-foreground text-xs">
-						<a
-							className="flex items-center gap-1.5 transition-colors hover:text-foreground"
-							href="https://github.com/Its-Satyajit/git-insights-analyzer"
-							rel="noopener noreferrer"
-							target="_blank"
-						>
-							<SiGithub className="h-3 w-3" />
-							<span>Source</span>
-						</a>
-						<span className="text-border">·</span>
-						<span>
-							Built by{" "}
-							<a
-								className="text-foreground transition-colors hover:text-accent"
-								href="https://github.com/Its-Satyajit"
-								rel="noopener noreferrer"
-								target="_blank"
-							>
-								Satyajit
-							</a>
-						</span>
-						<span className="text-border">·</span>
-						<Link
-							className="transition-colors hover:text-foreground"
-							href="/legal"
-						>
-							Legal
-						</Link>
-					</div>
-					<div className="flex items-center gap-6 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-						<span>
-							Status <span className="text-foreground">Online</span>
-						</span>
-						<span className="text-border">·</span>
-						<span>
-							Latency <span className="text-accent">12ms</span>
-						</span>
-					</div>
-				</footer>
 			</div>
 
 			{/* FAQ Schema for SEO */}

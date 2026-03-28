@@ -103,14 +103,14 @@ export default async function FilesPage({ params }: FilesPageProps) {
 
 	if (!repoData) {
 		return (
-			<main className="blueprint-grid relative mx-auto min-h-screen max-w-7xl overflow-hidden bg-background pt-14">
+			<main className="blueprint-grid relative mx-auto min-h-screen max-w-7xl overflow-hidden bg-background">
 				<NotFoundState owner={owner} repo={repo} />
 			</main>
 		);
 	}
 
 	return (
-		<main className="blueprint-grid relative mx-auto min-h-screen max-w-7xl overflow-hidden bg-background pt-14">
+		<main className="blueprint-grid relative mx-auto min-h-screen max-w-7xl overflow-hidden bg-background">
 			<Suspense fallback={<LoadingState />}>
 				<FilesContent owner={owner} repo={repo} repoId={repoData.id} />
 			</Suspense>

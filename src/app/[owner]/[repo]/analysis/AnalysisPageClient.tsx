@@ -486,7 +486,7 @@ export function AnalysisPageClient({
 	return (
 		<motion.div
 			animate="visible"
-			className="blueprint-grid min-h-screen bg-background pt-14"
+			className="blueprint-grid min-h-screen bg-background"
 			initial="hidden"
 			variants={containerVariants}
 		>

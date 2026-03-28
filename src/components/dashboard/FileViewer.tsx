@@ -4,10 +4,10 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { escape as htmlEscape } from "es-toolkit";
 import { Copy, FileCode, Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useTheme } from "next-themes";
 import React, { Suspense, use, useMemo, useState } from "react";
 import { codeToHtml } from "shiki";
 import { AIExplainButton } from "~/components/ai";
+import { useTheme } from "~/components/ThemeProvider";
 import { Button } from "~/components/ui/button";
 import { env } from "~/env";
 

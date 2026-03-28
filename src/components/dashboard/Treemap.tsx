@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import * as d3 from "d3";
 import { motion } from "motion/react";
-import { useTheme } from "next-themes";
 import { useCallback, useMemo, useState } from "react";
+import { useTheme } from "~/components/ThemeProvider";
 import { api } from "~/lib/eden";
 
 interface TreemapFile {

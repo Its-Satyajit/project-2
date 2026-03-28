@@ -52,7 +52,7 @@ export default async function InsightsPage() {
 
 	if (insights.stats.totalRepos === 0) {
 		return (
-			<main className="blueprint-grid min-h-screen bg-background pt-14">
+			<main className="blueprint-grid min-h-screen bg-background">
 				<div className="mx-auto max-w-7xl px-6 py-8">
 					<InsightsHeroHeader
 						totalContributors={0}
@@ -67,7 +67,7 @@ export default async function InsightsPage() {
 	}
 
 	return (
-		<main className="blueprint-grid min-h-screen bg-background pt-14">
+		<main className="blueprint-grid min-h-screen bg-background">
 			<div className="mx-auto max-w-7xl px-6 py-8">
 				{/* Hero Header */}
 				<InsightsHeroHeader
@@ -174,21 +174,6 @@ export default async function InsightsPage() {
 						<GrowthTimeline data={insights.timeline} />
 					</section>
 				)}
-
-				{/* Footer */}
-				<footer className="mt-8 border-border border-t pt-6">
-					<div className="flex items-center justify-between">
-						<span className="font-mono text-muted-foreground text-xs">
-							Data cached for 24 hours
-						</span>
-						<Link
-							className="font-mono text-muted-foreground text-xs transition-colors hover:text-foreground"
-							href="/"
-						>
-							Analyze more repositories
-						</Link>
-					</div>
-				</footer>
 			</div>
 		</main>
 	);
