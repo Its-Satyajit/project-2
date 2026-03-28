@@ -1,5 +1,6 @@
 import { GitGraph, Search } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { CodeQualityMetrics } from "~/components/insights/CodeQualityMetrics";
 import { FilesByLanguageChart } from "~/components/insights/FilesByLanguageChart";
 import { GrowthTimeline } from "~/components/insights/GrowthTimeline";
@@ -47,133 +48,143 @@ function EmptyState() {
 	);
 }
 
-export default async function InsightsPage() {
+function InsightsSkeleton() {
+	return (
+		<div className="animate-pulse space-y-8">
+			<div className="grid grid-cols-4 gap-4">
+				<div className="h-24 rounded-lg bg-muted" />
+				<div className="h-24 rounded-lg bg-muted" />
+				<div className="h-24 rounded-lg bg-muted" />
+				<div className="h-24 rounded-lg bg-muted" />
+			</div>
+			<div className="h-64 rounded-lg bg-muted" />
+			<div className="grid grid-cols-2 gap-4">
+				<div className="h-64 rounded-lg bg-muted" />
+				<div className="h-64 rounded-lg bg-muted" />
+			</div>
+		</div>
+	);
+}
+
+async function InsightsData() {
 	const insights = await getCachedGlobalInsights();
 
 	if (insights.stats.totalRepos === 0) {
-		return (
-			<main className="blueprint-grid min-h-screen bg-background">
-				<div className="mx-auto max-w-7xl px-6 py-8">
-					<InsightsHeroHeader
-						totalContributors={0}
-						totalFiles={0}
-						totalLines={0}
-						totalRepos={0}
-					/>
-					<EmptyState />
-				</div>
-			</main>
-		);
+		return <EmptyState />;
 	}
 
 	return (
+		<>
+			<section className="mb-8 border border-border bg-card">
+				<InsightsHero stats={insights.stats} />
+			</section>
+
+			{insights.stats.totalRepos > 0 && (
+				<section className="mb-8 border border-border bg-card">
+					<CodeQualityMetrics stats={insights.stats} />
+				</section>
+			)}
+
+			<div className="mb-8 grid grid-cols-1 gap-0 lg:grid-cols-2">
+				{insights.languages.length > 0 && (
+					<div className="border border-border bg-card lg:border-r">
+						<LanguageDistribution data={insights.languages} />
+					</div>
+				)}
+				{insights.topLanguagesByLoc.length > 0 && (
+					<div className="border border-border bg-card">
+						<LocByLanguage data={insights.topLanguagesByLoc} />
+					</div>
+				)}
+			</div>
+
+			<div className="mb-8 grid grid-cols-1 gap-0 lg:grid-cols-2">
+				{insights.languageLocVsFiles.length > 0 && (
+					<div className="border border-border bg-card lg:border-r">
+						<LanguageLocVsFiles data={insights.languageLocVsFiles} />
+					</div>
+				)}
+				{insights.filesByLanguage.length > 0 && (
+					<div className="border border-border bg-card">
+						<FilesByLanguageChart data={insights.filesByLanguage} />
+					</div>
+				)}
+			</div>
+
+			<div className="mb-8 grid grid-cols-1 gap-0 md:grid-cols-2">
+				{insights.starDistribution.length > 0 && (
+					<div className="border border-border bg-card md:border-r">
+						<StarDistribution data={insights.starDistribution} />
+					</div>
+				)}
+				{insights.repoSizeDistribution.length > 0 && (
+					<div className="border border-border bg-card">
+						<RepoSizeDistribution data={insights.repoSizeDistribution} />
+					</div>
+				)}
+			</div>
+
+			{insights.starsForksData.length > 0 && (
+				<section className="mb-8 border border-border bg-card">
+					<StarsForksScatter data={insights.starsForksData} />
+				</section>
+			)}
+
+			{insights.topRepos.length > 0 && (
+				<section className="mb-8 border border-border bg-card">
+					<TopRepositoriesTable repos={insights.topRepos} />
+				</section>
+			)}
+
+			<div className="mb-8 grid grid-cols-1 gap-0 lg:grid-cols-2">
+				{insights.topContributors.length > 0 && (
+					<div className="border border-border bg-card lg:border-r">
+						<TopContributorsTable contributors={insights.topContributors} />
+					</div>
+				)}
+				{insights.mostActiveContributors.length > 0 && (
+					<div className="border border-border bg-card">
+						<TopContributorsByRepos
+							contributors={insights.mostActiveContributors}
+						/>
+					</div>
+				)}
+			</div>
+
+			{insights.licenses.length > 0 && (
+				<section className="mb-8 border border-border bg-card">
+					<LicenseBreakdown data={insights.licenses} />
+				</section>
+			)}
+
+			{insights.timeline.length > 0 && (
+				<section className="mb-8 border border-border bg-card">
+					<GrowthTimeline data={insights.timeline} />
+				</section>
+			)}
+		</>
+	);
+}
+
+export default async function InsightsPage() {
+	return (
 		<main className="blueprint-grid min-h-screen bg-background">
 			<div className="mx-auto max-w-7xl px-6 py-8">
-				{/* Hero Header */}
-				<InsightsHeroHeader
-					totalContributors={insights.stats.totalContributors}
-					totalFiles={insights.stats.totalFiles}
-					totalLines={insights.stats.totalLines}
-					totalRepos={insights.stats.totalRepos}
-				/>
-
-				{/* Hero Stats */}
-				<section className="mb-8 border border-border bg-card">
-					<InsightsHero stats={insights.stats} />
-				</section>
-
-				{/* Code Quality Indicators */}
-				{insights.stats.totalRepos > 0 && (
-					<section className="mb-8 border border-border bg-card">
-						<CodeQualityMetrics stats={insights.stats} />
-					</section>
-				)}
-
-				{/* Row 1: Language Distribution + LOC by Language */}
-				<div className="mb-8 grid grid-cols-1 gap-0 lg:grid-cols-2">
-					{insights.languages.length > 0 && (
-						<div className="border border-border bg-card lg:border-r">
-							<LanguageDistribution data={insights.languages} />
-						</div>
-					)}
-					{insights.topLanguagesByLoc.length > 0 && (
-						<div className="border border-border bg-card">
-							<LocByLanguage data={insights.topLanguagesByLoc} />
-						</div>
-					)}
-				</div>
-
-				{/* Row 2: LOC vs Files + Files by Language */}
-				<div className="mb-8 grid grid-cols-1 gap-0 lg:grid-cols-2">
-					{insights.languageLocVsFiles.length > 0 && (
-						<div className="border border-border bg-card lg:border-r">
-							<LanguageLocVsFiles data={insights.languageLocVsFiles} />
-						</div>
-					)}
-					{insights.filesByLanguage.length > 0 && (
-						<div className="border border-border bg-card">
-							<FilesByLanguageChart data={insights.filesByLanguage} />
-						</div>
-					)}
-				</div>
-
-				{/* Row 3: Stars Distribution + Repo Size Distribution */}
-				<div className="mb-8 grid grid-cols-1 gap-0 md:grid-cols-2">
-					{insights.starDistribution.length > 0 && (
-						<div className="border border-border bg-card md:border-r">
-							<StarDistribution data={insights.starDistribution} />
-						</div>
-					)}
-					{insights.repoSizeDistribution.length > 0 && (
-						<div className="border border-border bg-card">
-							<RepoSizeDistribution data={insights.repoSizeDistribution} />
-						</div>
-					)}
-				</div>
-
-				{/* Stars vs Forks Scatter */}
-				{insights.starsForksData.length > 0 && (
-					<section className="mb-8 border border-border bg-card">
-						<StarsForksScatter data={insights.starsForksData} />
-					</section>
-				)}
-
-				{/* Top Repositories */}
-				{insights.topRepos.length > 0 && (
-					<section className="mb-8 border border-border bg-card">
-						<TopRepositoriesTable repos={insights.topRepos} />
-					</section>
-				)}
-
-				{/* Row 4: Contributors by Contributions + Contributors by Repos */}
-				<div className="mb-8 grid grid-cols-1 gap-0 lg:grid-cols-2">
-					{insights.topContributors.length > 0 && (
-						<div className="border border-border bg-card lg:border-r">
-							<TopContributorsTable contributors={insights.topContributors} />
-						</div>
-					)}
-					{insights.mostActiveContributors.length > 0 && (
-						<div className="border border-border bg-card">
-							<TopContributorsByRepos
-								contributors={insights.mostActiveContributors}
+				<Suspense
+					fallback={
+						<>
+							<InsightsHeroHeader
+								totalContributors={0}
+								totalFiles={0}
+								totalLines={0}
+								totalRepos={0}
 							/>
-						</div>
-					)}
-				</div>
-
-				{/* License Breakdown */}
-				{insights.licenses.length > 0 && (
-					<section className="mb-8 border border-border bg-card">
-						<LicenseBreakdown data={insights.licenses} />
-					</section>
-				)}
-
-				{/* Growth Timeline */}
-				{insights.timeline.length > 0 && (
-					<section className="mb-8 border border-border bg-card">
-						<GrowthTimeline data={insights.timeline} />
-					</section>
-				)}
+							<InsightsSkeleton />
+						</>
+					}
+				>
+					<InsightsData />
+				</Suspense>
 			</div>
 		</main>
 	);
