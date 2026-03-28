@@ -16,12 +16,9 @@ import {
 	Zap,
 } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import Script from "next/script";
-import { Suspense } from "react";
-import { RecentAnalyses } from "~/components/home/RecentAnalyses";
 import { SearchForm } from "~/components/home/SearchForm";
-import { Skeleton } from "~/components/ui/skeleton";
+import { getGlobalStats } from "~/server/dal/repositories";
 
 export const metadata: Metadata = {
 	title: "Free GitHub Repository Analyzer - Code Intelligence & Hotspots",
@@ -102,7 +99,7 @@ const STEPS = [
 		num: "02",
 		title: "Parse Structure",
 		description:
-			"We clone the repo and parse every file using Tree-sitter AST.",
+			"We parse every file using Tree-sitter AST for precise syntax trees.",
 		icon: Code2,
 	},
 	{
@@ -124,183 +121,168 @@ const STEPS = [
 const FEATURES = [
 	{
 		icon: FolderTree,
-		title: "Complete File Structure",
+		title: "File Structure",
 		description:
-			"Visualize your entire repository structure with an interactive file tree. See language breakdown, folder organization, and file counts at a glance.",
-		benefits: [
-			"Interactive file tree navigation",
-			"Language distribution analysis",
-			"Directory structure overview",
-			"File type categorization",
-		],
+			"Interactive file tree with language breakdown and directory organization.",
+		stats: ["Tree navigation", "Language stats", "File types"],
 	},
 	{
 		icon: Network,
 		title: "Dependency Graph",
 		description:
-			"Understand how files connect through imports and exports. Powered by Tree-sitter AST parsing for accurate dependency mapping.",
-		benefits: [
-			"AST-powered import detection",
-			"Visual dependency relationships",
-			"Circular dependency detection",
-			"Module isolation analysis",
-		],
+			"AST-powered import detection for accurate dependency mapping.",
+		stats: ["100+ languages", "Circular detection", "Module analysis"],
 	},
 	{
 		icon: Target,
 		title: "Hotspot Detection",
 		description:
-			"Identify high-risk files based on complexity, dependency weights, and change frequency. Focus refactoring efforts where they matter most.",
-		benefits: [
-			"Risk score calculation",
-			"Churn analysis from git history",
-			"Complexity metrics",
-			"Prioritized refactoring targets",
-		],
+			"Identify high-risk files based on complexity and change frequency.",
+		stats: ["Risk scoring", "Churn analysis", "Refactoring targets"],
 	},
 	{
 		icon: BarChart3,
 		title: "Visual Analytics",
 		description:
-			"Rich charts and visualizations help you understand your codebase composition, language distribution, and code metrics at a glance.",
-		benefits: [
-			"Lines of code by language",
-			"File distribution charts",
-			"Dependency scatter plots",
-			"Interactive data exploration",
-		],
+			"Rich charts showing code composition and language distribution.",
+		stats: ["LOC charts", "Interactive plots", "Data exploration"],
 	},
 	{
 		icon: GitBranch,
-		title: "Contributor Insights",
-		description:
-			"See who contributes to your repository, their contribution patterns, and activity over time. Understand team dynamics and code ownership.",
-		benefits: [
-			"Top contributor ranking",
-			"Contribution timeline",
-			"Code ownership mapping",
-			"Activity patterns",
-		],
+		title: "Contributors",
+		description: "See contribution patterns and activity over time.",
+		stats: ["Top rankings", "Activity timeline", "Code ownership"],
 	},
 	{
 		icon: Code2,
 		title: "Code Preview",
-		description:
-			"View file contents with syntax highlighting powered by Shiki. Supports both public and private repositories securely.",
-		benefits: [
-			"Syntax highlighting for 100+ languages",
-			"Secure private repo access",
-			"Quick file navigation",
-			"Line-by-line viewing",
-		],
+		description: "Syntax highlighting powered by Shiki for 100+ languages.",
+		stats: ["Multi-language", "Private repos", "Quick navigation"],
 	},
 	{
 		icon: Zap,
-		title: "AI-Powered Insights",
-		description:
-			"Get intelligent summaries about your codebase structure, architecture patterns, and potential improvements powered by AI.",
-		benefits: [
-			"Architecture summaries",
-			"Code quality suggestions",
-			"Pattern recognition",
-			"Improvement recommendations",
-		],
+		title: "AI Insights",
+		description: "Intelligent summaries about architecture and code quality.",
+		stats: ["Architecture", "Patterns", "Recommendations"],
 	},
 	{
 		icon: Shield,
-		title: "Privacy-First Design",
-		description:
-			"We never store your source code. Repository contents are fetched on-demand and displayed temporarily in your browser only.",
-		benefits: [
-			"No code storage",
-			"On-demand fetching",
-			"Temporary browser cache only",
-			"GDPR compliant",
-		],
+		title: "Privacy First",
+		description: "No source code storage. On-demand fetching only.",
+		stats: ["No storage", "GDPR compliant", "Secure fetching"],
 	},
 ];
 
-export default function Home() {
+function formatNumber(num: number): string {
+	if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M+`;
+	if (num >= 1000) return `${(num / 1000).toFixed(0)}K+`;
+	return num.toString();
+}
+
+export default async function Home() {
+	const stats = await getGlobalStats();
+
 	return (
 		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background">
-			<div className="relative mx-auto max-w-6xl px-6 pt-16 pb-8 md:pt-24 md:pb-12">
+			{/* ===================== */}
+			{/* DECORATIVE: Top Accent Bar */}
+			{/* ===================== */}
+			<div className="fixed top-0 right-0 left-0 z-40 h-1 bg-gradient-to-r from-accent via-accent/80 to-accent" />
+
+			<div className="relative mx-auto max-w-7xl px-6 pt-24 pb-16 md:pt-32">
 				{/* ===================== */}
-				{/* SECTION 1: Hero + Search */}
+				{/* SECTION 1: Hero */}
 				{/* ===================== */}
-				<div className="mb-16">
-					<div className="grid gap-12 lg:grid-cols-[1fr_400px] lg:items-end">
-						<div>
-							<div className="mb-6 inline-flex items-center gap-2 border border-border px-3 py-1 font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-								<span className="relative flex h-1.5 w-1.5">
-									<span className="absolute inline-flex h-full w-full animate-ping bg-accent opacity-75" />
-									<span className="relative inline-flex h-1.5 w-1.5 bg-accent" />
-								</span>
-								<span>Free GitHub Repository Analyzer</span>
-							</div>
-							<h1 className="font-(family-name:--font-display) text-6xl text-foreground tracking-tight md:text-7xl lg:text-[5.5rem]">
-								Repository
-								<br />
-								Code Intelligence
-							</h1>
-							<p className="mt-6 max-w-lg font-sans text-lg text-muted-foreground leading-relaxed">
-								Free GitHub repository analyzer. Deep structural analysis -
-								visualize file structure, map dependencies, find code hotspots,
-								and get AI-powered architecture insights.
-							</p>
+				<div className="mb-24 md:mb-32">
+					<div className="mx-auto max-w-4xl text-center">
+						{/* Eyebrow */}
+						<div className="mb-6 inline-flex items-center gap-3 border border-border/60 bg-card/40 px-4 py-2 backdrop-blur-sm">
+							<span className="relative flex h-2 w-2">
+								<span className="absolute inline-flex h-full w-full animate-ping bg-accent opacity-75" />
+								<span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+							</span>
+							<span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.2em]">
+								Free GitHub Analyzer
+							</span>
 						</div>
 
-						{/* Input Form - Client Island */}
-						<Suspense
-							fallback={
-								<div className="lg:pb-2">
-									<div className="flex items-center border border-foreground/20 bg-card/50">
-										<Skeleton className="h-12 flex-1" />
-									</div>
-								</div>
-							}
-						>
+						{/* Headline - Dramatic Typography */}
+						<h1 className="font-(family-name:--font-display) mb-8 text-5xl text-foreground leading-[0.95] md:text-7xl lg:text-[5.5rem]">
+							<span className="block">Repository</span>
+							<span className="block text-accent">Intelligence</span>
+						</h1>
+
+						{/* Subheadline */}
+						<p className="mx-auto mb-12 max-w-2xl font-sans text-lg text-muted-foreground leading-relaxed md:text-xl">
+							Deep structural analysis for any GitHub repository. Visualize file
+							structures, map dependencies, find code hotspots, and uncover
+							architecture patterns.
+						</p>
+
+						{/* Search Form - Prominent */}
+						<div className="mx-auto max-w-2xl">
 							<SearchForm />
-						</Suspense>
+						</div>
+					</div>
+
+					{/* Decorative measurement lines */}
+					<div className="mt-16 flex justify-center">
+						<div className="flex items-center gap-8">
+							<div className="h-px w-16 bg-border" />
+							<span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest">
+								No signup required
+							</span>
+							<div className="h-px w-16 bg-border" />
+						</div>
 					</div>
 				</div>
 
-				{/* Accent Line */}
-				<div className="mb-16">
-					<div className="line-rule-accent" />
-				</div>
-
 				{/* ===================== */}
-				{/* SECTION 2: How It Works */}
+				{/* SECTION 2: How It Works - Horizontal Flow */}
 				{/* ===================== */}
-				<div className="mb-16">
-					<div className="mb-8 flex items-center gap-3">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+				<div className="mb-24">
+					<div className="mb-10 flex items-center gap-4">
+						<span className="shrink-0 font-mono text-[11px] text-accent uppercase tracking-[0.2em]">
 							How It Works
 						</span>
-						<div className="line-rule flex-1" />
+						<div className="h-px flex-1 bg-border" />
 					</div>
-					<div className="grid gap-0 md:grid-cols-2 lg:grid-cols-4">
+
+					<div className="relative grid grid-cols-1 gap-0 md:grid-cols-4">
+						{/* Connector line for desktop */}
+						<div
+							className="absolute top-8 left-[12.5%] hidden h-px w-[75%] md:block"
+							style={{
+								background:
+									"repeating-linear-gradient(90deg, var(--color-border) 0, var(--color-border) 8px, transparent 8px, transparent 16px)",
+							}}
+						/>
+
 						{STEPS.map((step, i) => (
 							<div
-								className="group relative border-border border-r p-6 last:border-r-0"
+								className="group relative border-border border-r border-b p-6 md:border-r md:border-b-0 md:last:border-r-0"
 								key={step.num}
 							>
-								<div className="mb-4 flex items-center gap-3">
-									<div className="flex h-8 w-8 items-center justify-center border border-border bg-secondary">
-										<step.icon className="h-4 w-4 text-foreground" />
-									</div>
-									<span className="font-mono text-muted-foreground text-xs">
-										Step {step.num}
-									</span>
+								{/* Step number - Large decorative */}
+								<div className="font-(family-name:--font-display) mb-5 text-4xl text-border/40 md:text-5xl">
+									{step.num}
 								</div>
-								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-lg">
+
+								{/* Icon */}
+								<div className="mb-4 flex h-10 w-10 items-center justify-center border border-accent/30 bg-accent/5">
+									<step.icon className="h-5 w-5 text-accent" />
+								</div>
+
+								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-xl">
 									{step.title}
 								</h3>
 								<p className="font-sans text-muted-foreground text-sm leading-relaxed">
 									{step.description}
 								</p>
+
+								{/* Arrow connector for mobile */}
 								{i < STEPS.length - 1 && (
-									<ArrowRight className="absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 text-border lg:hidden" />
+									<ArrowRight className="absolute right-4 bottom-4 h-4 w-4 text-border md:hidden" />
 								)}
 							</div>
 						))}
@@ -308,115 +290,111 @@ export default function Home() {
 				</div>
 
 				{/* ===================== */}
-				{/* SECTION 3: Features */}
+				{/* SECTION 3: Features - Grid with Accents */}
 				{/* ===================== */}
-				<div className="mb-16">
-					<div className="mb-8 flex items-center gap-3">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-							Deep Code Intelligence
+				<div className="mb-24">
+					<div className="mb-10 flex items-center gap-4">
+						<span className="shrink-0 font-mono text-[11px] text-accent uppercase tracking-[0.2em]">
+							Capabilities
 						</span>
-						<div className="line-rule flex-1" />
+						<div className="h-px flex-1 bg-border" />
 					</div>
-					<div className="grid gap-0 md:grid-cols-2">
+
+					<div className="grid grid-cols-1 gap-0 border border-border md:grid-cols-2 lg:grid-cols-4">
 						{FEATURES.map((feature, i) => (
 							<div
-								className="group border-border border-r border-b p-8 transition-colors hover:bg-secondary/30"
+								className="group border-border border-r border-b p-6 transition-all hover:bg-accent/[0.03] md:last:border-r-0 lg:nth-2:border-r-0"
 								key={feature.title}
 							>
-								<div className="mb-4 flex h-10 w-10 items-center justify-center border border-border bg-secondary">
-									<feature.icon className="h-5 w-5 text-muted-foreground" />
+								{/* Icon with accent background */}
+								<div className="mb-4 flex h-12 w-12 items-center justify-center border border-border bg-card">
+									<feature.icon className="h-6 w-6 text-accent" />
 								</div>
-								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-xl">
+
+								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-lg">
 									{feature.title}
 								</h3>
 								<p className="mb-4 font-sans text-muted-foreground text-sm leading-relaxed">
 									{feature.description}
 								</p>
-								<ul className="space-y-2">
-									{feature.benefits.map((benefit) => (
-										<li
-											className="flex items-center gap-2 font-mono text-muted-foreground text-xs"
-											key={benefit}
+
+								{/* Stats tags */}
+								<div className="flex flex-wrap gap-1.5">
+									{feature.stats.map((stat) => (
+										<span
+											className="border border-border/60 bg-muted/30 px-2 py-0.5 font-mono text-[9px] text-muted-foreground uppercase tracking-wider"
+											key={stat}
 										>
-											<span className="h-1 w-1 bg-accent" />
-											{benefit}
-										</li>
+											{stat}
+										</span>
 									))}
-								</ul>
+								</div>
 							</div>
 						))}
 					</div>
 				</div>
 
 				{/* ===================== */}
-				{/* SECTION 4: Recent Analyses */}
+				{/* SECTION 4: Stats / Social Proof */}
 				{/* ===================== */}
-				<div className="mb-16">
-					<Suspense
-						fallback={
-							<div>
-								<div className="mb-8 flex items-end justify-between">
-									<div>
-										<span className="font-(family-name:--font-display) mb-2 block text-3xl text-foreground">
-											Recent
-										</span>
-										<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-											Previously analyzed repositories
-										</span>
-									</div>
+				<div className="mb-24 border-border border-y bg-card/30 py-12">
+					<div className="grid grid-cols-2 gap-8 md:grid-cols-4">
+						{[
+							{
+								label: "Repositories Analyzed",
+								value: formatNumber(stats.repositoriesAnalyzed),
+							},
+							{ label: "Languages Supported", value: "100+" },
+							{ label: "Files Parsed", value: formatNumber(stats.totalFiles) },
+							{ label: "Lines of Code", value: formatNumber(stats.totalLines) },
+						].map((stat) => (
+							<div className="text-center" key={stat.label}>
+								<div className="font-(family-name:--font-display) mb-1 text-4xl text-accent md:text-5xl">
+									{stat.value}
 								</div>
-								<div className="space-y-0">
-									{[1, 2, 3, 4].map((n) => (
-										<div
-											className="border-border border-b py-5"
-											key={`skeleton-${n}`}
-										>
-											<Skeleton className="mb-2 h-5 w-64" />
-											<Skeleton className="h-3 w-32" />
-										</div>
-									))}
+								<div className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+									{stat.label}
 								</div>
 							</div>
-						}
-					>
-						<RecentAnalyses />
-					</Suspense>
+						))}
+					</div>
 				</div>
 
 				{/* ===================== */}
 				{/* SECTION 5: FAQ */}
 				{/* ===================== */}
 				<div className="mb-16">
-					<div className="mb-8 flex items-center gap-3">
-						<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-							FAQ
+					<div className="mb-10 flex items-center gap-4">
+						<span className="shrink-0 font-mono text-[11px] text-accent uppercase tracking-[0.2em]">
+							Frequently Asked
 						</span>
-						<div className="line-rule flex-1" />
+						<div className="h-px flex-1 bg-border" />
 					</div>
-					<div className="grid gap-0 md:grid-cols-2">
+
+					<div className="grid grid-cols-1 gap-0 border border-border md:grid-cols-2">
 						{[
 							{
-								q: "How do I analyze a GitHub repository?",
-								a: "Simply paste any GitHub repository URL into the search box. Our analyzer will parse the repo structure, build dependency graphs, and identify hotspots.",
+								q: "How do I analyze a repository?",
+								a: "Paste any GitHub URL into the search box. We'll parse the structure, build dependency graphs, and identify hotspots automatically.",
 							},
 							{
 								q: "What is a code hotspot?",
-								a: "A code hotspot is a file identified as high-risk based on complexity metrics, dependency weights, and change frequency. These files typically need the most attention during refactoring.",
+								a: "Files identified as high-risk based on complexity, dependency weights, and change frequency. These need the most attention during refactoring.",
 							},
 							{
-								q: "Does this work with private repositories?",
-								a: "Yes! Connect your GitHub account via OAuth to analyze private repositories. Your code remains secure - we only fetch content on-demand.",
+								q: "Does it work with private repos?",
+								a: "Yes. Connect your GitHub account to analyze private repositories. Your code remains secure with on-demand fetching.",
 							},
 							{
 								q: "How does dependency analysis work?",
-								a: "We use Tree-sitter AST parsing to generate precise syntax trees for every file, enabling accurate import/dependency detection across 100+ languages.",
+								a: "We use Tree-sitter AST parsing for precise syntax trees, enabling accurate import detection across 100+ programming languages.",
 							},
-						].map((faq) => (
+						].map((faq, i) => (
 							<div
-								className="faq-card border-border border-b p-6 md:border-r-[1px]"
+								className="group border-border border-b p-6 md:border-r-[1px] md:nth-2:border-r-0 md:border-b-0 lg:nth-2:border-r lg:nth-last-child(-n+2):border-b-0"
 								key={faq.q}
 							>
-								<h3 className="font-(family-name:--font-display) mb-2 text-foreground text-lg">
+								<h3 className="font-(family-name:--font-display) mb-3 text-foreground text-lg">
 									{faq.q}
 								</h3>
 								<p className="font-sans text-muted-foreground text-sm leading-relaxed">
@@ -428,32 +406,37 @@ export default function Home() {
 				</div>
 
 				{/* ===================== */}
-				{/* CTA Banner */}
+				{/* SECTION 6: CTA */}
 				{/* ===================== */}
-				<div className="mb-16 border border-border bg-card/50 p-8 text-center">
-					<h2 className="font-(family-name:--font-display) mb-2 text-2xl text-foreground">
-						Ready to analyze your codebase?
-					</h2>
-					<p className="mb-6 font-sans text-muted-foreground text-sm">
-						Paste a GitHub URL above to get started. Free, no signup required.
-					</p>
-					<div className="flex items-center justify-center gap-4">
-						<a
-							className="flex items-center gap-2 border border-foreground bg-foreground px-6 py-2.5 font-mono text-background text-xs uppercase tracking-wider transition-colors hover:bg-foreground/90"
-							href="/"
-						>
-							<Search className="h-3 w-3" />
-							<span>Analyze Repository</span>
-						</a>
-						<a
-							className="flex items-center gap-2 border border-border px-6 py-2.5 font-mono text-foreground text-xs uppercase tracking-wider transition-colors hover:bg-secondary"
-							href="https://github.com/Its-Satyajit/git-insights-analyzer"
-							rel="noopener noreferrer"
-							target="_blank"
-						>
-							<SiGithub className="h-3 w-3" />
-							<span>View Source</span>
-						</a>
+				<div className="mb-16 border border-accent/30 bg-accent/[0.02] p-8 md:p-12">
+					<div className="flex flex-col items-center gap-8 md:flex-row md:justify-between">
+						<div className="text-center md:text-left">
+							<h2 className="font-(family-name:--font-display) mb-2 text-2xl text-foreground md:text-3xl">
+								Ready to understand your codebase?
+							</h2>
+							<p className="font-sans text-muted-foreground">
+								Paste a GitHub URL above to begin. Free, instant, no signup.
+							</p>
+						</div>
+
+						<div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+							<a
+								className="flex items-center justify-center gap-2 border border-accent bg-accent px-8 py-3 font-mono text-sm text-white uppercase tracking-wider transition-all hover:bg-accent/90 hover:shadow-accent/20 hover:shadow-lg"
+								href="/"
+							>
+								<Zap className="h-4 w-4" />
+								<span>Analyze Now</span>
+							</a>
+							<a
+								className="flex items-center justify-center gap-2 border border-border bg-card px-8 py-3 font-mono text-foreground text-sm uppercase tracking-wider transition-all hover:bg-secondary"
+								href="https://github.com/Its-Satyajit/git-insights-analyzer"
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								<SiGithub className="h-4 w-4" />
+								<span>Source</span>
+							</a>
+						</div>
 					</div>
 				</div>
 			</div>
