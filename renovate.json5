@@ -9,8 +9,7 @@
   "packageRules": [
     {
       "matchUpdateTypes": ["major"],
-      "automerge": false,
-      "requireStatusChecks": true
+      "automerge": false
     },
     {
       "matchPackagePatterns": ["^@types/", "^@testing-library/"],
@@ -29,7 +28,7 @@
   "labels": ["dependencies", "renovate"],
   "rangeStrategy": "bump",
   "prCreation": "immediate",
-  "minimumReleaseAge": 3,
+  "minimumReleaseAge": "3d",
   "vulnerabilityAlerts": {
     "labels": ["security"]
   }
