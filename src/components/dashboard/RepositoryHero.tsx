@@ -141,13 +141,13 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 						{/* Name and description */}
 						<div className="min-w-0 flex-1">
 							<div className="mb-1 flex items-center gap-2">
-								<span className="font-mono text-muted-foreground text-sm">
-									{owner}
-								</span>
-								<span className="text-border">/</span>
-								<span className="font-(family-name:--font-display) text-foreground text-xl">
-									{name}
-								</span>
+								<h1 className="font-(family-name:--font-display) text-2xl text-foreground tracking-tight md:text-3xl">
+									<span className="font-mono text-muted-foreground">
+										{owner}
+									</span>
+									<span className="text-border">/</span>
+									<span>{name}</span>
+								</h1>
 								{isPrivate && (
 									<span className="flex items-center gap-1 border border-border px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground uppercase">
 										<Lock className="h-2.5 w-2.5" />

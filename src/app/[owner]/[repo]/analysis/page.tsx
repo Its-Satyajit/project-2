@@ -100,7 +100,7 @@ async function AnalysisContent({
 	}
 
 	return (
-		<>
+		<div className="mx-auto max-w-7xl px-6">
 			<AnalysisPageHeader owner={owner} repo={repo} />
 			<AnalysisPageClient
 				owner={owner}
@@ -108,7 +108,7 @@ async function AnalysisContent({
 				repoId={repoData.id}
 				showHeader={false}
 			/>
-		</>
+		</div>
 	);
 }
 
