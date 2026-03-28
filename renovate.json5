@@ -8,20 +8,18 @@
   ],
   "packageRules": [
     {
-      "matchPackagePatterns": ["*"],
       "matchUpdateTypes": ["major"],
       "automerge": false,
       "requireStatusChecks": true
     },
     {
-      "matchPackagePatterns": ["@types/*", "@testing-library/*"],
-      "automerge": true,
-      "minor": {
-        "automerge": true
-      },
-      "patch": {
-        "automerge": true
-      }
+      "matchPackagePatterns": ["^@types/", "^@testing-library/"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "extends": ["schedule:weekly"]
     }
   ],
   "prHourlyLimit": 4,
@@ -39,11 +37,5 @@
   "stabilityDays": 3,
   "vulnerabilityAlerts": {
     "labels": ["security"]
-  },
-  "packageRules": [
-    {
-      "matchDepTypes": ["devDependencies"],
-      "extends": ["schedule:weekly"]
-    }
-  ]
+  }
 }
