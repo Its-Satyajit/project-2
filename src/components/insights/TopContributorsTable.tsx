@@ -3,6 +3,7 @@
 import { GitBranch, Users } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
+import { useState } from "react";
 
 interface TopContributorsTableProps {
 	contributors: Array<{
@@ -24,13 +25,28 @@ function formatNumber(num: number): string {
 export function TopContributorsTable({
 	contributors,
 }: TopContributorsTableProps) {
+	const [showBots, setShowBots] = useState(false);
+
+	const filteredContributors = contributors.filter(
+		(c) => showBots || !c.githubLogin.toLowerCase().includes("[bot]"),
+	);
+
 	return (
 		<div className="p-6">
-			<div className="mb-6 flex items-center gap-2">
-				<Users className="h-4 w-4 text-muted-foreground" />
-				<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-					Top Contributors
-				</span>
+			<div className="mb-6 flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<Users className="h-4 w-4 text-muted-foreground" />
+					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+						Top Contributors
+					</span>
+				</div>
+				<button
+					className="font-mono text-[10px] text-muted-foreground underline transition-colors hover:text-foreground"
+					onClick={() => setShowBots(!showBots)}
+					type="button"
+				>
+					{showBots ? "Hide bots" : "Show bots"}
+				</button>
 			</div>
 
 			<div className="space-y-0">
@@ -44,7 +60,7 @@ export function TopContributorsTable({
 				</div>
 
 				{/* Rows */}
-				{contributors.map((contributor, index) => (
+				{filteredContributors.map((contributor, index) => (
 					<motion.div
 						animate={{ opacity: 1, x: 0 }}
 						className="flex items-center border-border border-b py-3 transition-colors last:border-b-0 hover:bg-muted/20"

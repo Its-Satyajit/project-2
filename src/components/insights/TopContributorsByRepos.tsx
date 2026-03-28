@@ -3,6 +3,7 @@
 import { GitPullRequest, Users } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
+import { useState } from "react";
 
 interface TopContributorsByReposProps {
 	contributors: Array<{
@@ -23,19 +24,34 @@ function formatNumber(num: number): string {
 export function TopContributorsByRepos({
 	contributors,
 }: TopContributorsByReposProps) {
-	const maxRepos = Math.max(...contributors.map((c) => c.repoCount), 1);
+	const [showBots, setShowBots] = useState(false);
+
+	const filteredContributors = contributors
+		.filter((c) => showBots || !c.githubLogin.toLowerCase().includes("[bot]"))
+		.slice(0, 15);
+
+	const maxRepos = Math.max(...filteredContributors.map((c) => c.repoCount), 1);
 
 	return (
 		<div className="p-6">
-			<div className="mb-6 flex items-center gap-2">
-				<Users className="h-4 w-4 text-muted-foreground" />
-				<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-					Most Active Across Repos
-				</span>
+			<div className="mb-6 flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<Users className="h-4 w-4 text-muted-foreground" />
+					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+						Most Active Across Repos
+					</span>
+				</div>
+				<button
+					className="font-mono text-[10px] text-muted-foreground underline transition-colors hover:text-foreground"
+					onClick={() => setShowBots(!showBots)}
+					type="button"
+				>
+					{showBots ? "Hide bots" : "Show bots"}
+				</button>
 			</div>
 
 			<div className="space-y-3">
-				{contributors.slice(0, 8).map((contributor, index) => {
+				{filteredContributors.map((contributor, index) => {
 					const percentage = (contributor.repoCount / maxRepos) * 100;
 					return (
 						<motion.div
@@ -87,7 +103,7 @@ export function TopContributorsByRepos({
 				<span className="mb-3 block font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
 					Repo Distribution
 				</span>
-				{contributors.slice(0, 5).map((contributor, index) => {
+				{filteredContributors.slice(0, 5).map((contributor, index) => {
 					const percentage = (contributor.repoCount / maxRepos) * 100;
 					return (
 						<motion.div
