@@ -210,26 +210,26 @@ export async function getLicenseDistribution(): Promise<
 }
 
 /**
- * Get growth timeline - repos added by month
+ * Get growth timeline - repos added by day
  */
 export async function getGrowthTimeline(): Promise<
 	Array<{
-		month: string;
+		date: string;
 		count: number;
 	}>
 > {
 	const results = await db
 		.select({
-			month: sql<string>`TO_CHAR(${repositories.createdAt}, 'YYYY-MM')`,
+			date: sql<string>`TO_CHAR(${repositories.createdAt}, 'YYYY-MM-DD')`,
 			count: count(),
 		})
 		.from(repositories)
 		.where(eq(repositories.analysisStatus, "complete"))
-		.groupBy(sql`TO_CHAR(${repositories.createdAt}, 'YYYY-MM')`)
-		.orderBy(sql`TO_CHAR(${repositories.createdAt}, 'YYYY-MM')`);
+		.groupBy(sql`TO_CHAR(${repositories.createdAt}, 'YYYY-MM-DD')`)
+		.orderBy(sql`TO_CHAR(${repositories.createdAt}, 'YYYY-MM-DD')`);
 
 	return results.map((r) => ({
-		month: r.month,
+		date: r.date,
 		count: Number(r.count) || 0,
 	}));
 }

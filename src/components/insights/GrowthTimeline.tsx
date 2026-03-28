@@ -2,6 +2,7 @@
 
 import { TrendingUp } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
 import { Area, AreaChart, XAxis, YAxis } from "recharts";
 import {
 	ChartContainer,
@@ -11,19 +12,66 @@ import {
 
 interface GrowthTimelineProps {
 	data: Array<{
-		month: string;
+		date: string;
 		count: number;
 	}>;
 }
 
+type TimeScale = "daily" | "weekly" | "monthly";
+
+function aggregateData(
+	data: Array<{ date: string; count: number }>,
+	scale: TimeScale,
+) {
+	if (scale === "daily") return data;
+
+	const grouped = new Map<string, number>();
+
+	data.forEach((item) => {
+		const d = new Date(item.date);
+		let key: string;
+		if (scale === "weekly") {
+			const weekStart = new Date(d);
+			weekStart.setDate(d.getDate() - d.getDay());
+			key =
+				weekStart.toISOString().split("T")[0] ??
+				weekStart.toISOString().slice(0, 10);
+		} else {
+			key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+		}
+		grouped.set(key, (grouped.get(key) || 0) + item.count);
+	});
+
+	return Array.from(grouped.entries())
+		.map(([date, count]) => ({ date, count }))
+		.sort((a, b) => a.date.localeCompare(b.date));
+}
+
 export function GrowthTimeline({ data }: GrowthTimelineProps) {
-	const chartData = data.map((item) => ({
-		...item,
-		label: new Date(`${item.month}-01`).toLocaleDateString("en-US", {
-			month: "short",
-			year: "2-digit",
-		}),
-	}));
+	const [timeScale, setTimeScale] = useState<TimeScale>("daily");
+	const [limit, setLimit] = useState(50);
+
+	const aggregatedData = aggregateData(data, timeScale);
+	const displayData =
+		aggregatedData.length > limit
+			? aggregatedData.slice(-limit)
+			: aggregatedData;
+
+	const chartData = displayData.map((item) => {
+		const d = new Date(item.date);
+		let label: string;
+		if (timeScale === "daily") {
+			label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+		} else if (timeScale === "weekly") {
+			label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+		} else {
+			label = d.toLocaleDateString("en-US", {
+				month: "short",
+				year: "2-digit",
+			});
+		}
+		return { ...item, label };
+	});
 
 	const chartConfig = {
 		count: {
@@ -34,11 +82,42 @@ export function GrowthTimeline({ data }: GrowthTimelineProps) {
 
 	return (
 		<div className="p-6">
-			<div className="mb-6 flex items-center gap-2">
-				<TrendingUp className="h-4 w-4 text-muted-foreground" />
-				<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-					Growth Timeline
-				</span>
+			<div className="mb-6 flex items-center justify-between">
+				<div className="flex items-center gap-2">
+					<TrendingUp className="h-4 w-4 text-muted-foreground" />
+					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
+						Growth Timeline
+					</span>
+				</div>
+				<div className="flex items-center gap-3">
+					<div className="flex items-center gap-1">
+						{(["daily", "weekly", "monthly"] as TimeScale[]).map((scale) => (
+							<button
+								className={`rounded px-2 py-1 font-mono text-[10px] transition-colors ${
+									timeScale === scale
+										? "bg-foreground text-background"
+										: "text-muted-foreground hover:text-foreground"
+								}`}
+								key={scale}
+								onClick={() => setTimeScale(scale)}
+								type="button"
+							>
+								{scale}
+							</button>
+						))}
+					</div>
+					<span className="text-muted-foreground">|</span>
+					<select
+						className="bg-transparent font-mono text-[10px] text-foreground focus:outline-none"
+						onChange={(e) => setLimit(Number(e.target.value))}
+						value={limit}
+					>
+						<option value={25}>25</option>
+						<option value={50}>50</option>
+						<option value={100}>100</option>
+						<option value={0}>All</option>
+					</select>
+				</div>
 			</div>
 
 			<motion.div

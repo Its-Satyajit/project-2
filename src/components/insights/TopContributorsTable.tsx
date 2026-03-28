@@ -3,7 +3,7 @@
 import { GitBranch, Users } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface TopContributorsTableProps {
 	contributors: Array<{
@@ -26,10 +26,26 @@ export function TopContributorsTable({
 	contributors,
 }: TopContributorsTableProps) {
 	const [showBots, setShowBots] = useState(false);
+	const [mounted, setMounted] = useState(false);
 
-	const filteredContributors = contributors.filter(
-		(c) => showBots || !c.githubLogin.toLowerCase().includes("[bot]"),
-	);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	const getDisplayedContributors = () => {
+		if (showBots) return contributors.slice(0, 20);
+		const filtered = contributors.filter(
+			(c) => !c.githubLogin.toLowerCase().includes("[bot]"),
+		);
+		const botCount = 20 - filtered.length;
+		if (botCount <= 0) return filtered.slice(0, 20);
+		const bots = contributors.filter((c) =>
+			c.githubLogin.toLowerCase().includes("[bot]"),
+		);
+		return [...filtered, ...bots.slice(0, botCount)].slice(0, 20);
+	};
+
+	const displayedContributors = getDisplayedContributors();
 
 	return (
 		<div className="p-6">
@@ -60,13 +76,11 @@ export function TopContributorsTable({
 				</div>
 
 				{/* Rows */}
-				{filteredContributors.map((contributor, index) => (
-					<motion.div
-						animate={{ opacity: 1, x: 0 }}
+				{displayedContributors.map((contributor, index) => (
+					<div
 						className="flex items-center border-border border-b py-3 transition-colors last:border-b-0 hover:bg-muted/20"
-						initial={{ opacity: 0, x: -10 }}
 						key={contributor.id}
-						transition={{ delay: index * 0.03, duration: 0.3 }}
+						style={mounted ? undefined : { opacity: 1 }}
 					>
 						<span className="w-8 text-center font-mono text-muted-foreground text-xs tabular-nums">
 							{index + 1}
@@ -95,7 +109,7 @@ export function TopContributorsTable({
 						<span className="hidden w-20 text-right font-mono text-muted-foreground text-sm tabular-nums sm:block">
 							{contributor.repoCount}
 						</span>
-					</motion.div>
+					</div>
 				))}
 			</div>
 		</div>

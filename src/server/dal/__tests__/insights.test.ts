@@ -202,7 +202,7 @@ describe("insights DAL", () => {
 			expect(Array.isArray(result)).toBe(true);
 		});
 
-		it("each item should have month and count", async () => {
+		it("each item should have date and count", async () => {
 			const result = await getGrowthTimeline();
 			expect(Array.isArray(result)).toBe(true);
 		});
