@@ -2,10 +2,9 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    "group:all",
-    "schedule:weekends",
-    "automerge:all"
+    "group:all"
   ],
+  "automerge": true,
   "packageRules": [
     {
       "matchUpdateTypes": ["major"],
@@ -18,7 +17,7 @@
     },
     {
       "matchDepTypes": ["devDependencies"],
-      "extends": ["schedule:weekly"]
+      "schedule": ["before 8am on Sunday"]
     }
   ],
   "prHourlyLimit": 4,
