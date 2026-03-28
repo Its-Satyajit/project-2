@@ -1,12 +1,9 @@
-import { useMemo, useState } from "react";
+import { useDebouncedValue } from "@tanstack/react-pacer";
 
 export function useDebounce<T>(value: T, delay: number): T {
-	const [debouncedValue, setDebouncedValue] = useState(value);
-
-	useMemo(() => {
-		const timer = setTimeout(() => setDebouncedValue(value), delay);
-		return () => clearTimeout(timer);
-	}, [value, delay]);
+	const [debouncedValue] = useDebouncedValue(value, {
+		wait: delay,
+	});
 
 	return debouncedValue;
 }

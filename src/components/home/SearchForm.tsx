@@ -2,6 +2,7 @@
 
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useForm } from "@tanstack/react-form-nextjs";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	ArrowRight,
@@ -21,6 +22,7 @@ import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { api } from "~/lib/eden";
+import { useDebounce } from "~/lib/useDebounce";
 
 interface RecentRepo {
 	id: string;
@@ -38,9 +40,10 @@ export function SearchForm() {
 	const queryClient = useQueryClient();
 	const [isOpen, setIsOpen] = useState(false);
 	const [filter, setFilter] = useState("");
+	const debouncedFilter = useDebounce(filter, 300);
 	const containerRef = useRef<HTMLDivElement>(null);
 
-	// Fetch recent analyzed repos
+	// Fetch recent analyzed repos (when not searching)
 	const { data: recentRepos = [] } = useQuery<RecentRepo[]>({
 		queryKey: ["recent-repos"],
 		queryFn: async () => {
@@ -48,17 +51,35 @@ export function SearchForm() {
 			if (res.error) return [];
 			return (res.data as RecentRepo[]) || [];
 		},
-		staleTime: 5 * 60 * 1000, // 5 minutes
+		staleTime: 5 * 60 * 1000,
+		enabled: !debouncedFilter,
 	});
 
-	// Filter repos based on input
-	const filteredRepos = filter
-		? recentRepos.filter(
-				(repo) =>
-					repo.fullName.toLowerCase().includes(filter.toLowerCase()) ||
-					repo.description?.toLowerCase().includes(filter.toLowerCase()),
-			)
-		: recentRepos;
+	// Search repos from DB when filtering (debounced)
+	const { data: searchResults = [] } = useQuery<RecentRepo[]>({
+		queryKey: ["repo-search", debouncedFilter],
+		queryFn: async () => {
+			if (debouncedFilter.length < 2) return [];
+			const baseUrl =
+				typeof window !== "undefined"
+					? window.location.origin
+					: "http://localhost:3000";
+			const res = await fetch(
+				`${baseUrl}/api/repos/search?q=${encodeURIComponent(debouncedFilter)}&limit=8`,
+			);
+			if (!res.ok) return [];
+			return (await res.json()) as RecentRepo[];
+		},
+		staleTime: 60 * 1000,
+		enabled: debouncedFilter.length >= 2,
+	});
+
+	// Use search results when filtering, otherwise recent repos
+	const displayedRepos =
+		debouncedFilter.length >= 2 ? searchResults : recentRepos.slice(0, 8);
+
+	const hasMoreResults =
+		debouncedFilter.length >= 2 && searchResults.length >= 8;
 
 	// Close dropdown when clicking outside
 	useEffect(() => {
@@ -188,16 +209,18 @@ export function SearchForm() {
 					</form.Subscribe>
 				</div>
 
-				{/* Dropdown: Recent Analyzed Repos */}
-				{isOpen && filteredRepos.length > 0 && (
+				{/* Dropdown: Recent Analyzed Repos / Search Results */}
+				{isOpen && displayedRepos.length > 0 && (
 					<div className="absolute top-full right-0 left-0 z-50 mt-2 border border-border bg-background shadow-xl">
 						<div className="border-border border-b px-5 py-3">
 							<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-								Recently Analyzed
+								{debouncedFilter.length >= 2
+									? "Search Results"
+									: "Recently Analyzed"}
 							</span>
 						</div>
 						<div className="max-h-[400px] overflow-y-auto">
-							{filteredRepos.map((repo) => (
+							{displayedRepos.map((repo: RecentRepo) => (
 								<Link
 									className="group flex items-center justify-between border-border border-b px-5 py-4 transition-colors last:border-b-0 hover:bg-secondary/30"
 									href={`/${repo.owner}/${repo.name}`}
@@ -243,11 +266,18 @@ export function SearchForm() {
 								</Link>
 							))}
 						</div>
-						{recentRepos.length > 8 && !filter && (
+						{(recentRepos.length >= 8 || hasMoreResults) && (
 							<div className="border-border border-t bg-muted/20 px-5 py-2.5">
-								<span className="font-mono text-[10px] text-muted-foreground">
-									Showing {filteredRepos.length} of {recentRepos.length} repos
-								</span>
+								{hasMoreResults ? (
+									<span className="font-mono text-[10px] text-muted-foreground">
+										Showing {displayedRepos.length} results. Press Enter to
+										analyze "{debouncedFilter}"
+									</span>
+								) : (
+									<span className="font-mono text-[10px] text-muted-foreground">
+										Recently analyzed
+									</span>
+								)}
 							</div>
 						)}
 					</div>

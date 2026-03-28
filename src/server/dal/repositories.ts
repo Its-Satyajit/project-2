@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
 import type { Static } from "elysia";
 import type { dbSchema } from "../api/dbSchema";
 import { db } from "../db";
@@ -122,4 +122,44 @@ export async function getGlobalStats(): Promise<GlobalStats> {
 		totalLines: analysisStats[0]?.totalLines ?? 0,
 		contributors: contributorCount[0]?.count ?? 0,
 	};
+}
+
+export async function searchRepositories(query: string, limit: number = 10) {
+	const searchPattern = `%${query}%`;
+	const result = await db.query.repositories.findMany({
+		where: (t) =>
+			and(
+				eq(t.analysisStatus, "complete"),
+				or(
+					ilike(t.fullName, searchPattern),
+					ilike(t.name, searchPattern),
+					ilike(t.owner, searchPattern),
+					t.description ? ilike(t.description, searchPattern) : undefined,
+				),
+			),
+		orderBy: (t, { desc }) => [desc(t.stars)],
+		limit,
+		columns: {
+			id: true,
+			owner: true,
+			name: true,
+			fullName: true,
+			description: true,
+			stars: true,
+			forks: true,
+			primaryLanguage: true,
+			analysisStatus: true,
+			avatarUrl: true,
+		},
+		with: {
+			contributors: {
+				limit: 1000,
+				columns: { contributions: true },
+			},
+		},
+	});
+	return result.map((repo) => ({
+		...repo,
+		contributorCount: repo.contributors?.length ?? 0,
+	}));
 }
