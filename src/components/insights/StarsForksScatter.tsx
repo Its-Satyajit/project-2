@@ -1,7 +1,15 @@
 "use client";
 
-import { ScatterChart as ScatterIcon } from "lucide-react";
-import { motion } from "motion/react";
+import {
+	Check,
+	ChevronDown,
+	Filter,
+	ScatterChart as ScatterIcon,
+	Search,
+	X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { Scatter, ScatterChart, XAxis, YAxis, ZAxis } from "recharts";
 import {
 	ChartContainer,
@@ -40,13 +48,54 @@ function getColor(language: string | null): string {
 }
 
 export function StarsForksScatter({ data }: StarsForksScatterProps) {
+	const [isOpen, setIsOpen] = useState(false);
+	const [search, setSearch] = useState("");
+	const [selected, setSelected] = useState<Set<string>>(new Set());
+	const dropdownRef = useRef<HTMLDivElement>(null);
+
 	const chartConfig = {} satisfies Record<
 		string,
 		{ label: string; color?: string }
 	>;
 
-	// Get unique languages for legend
-	const languages = [...new Set(data.map((d) => d.language).filter(Boolean))];
+	const searchableData = data.filter(
+		(d) =>
+			!search ||
+			d.name.toLowerCase().includes(search.toLowerCase()) ||
+			d.owner.toLowerCase().includes(search.toLowerCase()),
+	);
+
+	const filteredData =
+		selected.size > 0
+			? data.filter((d) => selected.has(`${d.owner}/${d.name}`))
+			: searchableData;
+
+	const languages = [
+		...new Set(filteredData.map((d) => d.language).filter(Boolean)),
+	];
+
+	const toggleSelect = (repo: string) => {
+		const newSelected = new Set(selected);
+		if (newSelected.has(repo)) {
+			newSelected.delete(repo);
+		} else {
+			newSelected.add(repo);
+		}
+		setSelected(newSelected);
+	};
+
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(event.target as Node)
+			) {
+				setIsOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
 
 	return (
 		<div className="p-6">
@@ -56,10 +105,129 @@ export function StarsForksScatter({ data }: StarsForksScatterProps) {
 					<span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
 						Forks vs Stars
 					</span>
+					{selected.size > 0 && (
+						<span className="rounded-full bg-accent/10 px-2 py-0.5 font-mono text-[10px] text-accent">
+							{selected.size} selected
+						</span>
+					)}
 				</div>
-				<span className="font-mono text-muted-foreground text-xs">
-					Top {data.length} Repos
-				</span>
+
+				<div className="relative" ref={dropdownRef}>
+					<button
+						className={`flex items-center gap-2 rounded-md border border-border bg-card px-3 py-1.5 font-mono text-xs transition-all hover:border-accent/50 ${
+							isOpen ? "border-accent ring-1 ring-accent/20" : ""
+						}`}
+						onClick={() => setIsOpen(!isOpen)}
+						type="button"
+					>
+						<Filter className="h-3 w-3 text-muted-foreground" />
+						<span className="text-foreground">
+							{selected.size > 0 ? `${selected.size} repos` : "Filter repos"}
+						</span>
+						<ChevronDown
+							className={`h-3 w-3 text-muted-foreground transition-transform ${
+								isOpen ? "rotate-180" : ""
+							}`}
+						/>
+					</button>
+
+					<AnimatePresence>
+						{isOpen && (
+							<motion.div
+								animate={{ opacity: 1, y: 0 }}
+								className="absolute top-full right-0 z-50 mt-2 w-72 rounded-lg border border-border bg-card shadow-xl"
+								exit={{ opacity: 0, y: -8 }}
+								initial={{ opacity: 0, y: -8 }}
+								transition={{ duration: 0.15 }}
+							>
+								<div className="border-border border-b p-2">
+									<div className="relative">
+										<Search className="absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+										<input
+											autoFocus
+											className="w-full rounded-md border border-border bg-background py-2 pr-8 pl-9 font-mono text-foreground text-xs placeholder:text-muted-foreground focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent/20"
+											onChange={(e) => setSearch(e.target.value)}
+											placeholder="Search repositories..."
+											type="text"
+											value={search}
+										/>
+										{search && (
+											<button
+												className="absolute top-1/2 right-2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+												onClick={() => setSearch("")}
+												type="button"
+											>
+												<X className="h-3.5 w-3.5" />
+											</button>
+										)}
+									</div>
+								</div>
+
+								<div className="max-h-64 overflow-y-auto p-1">
+									{searchableData.length === 0 ? (
+										<div className="p-3 text-center font-mono text-muted-foreground text-xs">
+											No repos found
+										</div>
+									) : (
+										searchableData.slice(0, 15).map((item) => {
+											const repo = `${item.owner}/${item.name}`;
+											const isSelected = selected.has(repo);
+											return (
+												<button
+													className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors ${
+														isSelected ? "bg-accent/10" : "hover:bg-muted"
+													}`}
+													key={repo}
+													onClick={() => toggleSelect(repo)}
+													type="button"
+												>
+													<span
+														className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+															isSelected
+																? "border-accent bg-accent"
+																: "border-border"
+														}`}
+													>
+														{isSelected && (
+															<Check className="h-2.5 w-2.5 text-accent-foreground" />
+														)}
+													</span>
+													<div className="min-w-0 flex-1">
+														<span className="block truncate font-mono text-foreground text-xs">
+															{repo}
+														</span>
+														<span className="font-mono text-[10px] text-muted-foreground">
+															{item.language || "Unknown"}
+														</span>
+													</div>
+													<span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+														{item.stars.toLocaleString()} ★
+													</span>
+												</button>
+											);
+										})
+									)}
+								</div>
+
+								{selected.size > 0 && (
+									<div className="border-border border-t p-2">
+										<button
+											className="flex w-full items-center justify-center gap-2 rounded-md bg-muted py-2 font-mono text-foreground text-xs transition-colors hover:bg-muted/80"
+											onClick={() => {
+												setSelected(new Set());
+												setSearch("");
+											}}
+											type="button"
+										>
+											<X className="h-3 w-3" />
+											Clear selection
+										</button>
+									</div>
+								)}
+							</motion.div>
+						)}
+					</AnimatePresence>
+				</div>
 			</div>
 
 			<motion.div
@@ -90,21 +258,21 @@ export function StarsForksScatter({ data }: StarsForksScatterProps) {
 							<ChartTooltip
 								content={({ active, payload }) => {
 									if (active && payload?.length && payload[0]?.payload) {
-										const data = payload[0].payload;
+										const item = payload[0].payload;
 										return (
-											<div className="border border-border bg-card p-3 shadow-lg">
+											<div className="rounded-lg border border-border bg-card p-3 shadow-lg">
 												<p className="font-medium font-mono text-foreground text-xs">
-													{data.owner}/{data.name}
+													{item.owner}/{item.name}
 												</p>
 												<p className="mt-1 font-mono text-muted-foreground text-xs">
-													{data.stars.toLocaleString("en-US")} stars
+													{item.stars.toLocaleString("en-US")} stars
 												</p>
 												<p className="font-mono text-muted-foreground text-xs">
-													{data.forks.toLocaleString("en-US")} forks
+													{item.forks.toLocaleString("en-US")} forks
 												</p>
-												{data.language && (
+												{item.language && (
 													<p className="font-mono text-[10px] text-muted-foreground">
-														{data.language}
+														{item.language}
 													</p>
 												)}
 											</div>
@@ -114,7 +282,7 @@ export function StarsForksScatter({ data }: StarsForksScatterProps) {
 								}}
 								cursor={false}
 							/>
-							{data.map((item) => (
+							{filteredData.map((item) => (
 								<Scatter
 									data={[item]}
 									fill={getColor(item.language)}
@@ -127,7 +295,6 @@ export function StarsForksScatter({ data }: StarsForksScatterProps) {
 				</div>
 			</motion.div>
 
-			{/* Language Legend */}
 			<div className="mt-4 flex flex-wrap gap-3">
 				{languages.map((lang) => (
 					<span className="flex items-center gap-1.5" key={lang}>

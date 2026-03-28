@@ -85,8 +85,9 @@ const mockLicenses = [
 ];
 
 const mockTimeline = [
-	{ month: "2024-01", count: 5 },
-	{ month: "2024-02", count: 8 },
+	{ date: "2024-01-15", count: 5 },
+	{ date: "2024-01-16", count: 3 },
+	{ date: "2024-02-01", count: 8 },
 ];
 
 const mockStarDistribution = [

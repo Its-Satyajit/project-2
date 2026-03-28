@@ -1,9 +1,9 @@
 "use client";
 
-import { GitPullRequest, Users } from "lucide-react";
+import { GitBranch, Users } from "lucide-react";
 import { motion } from "motion/react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface TopContributorsByReposProps {
 	contributors: Array<{
@@ -25,12 +25,32 @@ export function TopContributorsByRepos({
 	contributors,
 }: TopContributorsByReposProps) {
 	const [showBots, setShowBots] = useState(false);
+	const [mounted, setMounted] = useState(false);
 
-	const filteredContributors = contributors
-		.filter((c) => showBots || !c.githubLogin.toLowerCase().includes("[bot]"))
-		.slice(0, 15);
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
-	const maxRepos = Math.max(...filteredContributors.map((c) => c.repoCount), 1);
+	const getDisplayedContributors = () => {
+		const max = 15;
+		if (showBots) return contributors.slice(0, max);
+		const filtered = contributors.filter(
+			(c) => !c.githubLogin.toLowerCase().includes("[bot]"),
+		);
+		if (filtered.length >= max) return filtered.slice(0, max);
+		const botCount = max - filtered.length;
+		const bots = contributors.filter((c) =>
+			c.githubLogin.toLowerCase().includes("[bot]"),
+		);
+		return [...filtered, ...bots.slice(0, botCount)];
+	};
+
+	const displayedContributors = getDisplayedContributors();
+
+	const maxRepos = Math.max(
+		...displayedContributors.map((c) => c.repoCount),
+		1,
+	);
 
 	return (
 		<div className="p-6">
@@ -51,15 +71,13 @@ export function TopContributorsByRepos({
 			</div>
 
 			<div className="space-y-3">
-				{filteredContributors.map((contributor, index) => {
+				{displayedContributors.map((contributor, index) => {
 					const percentage = (contributor.repoCount / maxRepos) * 100;
 					return (
-						<motion.div
-							animate={{ opacity: 1, x: 0 }}
+						<div
 							className="flex items-center gap-3"
-							initial={{ opacity: 0, x: -20 }}
 							key={contributor.githubLogin}
-							transition={{ delay: index * 0.04, duration: 0.3 }}
+							style={mounted ? undefined : { opacity: 1 }}
 						>
 							<span className="w-5 text-right font-mono text-muted-foreground text-xs tabular-nums">
 								{index + 1}
@@ -93,51 +111,43 @@ export function TopContributorsByRepos({
 									repos
 								</span>
 							</div>
-						</motion.div>
+						</div>
 					);
 				})}
 			</div>
 
-			{/* Visual bar representation */}
 			<div className="mt-6 border-border border-t pt-4">
 				<span className="mb-3 block font-mono text-[9px] text-muted-foreground uppercase tracking-widest">
 					Repo Distribution
 				</span>
-				{filteredContributors.slice(0, 5).map((contributor, index) => {
+				{displayedContributors.slice(0, 5).map((contributor, index) => {
 					const percentage = (contributor.repoCount / maxRepos) * 100;
 					return (
-						<motion.div
-							animate={{ opacity: 1 }}
+						<div
 							className="mb-2 flex items-center gap-2"
-							initial={{ opacity: 0 }}
 							key={`${contributor.githubLogin}-bar`}
-							transition={{ delay: 0.3 + index * 0.05, duration: 0.3 }}
+							style={mounted ? undefined : { opacity: 1 }}
 						>
 							<span className="w-20 truncate font-mono text-[10px] text-muted-foreground">
 								{contributor.githubLogin}
 							</span>
 							<div className="h-3 flex-1 bg-muted/30">
-								<motion.div
-									animate={{ width: `${percentage}%` }}
+								<div
 									className="h-full bg-accent"
-									initial={{ width: 0 }}
-									transition={{
-										delay: 0.4 + index * 0.05,
-										duration: 0.5,
-										ease: "easeOut",
-									}}
+									style={
+										mounted
+											? { width: `${percentage}%` }
+											: { width: `${percentage}%` }
+									}
 								/>
 							</div>
 							<span className="w-8 text-right font-mono text-[10px] text-muted-foreground tabular-nums">
 								{contributor.repoCount}
 							</span>
-						</motion.div>
+						</div>
 					);
 				})}
 			</div>
 		</div>
 	);
 }
-
-// Need to import GitBranch for fallback avatar
-import { GitBranch } from "lucide-react";
