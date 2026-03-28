@@ -80,7 +80,7 @@ export const EnhancedStatCards = React.memo(function EnhancedStatCards({
 		},
 		{
 			title: "Lines",
-			value: totalLines?.toLocaleString() ?? "0",
+			value: totalLines?.toLocaleString("en-US") ?? "0",
 			icon: HashIcon,
 		},
 		{
@@ -90,7 +90,7 @@ export const EnhancedStatCards = React.memo(function EnhancedStatCards({
 		},
 		{
 			title: "Contributors",
-			value: contributorCount?.toLocaleString() ?? "N/A",
+			value: contributorCount?.toLocaleString("en-US") ?? "N/A",
 			icon: Users,
 		},
 		{

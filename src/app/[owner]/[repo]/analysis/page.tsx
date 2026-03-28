@@ -1,65 +1,37 @@
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { env } from "~/env";
+import type { RepoStatus } from "~/hooks/useRepoStatus";
+import { api } from "~/lib/eden";
 import { getCachedRepoByPath } from "~/lib/server/data";
 import { AnalysisPageClient } from "./AnalysisPageClient";
-import { AnalysisPageHeader } from "./AnalysisPageHeader";
 
-export async function generateMetadata({
-	params,
-}: {
-	params: Promise<{ owner: string; repo: string }>;
-}): Promise<Metadata> {
+type Props = { params: Promise<{ owner: string; repo: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { owner, repo } = await params;
-	const title = `${owner}/${repo} Analysis — Analyze`;
-	const description = `Detailed code analysis for ${owner}/${repo}. Explore hotspots, complexity metrics, dependency analysis, and architectural insights.`;
-	const url = `${env.NEXT_PUBLIC_BASE_URL}/${owner}/${repo}/analysis`;
-
 	return {
-		title,
-		description,
-		alternates: {
-			canonical: url,
-		},
-		openGraph: {
-			type: "website",
-			locale: "en_US",
-			url,
-			siteName: "Analyze",
-			title,
-			description,
-			images: [
-				{
-					url: "/og-image.png",
-					width: 1200,
-					height: 630,
-					alt: `${owner}/${repo} Analysis`,
-				},
-			],
-		},
-		twitter: {
-			card: "summary_large_image",
-			title,
-			description,
-			images: ["/og-image.png"],
-		},
-		robots: {
-			index: true,
-			follow: true,
-			googleBot: {
-				index: true,
-				follow: true,
-				"max-video-preview": -1,
-				"max-image-preview": "large",
-				"max-snippet": -1,
-			},
-		},
+		title: `${owner}/${repo} Analysis — Analyze`,
+		description: `Detailed code analysis for ${owner}/${repo}.`,
 	};
 }
 
 interface AnalysisPageProps {
 	params: Promise<{ owner: string; repo: string }>;
+}
+
+async function getAnalysisStatus(repoId: string): Promise<RepoStatus | null> {
+	"use cache";
+	const res = await api.dashboard({ repoId }).status.get();
+	if (res.error || !res.data) return null;
+	return res.data as RepoStatus;
+}
+
+async function getFullRepoDetails(repoId: string) {
+	"use cache";
+	const res = await api.dashboard({ repoId }).get();
+	if (res.error || !res.data) return null;
+	return res.data;
 }
 
 async function AnalysisContent({
@@ -73,7 +45,7 @@ async function AnalysisContent({
 
 	if (!repoData) {
 		return (
-			<main className="blueprint-grid min-h-screen bg-background pt-14">
+			<main className="blueprint-grid min-h-screen bg-background">
 				<div className="flex min-h-screen flex-col items-center justify-center">
 					<div className="border border-border bg-card p-8 text-center">
 						<div className="mb-4 flex justify-center">
@@ -99,16 +71,46 @@ async function AnalysisContent({
 		);
 	}
 
+	const repoId = repoData.id;
+
 	return (
 		<div className="mx-auto max-w-7xl px-6">
-			<AnalysisPageHeader owner={owner} repo={repo} />
-			<AnalysisPageClient
-				owner={owner}
-				repo={repo}
-				repoId={repoData.id}
-				showHeader={false}
-			/>
+			<Suspense
+				fallback={
+					<div className="flex min-h-[200px] items-center justify-center">
+						<Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+					</div>
+				}
+			>
+				<AnalysisDataFetcher owner={owner} repo={repo} repoId={repoId} />
+			</Suspense>
 		</div>
+	);
+}
+
+async function AnalysisDataFetcher({
+	owner,
+	repo,
+	repoId,
+}: {
+	owner: string;
+	repo: string;
+	repoId: string;
+}) {
+	const [status, fullData] = await Promise.all([
+		getAnalysisStatus(repoId),
+		getFullRepoDetails(repoId),
+	]);
+
+	return (
+		<AnalysisPageClient
+			initialFullData={fullData ?? undefined}
+			initialStatus={status ?? undefined}
+			owner={owner}
+			repo={repo}
+			repoId={repoId}
+			showHeader={true}
+		/>
 	);
 }
 
@@ -118,7 +120,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
 	return (
 		<Suspense
 			fallback={
-				<main className="blueprint-grid min-h-screen bg-background pt-14">
+				<main className="blueprint-grid min-h-screen bg-background">
 					<div className="flex min-h-screen flex-col items-center justify-center">
 						<div className="flex flex-col items-center gap-6">
 							<Loader2 className="h-10 w-10 animate-spin text-foreground" />

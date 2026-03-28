@@ -99,6 +99,8 @@ const mono = IBM_Plex_Mono({
 	variable: "--font-mono",
 });
 
+import Breadcrumbs from "~/components/Breadcrumbs";
+import Footer from "~/components/Footer";
 import { ThemeProvider } from "~/components/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
 import { TooltipProvider } from "~/components/ui/tooltip";
@@ -135,18 +137,27 @@ export default function RootLayout({
 				strategy="afterInteractive"
 				type="application/ld+json"
 			/>
-			<body className="font-sans antialiased" suppressHydrationWarning>
-				<ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-					<QueryProvider>
-						<TooltipProvider>
-							<Suspense>
-								<Navigation />
-							</Suspense>
-							<main className="min-h-[calc(100vh-56px)]">{children}</main>
-						</TooltipProvider>
-						<Toaster />
-					</QueryProvider>
-				</ThemeProvider>
+			<body
+				className="flex min-h-screen flex-col font-sans antialiased"
+				suppressHydrationWarning
+			>
+				<Suspense>
+					<ThemeProvider>
+						<QueryProvider>
+							<TooltipProvider>
+								<Suspense>
+									<Navigation />
+								</Suspense>
+								<Suspense>
+									<Breadcrumbs />
+								</Suspense>
+								<main className="flex-1 pt-[88px]">{children}</main>
+								<Footer />
+							</TooltipProvider>
+							<Toaster />
+						</QueryProvider>
+					</ThemeProvider>
+				</Suspense>
 			</body>
 		</html>
 	);

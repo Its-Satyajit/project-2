@@ -50,27 +50,27 @@ export function DashboardHero({
 	const stats = [
 		{
 			label: "Stars",
-			value: repo.stars?.toLocaleString() ?? "0",
+			value: repo.stars?.toLocaleString("en-US") ?? "0",
 			icon: Star,
 		},
 		{
 			label: "Forks",
-			value: repo.forks?.toLocaleString() ?? "0",
+			value: repo.forks?.toLocaleString("en-US") ?? "0",
 			icon: GitFork,
 		},
 		{
 			label: "Contributors",
-			value: contributorCount?.toLocaleString() ?? "0",
+			value: contributorCount?.toLocaleString("en-US") ?? "0",
 			icon: Users,
 		},
 		{
 			label: "Files",
-			value: analysis?.totalFiles?.toLocaleString() ?? "0",
+			value: analysis?.totalFiles?.toLocaleString("en-US") ?? "0",
 			icon: FileCode,
 		},
 		{
 			label: "Lines",
-			value: analysis?.totalLines?.toLocaleString() ?? "0",
+			value: analysis?.totalLines?.toLocaleString("en-US") ?? "0",
 			icon: Database,
 		},
 	];

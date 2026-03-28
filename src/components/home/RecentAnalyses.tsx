@@ -1,25 +1,12 @@
-"use client";
-
-import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, GitFork, Star, Users } from "lucide-react";
-import { motion } from "motion/react";
 import Link from "next/link";
+import { getTopRepositories } from "~/lib/server/data";
 
-import { Skeleton } from "~/components/ui/skeleton";
-import { api } from "~/lib/eden";
-
-export function RecentAnalyses() {
-	const { data: topRepos, isLoading: isLoadingRepos } = useQuery({
-		queryKey: ["top-repos"],
-		queryFn: async () => {
-			const res = await api.repos.top.get({ query: { limit: 10 } });
-			if (res.error) throw new Error("Failed to fetch top repositories");
-			return res.data;
-		},
-	});
+export async function RecentAnalyses() {
+	const topRepos = await getTopRepositories(10);
 
 	return (
-		<motion.div>
+		<div>
 			<div className="mb-8 flex items-end justify-between">
 				<div>
 					<span className="font-(family-name:--font-display) mb-2 block text-3xl text-foreground">
@@ -34,23 +21,19 @@ export function RecentAnalyses() {
 				</span>
 			</div>
 
-			{isLoadingRepos ? (
-				<div className="space-y-0">
-					{[1, 2, 3, 4].map((n) => (
-						<div className="border-border border-b py-5" key={`skeleton-${n}`}>
-							<Skeleton className="mb-2 h-5 w-64" />
-							<Skeleton className="h-3 w-32" />
-						</div>
-					))}
+			{topRepos.length === 0 ? (
+				<div className="border-border border-t py-12 text-center">
+					<p className="font-mono text-muted-foreground text-sm uppercase tracking-wider">
+						No repositories analyzed yet
+					</p>
 				</div>
 			) : (
 				<div className="border-border border-t">
-					{topRepos?.map((repo, i) => (
-						<motion.a
+					{topRepos.map((repo, i) => (
+						<Link
 							className="group relative flex items-baseline justify-between border-border border-b py-5 transition-colors hover:bg-secondary/20"
 							href={`/${repo.owner}/${repo.name}`}
 							key={repo.id}
-							whileHover={{ x: 4 }}
 						>
 							<div className="flex-1">
 								<div className="mb-1 flex items-baseline gap-3">
@@ -74,14 +57,18 @@ export function RecentAnalyses() {
 								)}
 							</div>
 							<div className="my-auto ml-6 flex shrink-0 items-center gap-6">
-								<div className="flex items-center gap-1.5 font-mono text-muted-foreground text-xs tabular-nums">
-									<Star className="h-3 w-3" />
-									<span>{repo.stars?.toLocaleString()}</span>
-								</div>
-								<div className="flex items-center gap-1.5 font-mono text-muted-foreground text-xs tabular-nums">
-									<GitFork className="h-3 w-3" />
-									<span>{repo.forks?.toLocaleString()}</span>
-								</div>
+								{repo.stars != null && repo.stars > 0 && (
+									<div className="flex items-center gap-1.5 font-mono text-muted-foreground text-xs tabular-nums">
+										<Star className="h-3 w-3" />
+										<span>{repo.stars!.toLocaleString("en-US")}</span>
+									</div>
+								)}
+								{repo.forks != null && repo.forks > 0 && (
+									<div className="flex items-center gap-1.5 font-mono text-muted-foreground text-xs tabular-nums">
+										<GitFork className="h-3 w-3" />
+										<span>{repo.forks!.toLocaleString("en-US")}</span>
+									</div>
+								)}
 								{repo.contributorCount !== undefined &&
 									repo.contributorCount > 0 && (
 										<div className="hidden items-center gap-1.5 font-mono text-muted-foreground text-xs tabular-nums sm:flex">
@@ -91,10 +78,10 @@ export function RecentAnalyses() {
 									)}
 								<ArrowRight className="h-4 w-4 text-muted-foreground/0 transition-all group-hover:translate-x-1 group-hover:text-accent" />
 							</div>
-						</motion.a>
+						</Link>
 					))}
 				</div>
 			)}
-		</motion.div>
+		</div>
 	);
 }

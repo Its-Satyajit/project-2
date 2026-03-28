@@ -4,7 +4,6 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { GitBranch } from "lucide-react";
 import Image from "next/image";
 import type React from "react";
-import { useEffect, useState } from "react";
 
 interface Contributor {
 	id: string;
@@ -23,104 +22,60 @@ export function ContributorsList({
 	contributors,
 	parentRef,
 }: ContributorsListProps) {
-	const [columns, setColumns] = useState(3);
-	const CARD_MIN_WIDTH = 280;
-	const CARD_GAP = 16;
-
-	useEffect(() => {
-		if (!parentRef.current) return;
-
-		const observer = new ResizeObserver((entries) => {
-			if (!entries[0]) return;
-			const width = entries[0].contentRect.width;
-			const newColumns = Math.max(
-				1,
-				Math.floor((width + CARD_GAP) / (CARD_MIN_WIDTH + CARD_GAP)),
-			);
-			setColumns(newColumns);
-		});
-
-		observer.observe(parentRef.current);
-		return () => observer.disconnect();
-	}, [parentRef]);
-
-	const rowCount = Math.ceil(contributors.length / columns);
-
-	const rowVirtualizer = useVirtualizer({
-		count: rowCount,
+	const virtualizer = useVirtualizer({
+		count: contributors.length,
 		getScrollElement: () => parentRef.current,
-		estimateSize: () => 100, // Card height + gap
-		overscan: 5,
+		estimateSize: () => 56,
+		overscan: 10,
 	});
 
 	return (
 		<div
 			className="relative w-full"
 			style={{
-				height: `${rowVirtualizer.getTotalSize()}px`,
+				height: `${virtualizer.getTotalSize()}px`,
 			}}
 		>
-			{rowVirtualizer.getVirtualItems().map((virtualRow) => {
-				const startIndex = virtualRow.index * columns;
-				const rowContributors = contributors.slice(
-					startIndex,
-					startIndex + columns,
-				);
+			{virtualizer.getVirtualItems().map((virtualItem) => {
+				const contributor = contributors[virtualItem.index];
+				if (!contributor) return null;
 
 				return (
 					<div
-						className="absolute top-0 left-0 grid w-full gap-4"
-						key={virtualRow.key}
+						className="absolute top-0 left-0 flex w-full items-center gap-4 border-border border-b py-3 transition-colors last:border-b-0 hover:bg-muted/30"
+						key={contributor.id}
 						style={{
-							height: `${virtualRow.size}px`,
-							transform: `translateY(${virtualRow.start}px)`,
-							gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-							padding: "8px 4px",
+							height: `${virtualItem.size}px`,
+							transform: `translateY(${virtualItem.start}px)`,
 						}}
 					>
-						{rowContributors.map((contributor) => (
-							<div
-								className="flex h-full items-center gap-4 rounded-lg border border-border bg-muted/20 p-4 transition-colors hover:bg-muted/40"
-								key={contributor.id}
-							>
-								{contributor.avatarUrl ? (
-									<Image
-										alt={contributor.githubLogin}
-										className="rounded-full"
-										height={48}
-										src={contributor.avatarUrl}
-										width={48}
-									/>
-								) : (
-									<div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-										<GitBranch className="h-6 w-6 text-muted-foreground" />
-									</div>
-								)}
-								<div className="min-w-0 flex-1">
-									<p className="truncate font-medium font-mono">
-										{contributor.githubLogin}
-									</p>
-									{contributor.htmlUrl && (
-										<a
-											className="block truncate font-mono text-muted-foreground text-xs hover:underline"
-											href={contributor.htmlUrl}
-											rel="noopener noreferrer"
-											target="_blank"
-										>
-											{contributor.htmlUrl}
-										</a>
-									)}
-								</div>
-								<div className="text-right">
-									<p className="font-bold font-mono text-foreground text-lg">
-										{contributor.contributions}
-									</p>
-									<p className="font-mono text-muted-foreground text-xs">
-										contributions
-									</p>
-								</div>
+						<span className="w-8 text-right font-mono text-muted-foreground text-xs tabular-nums">
+							{virtualItem.index + 1}
+						</span>
+
+						{contributor.avatarUrl ? (
+							<Image
+								alt={contributor.githubLogin}
+								className="shrink-0 rounded-full"
+								height={36}
+								src={contributor.avatarUrl}
+								width={36}
+							/>
+						) : (
+							<div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted">
+								<GitBranch className="h-4 w-4 text-muted-foreground" />
 							</div>
-						))}
+						)}
+
+						<div className="min-w-0 flex-1">
+							<span className="truncate font-medium font-mono text-sm">
+								{contributor.githubLogin}
+							</span>
+						</div>
+
+						<div className="shrink-0 font-mono text-foreground text-sm tabular-nums">
+							{contributor.contributions.toLocaleString("en-US")}
+						</div>
 					</div>
 				);
 			})}

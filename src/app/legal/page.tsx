@@ -57,7 +57,7 @@ const legalSections = [
 
 export default function LegalPage() {
 	return (
-		<main className="blueprint-grid min-h-screen bg-background pt-14">
+		<main className="blueprint-grid min-h-screen bg-background">
 			<div className="mx-auto max-w-3xl animate-fade-in px-6 py-16">
 				{/* Back link */}
 				<div className="mb-8">

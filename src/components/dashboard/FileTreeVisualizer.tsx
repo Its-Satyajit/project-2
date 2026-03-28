@@ -7,9 +7,9 @@ import {
 	Hash,
 	Layers,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { memo, useCallback, useMemo, useState } from "react";
 import { ResponsiveContainer, Tooltip, Treemap } from "recharts";
+import { useTheme } from "~/components/ThemeProvider";
 import type { FileTreeItem } from "~/lib/treeUtils";
 import { cn } from "~/lib/utils";
 
@@ -20,7 +20,7 @@ interface FileTreeVisualizerProps {
 }
 
 interface TreemapNode {
-	name: string;        // full path — used as unique key by recharts
+	name: string; // full path — used as unique key by recharts
 	displayName: string; // basename — used for rendering labels
 	size: number;
 	path: string;
@@ -155,8 +155,8 @@ function convertToTreemapDataFlat(
 		if (isDirectory) {
 			dirs++;
 			flatData.push({
-				name: path || item.name,      // unique full path as recharts key
-				displayName: item.name,        // basename for display
+				name: path || item.name, // unique full path as recharts key
+				displayName: item.name, // basename for display
 				size: 1, // Will be recalculated by Recharts
 				path,
 				fill: `rgba(${isDark ? "232,228,220" : "26,29,46"}, ${0.08 - depth * 0.02})`,
@@ -177,8 +177,8 @@ function convertToTreemapDataFlat(
 			}
 
 			flatData.push({
-				name: path,                    // unique full path as recharts key
-				displayName: item.name,        // basename for display
+				name: path, // unique full path as recharts key
+				displayName: item.name, // basename for display
 				size,
 				path,
 				extension: ext,
