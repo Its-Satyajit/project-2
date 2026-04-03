@@ -2,8 +2,8 @@
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { GitBranch } from "lucide-react";
-import Image from "next/image";
 import type React from "react";
+import { FallbackImage } from "~/components/FallbackImage";
 
 interface Contributor {
 	id: string;
@@ -54,7 +54,7 @@ export function ContributorsList({
 						</span>
 
 						{contributor.avatarUrl ? (
-							<Image
+							<FallbackImage
 								alt={contributor.githubLogin}
 								className="shrink-0 rounded-full"
 								height={36}

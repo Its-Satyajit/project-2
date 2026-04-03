@@ -2,11 +2,9 @@ import { SiGithub } from "@icons-pack/react-simple-icons";
 import { GitBranch, GitGraph, Loader2, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { cacheLife, cacheTag } from "next/cache";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-
 import { ActivitySummary } from "~/components/dashboard/ActivitySummary";
 import { CodeQualityMetrics } from "~/components/dashboard/CodeQualityMetrics";
 import { CommitsTimeline } from "~/components/dashboard/CommitsTimeline";
@@ -19,6 +17,7 @@ import { HotspotRankings } from "~/components/dashboard/HotspotRankings";
 import { HotspotSummary } from "~/components/dashboard/HotspotSummary";
 import { RepositoryHero } from "~/components/dashboard/RepositoryHero";
 import { StatCardsSkeleton } from "~/components/dashboard/StatCards";
+import { FallbackImage } from "~/components/FallbackImage";
 import { Button } from "~/components/ui/button";
 import { api } from "~/lib/eden";
 import { getRepositoryByOwnerAndName } from "~/server/dal/repositories";
@@ -166,7 +165,7 @@ function ContributorsGrid({
 					key={contributor.id}
 				>
 					{contributor.avatarUrl ? (
-						<Image
+						<FallbackImage
 							alt={contributor.githubLogin}
 							className="rounded-full"
 							height={48}

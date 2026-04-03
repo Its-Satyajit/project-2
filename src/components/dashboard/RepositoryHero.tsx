@@ -13,9 +13,9 @@ import {
 	Star,
 } from "lucide-react";
 import { motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import React from "react";
+import { FallbackImage } from "~/components/FallbackImage";
 import { Button } from "~/components/ui/button";
 
 type AnalysisStatus =
@@ -124,7 +124,7 @@ export const RepositoryHero = React.memo(function RepositoryHero({
 						{/* Avatar */}
 						<div className="shrink-0">
 							{avatarUrl ? (
-								<Image
+								<FallbackImage
 									alt={owner}
 									className="border border-border"
 									height={56}

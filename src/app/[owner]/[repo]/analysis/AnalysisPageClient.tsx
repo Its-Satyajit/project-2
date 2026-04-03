@@ -24,7 +24,6 @@ import {
 	X,
 } from "lucide-react";
 import { motion } from "motion/react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -48,6 +47,7 @@ import {
 } from "recharts";
 import { AIInsightsPanel, HotspotAIExplainer } from "~/components/ai";
 import { FileTreeVisualizer } from "~/components/dashboard/FileTreeVisualizer";
+import { FallbackImage } from "~/components/FallbackImage";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -506,7 +506,7 @@ export function AnalysisPageClient({
 								</button>
 								<div className="flex items-center gap-4">
 									{metadata?.avatarUrl ? (
-										<Image
+										<FallbackImage
 											alt={metadata.owner}
 											className="border border-border"
 											height={44}

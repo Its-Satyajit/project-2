@@ -2,8 +2,8 @@
 
 import { GitBranch, Users } from "lucide-react";
 import { motion } from "motion/react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
+import { FallbackImage } from "~/components/FallbackImage";
 
 interface TopContributorsByReposProps {
 	contributors: Array<{
@@ -83,7 +83,7 @@ export function TopContributorsByRepos({
 								{index + 1}
 							</span>
 							{contributor.avatarUrl ? (
-								<Image
+								<FallbackImage
 									alt={contributor.githubLogin}
 									className="shrink-0 rounded-full"
 									height={28}
