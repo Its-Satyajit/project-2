@@ -35,27 +35,6 @@ function formatDate(dateString?: string): string {
 	});
 }
 
-function EnhancedStatCardsSkeleton() {
-	const skeletonKeys = [
-		"stat-1",
-		"stat-2",
-		"stat-3",
-		"stat-4",
-		"stat-5",
-		"stat-6",
-	];
-	return (
-		<div className="grid grid-cols-2 gap-0 md:grid-cols-3 lg:grid-cols-6">
-			{skeletonKeys.map((key) => (
-				<div className="border-border border-r border-b p-4" key={key}>
-					<Skeleton className="mb-3 h-3 w-20" />
-					<Skeleton className="h-6 w-12" />
-				</div>
-			))}
-		</div>
-	);
-}
-
 export const EnhancedStatCards = React.memo(function EnhancedStatCards({
 	totalFiles,
 	totalDirectories,
