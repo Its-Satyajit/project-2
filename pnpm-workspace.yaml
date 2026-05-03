@@ -1,3 +1,7 @@
+packages:
+  - "apps/*"
+  - "src/*"
+
 onlyBuiltDependencies:
   - esbuild
   - inngest-cli

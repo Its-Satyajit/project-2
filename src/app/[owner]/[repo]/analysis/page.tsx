@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Suspense } from "react";
 import type { RepoStatus } from "~/hooks/useRepoStatus";
 import { api } from "~/lib/eden";
@@ -59,12 +60,12 @@ async function AnalysisContent({
 						<p className="mb-6 font-mono text-muted-foreground text-xs uppercase tracking-wider">
 							{owner}/{repo} has not been analyzed yet.
 						</p>
-						<a
+						<Link
 							className="border border-foreground bg-foreground px-4 py-2 font-mono text-background text-xs uppercase tracking-wider hover:bg-foreground/90"
 							href="/"
 						>
 							Analyze a Repository
-						</a>
+						</Link>
 					</div>
 				</div>
 			</main>

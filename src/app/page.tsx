@@ -420,13 +420,13 @@ export default async function Home() {
 						</div>
 
 						<div className="flex shrink-0 flex-col gap-3 sm:flex-row">
-							<a
+							<Link
 								className="flex items-center justify-center gap-2 border border-accent bg-accent px-8 py-3 font-mono text-sm text-white uppercase tracking-wider transition-all hover:bg-accent/90 hover:shadow-accent/20 hover:shadow-lg"
 								href="/"
 							>
 								<Zap className="h-4 w-4" />
 								<span>Analyze Now</span>
-							</a>
+							</Link>
 							<a
 								className="flex items-center justify-center gap-2 border border-border bg-card px-8 py-3 font-mono text-foreground text-sm uppercase tracking-wider transition-all hover:bg-secondary"
 								href="https://github.com/Its-Satyajit/git-insights-analyzer"
