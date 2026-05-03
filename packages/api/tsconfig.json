@@ -1,0 +1,10 @@
+{
+	"extends": "@git-insights/config/tsconfig.base.json",
+	"compilerOptions": {
+		"paths": {
+			"@git-insights/api/*": ["./src/*"]
+		}
+	},
+	"include": ["src/**/*.ts"],
+	"exclude": ["node_modules"]
+}

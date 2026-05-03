@@ -1,53 +1,86 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
+# Dependencies
+node_modules/
+.pnp
 .pnp.js
 
-# testing
-/coverage
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/.tmp/
+# Testing
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.tmp/
 
-# database
-/prisma/db.sqlite
-/prisma/db.sqlite-journal
+# Database
+prisma/db.sqlite
+prisma/db.sqlite-journal
 db.sqlite
 
-# next.js
-/.next/
-/out/
+# Next.js
+.next/
+out/
 next-env.d.ts
 
-# production
-/build
+# Production
+build/
 
-# misc
+# Misc
 .DS_Store
 *.pem
 
-# debug
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
+pnpm-debug.log*
 
-# local env files
-# do not commit any .env files to git, except for the .env.example file. https://create.t3.gg/en/usage/env-variables#using-environment-variables
+# Local env files
 .env
 .env*.local
 
-# vercel
+# Vercel
 .vercel
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-# idea files
-.idea
-node-compile-cache
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Turbo & Fallow
+.turbo/
 .fallow/
+.fallowrc.json
+
+# Mobile app
+apps/mobile/android/.gradle/
+apps/mobile/android/build/
+apps/mobile/android/app/build/
+apps/mobile/android/app/src/main/res/drawable-*/
+apps/mobile/android/app/src/main/res/raw/
+apps/mobile/android/app/src/main/assets/
+apps/mobile/android/gradle-app.setting
+apps/mobile/android/local.properties
+apps/mobile/android/*.iml
+apps/mobile/android/.gradle/
+apps/mobile/android/gradle/
+apps/mobile/android/gradlew
+apps/mobile/android/gradlew.bat
+apps/mobile/node_modules/
+
+# Expo
+.expo/
+.expo-shared/
+apps/mobile/.expo/
+
+# Yaak
+.yaak/
+
+# Rust parser debug
+rust_parser_debug.log
+
+# Node compile cache
+node-compile-cache/

@@ -1,0 +1,26 @@
+type: http_request
+model: http_request
+id: rq_b7NdR4bv7g
+createdAt: 2026-04-15T15:18:24.007686877
+updatedAt: 2026-04-15T15:19:21.611333158
+workspaceId: wk_dPMYXCvCgM
+folderId: null
+authentication: {}
+authenticationType: null
+body: {}
+bodyType: null
+description: ''
+headers: []
+method: GET
+name: ''
+sortPriority: -1774015248234.995
+url: https://jsonmock.hackerrank.com/api/transactions
+urlParameters:
+- enabled: true
+  name: userId
+  value: '1'
+  id: enXQNjadVr
+- enabled: true
+  name: ''
+  value: ''
+  id: 3jCDwg9hmJ
