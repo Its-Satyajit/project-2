@@ -8,7 +8,27 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**", "build/**", ".expo/**"]
+      "outputs": [".next/**", "dist/**", "build/**", ".expo/**"],
+      "env": [
+        "DATABASE_URL",
+        "GITHUB_PAT",
+        "REDIS_URL",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "REDIS_PASSWORD",
+        "IDRIVE_E2_ACCESS_KEY",
+        "IDRIVE_E2_SECRET_KEY",
+        "IDRIVE_E2_BUCKET_NAME",
+        "IDRIVE_E2_REGION",
+        "IDRIVE_E2_ENDPOINT",
+        "BETTER_AUTH_SECRET",
+        "BETTER_AUTH_GITHUB_CLIENT_ID",
+        "BETTER_AUTH_GITHUB_CLIENT_SECRET",
+        "INNGEST_EVENT_KEY",
+        "INNGEST_SIGNING_KEY",
+        "NEXT_PUBLIC_BASE_URL",
+        "NEXT_PUBLIC_AI_ENABLED"
+      ]
     },
     "dev": {
       "cache": false,

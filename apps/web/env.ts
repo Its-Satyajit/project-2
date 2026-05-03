@@ -29,6 +29,14 @@ export const env = createEnv({
 			.string()
 			.url()
 			.default("https://s3.eu-central-2.idrivee2.com"),
+
+		// GitHub Auth
+		BETTER_AUTH_GITHUB_CLIENT_ID: z.string().optional(),
+		BETTER_AUTH_GITHUB_CLIENT_SECRET: z.string().optional(),
+
+		// Inngest
+		INNGEST_EVENT_KEY: z.string().optional(),
+		INNGEST_SIGNING_KEY: z.string().optional(),
 	},
 
 	/**
@@ -61,6 +69,10 @@ export const env = createEnv({
 		IDRIVE_E2_BUCKET_NAME: process.env.IDRIVE_E2_BUCKET_NAME,
 		IDRIVE_E2_REGION: process.env.IDRIVE_E2_REGION,
 		IDRIVE_E2_ENDPOINT: process.env.IDRIVE_E2_ENDPOINT,
+		BETTER_AUTH_GITHUB_CLIENT_ID: process.env.BETTER_AUTH_GITHUB_CLIENT_ID,
+		BETTER_AUTH_GITHUB_CLIENT_SECRET: process.env.BETTER_AUTH_GITHUB_CLIENT_SECRET,
+		INNGEST_EVENT_KEY: process.env.INNGEST_EVENT_KEY,
+		INNGEST_SIGNING_KEY: process.env.INNGEST_SIGNING_KEY,
 	},
 	/**
 	 * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
