@@ -1,16 +1,12 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-	createApiClient as createBaseApiClient,
-	createGitInsightsApi,
-} from "@git-insights/api/client";
-import type { GitInsightsApi } from "@git-insights/api/client";
+import { createEdenClient } from "@git-insights/api/client";
+import type { App } from "@git-insights/web/app/api/[[...slugs]]/route";
 
 const API_BASE_URL =
 	process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
 const AUTH_TOKEN_KEY = "auth_token";
 
-let _apiClient: GitInsightsApi | null = null;
-let _axiosClient: ReturnType<typeof createBaseApiClient> | null = null;
+let _edenClient: ReturnType<typeof createEdenClient<App>> | null = null;
 
 async function getToken(): Promise<string | null> {
 	try {
@@ -32,51 +28,80 @@ export async function setToken(token: string | null): Promise<void> {
 	}
 }
 
-export async function createApiClient(): Promise<GitInsightsApi> {
-	if (_apiClient && _axiosClient) return _apiClient;
-
-	const token = await getToken();
-
-	_axiosClient = createBaseApiClient({
-		baseURL: API_BASE_URL,
-		timeout: 30000,
-		token: token ?? undefined,
-	});
-
-	_apiClient = createGitInsightsApi(_axiosClient);
-	return _apiClient;
-}
-
-export async function getApiClient(): Promise<GitInsightsApi> {
-	if (!_apiClient) {
-		return createApiClient();
+export async function getEdenClient() {
+	if (!_edenClient) {
+		const token = await getToken();
+		_edenClient = createEdenClient<App>({
+			baseURL: API_BASE_URL,
+			token: token ?? undefined,
+		});
 	}
-	return _apiClient;
+	return _edenClient;
 }
 
 export const api = {
-	getTopRepos: async (...args: Parameters<GitInsightsApi["getTopRepos"]>) =>
-		(await getApiClient()).getTopRepos(...args),
-	searchRepos: async (...args: Parameters<GitInsightsApi["searchRepos"]>) =>
-		(await getApiClient()).searchRepos(...args),
-	getDashboard: async (...args: Parameters<GitInsightsApi["getDashboard"]>) =>
-		(await getApiClient()).getDashboard(...args),
-	getStatus: async (...args: Parameters<GitInsightsApi["getStatus"]>) =>
-		(await getApiClient()).getStatus(...args),
+	getTopRepos: async (limit = 10) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.repos.top.get({ query: { limit } });
+		if (error) throw error;
+		return data;
+	},
+	searchRepos: async (q: string, limit = 10) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.repos.search.get({ query: { q, limit } });
+		if (error) throw error;
+		return data;
+	},
+	getDashboard: async (repoId: string) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.dashboard({ repoId }).get();
+		if (error) throw error;
+		return data;
+	},
+	getStatus: async (repoId: string) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.dashboard({ repoId }).status.get();
+		if (error) throw error;
+		return data;
+	},
 	getContributors: async (
-		...args: Parameters<GitInsightsApi["getContributors"]>
-	) => (await getApiClient()).getContributors(...args),
-	getTreemap: async (...args: Parameters<GitInsightsApi["getTreemap"]>) =>
-		(await getApiClient()).getTreemap(...args),
-	getHotspots: async (...args: Parameters<GitInsightsApi["getHotspots"]>) =>
-		(await getApiClient()).getHotspots(...args),
-	getFileContent: async (
-		...args: Parameters<GitInsightsApi["getFileContent"]>
-	) => (await getApiClient()).getFileContent(...args),
-	getAlerts: async (...args: Parameters<GitInsightsApi["getAlerts"]>) =>
-		(await getApiClient()).getAlerts(...args),
-	analyzeRepo: async (...args: Parameters<GitInsightsApi["analyzeRepo"]>) =>
-		(await getApiClient()).analyzeRepo(...args),
+		repoId: string,
+		sort: "contributions" | "newest" = "contributions",
+		limit = 100,
+	) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.repos({ repoId }).contributors.get({
+			query: { sort, limit },
+		});
+		if (error) throw error;
+		return data;
+	},
+	getTreemap: async (repoId: string) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.dashboard({ repoId }).treemap.get();
+		if (error) throw error;
+		return data;
+	},
+	getHotspots: async (repoId: string) => {
+		return [];
+	},
+	getFileContent: async (repoId: string, path: string) => {
+		const client = await getEdenClient();
+		const { data, error } = await client["file-content"].get({
+			query: { repoId, path },
+		});
+		if (error) throw error;
+		return data;
+	},
+	getAlerts: async (repoId?: string) => {
+		return [];
+	},
+	analyzeRepo: async (body: { githubUrl: string }) => {
+		const client = await getEdenClient();
+		const { data, error } = await client.analyze.post(body);
+		if (error) throw error;
+		return data;
+	},
 };
 
 export default api;
