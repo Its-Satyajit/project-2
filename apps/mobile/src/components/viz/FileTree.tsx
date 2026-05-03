@@ -1,3 +1,4 @@
+import type { FileTreeItem } from "@git-insights/api";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
 import {
@@ -8,7 +9,6 @@ import {
 	View,
 } from "react-native";
 import Svg, { G, Line, Rect, Text as SvgText } from "react-native-svg";
-import type { FileTreeItem } from "@git-insights/api";
 import { BorderRadius, Colors, FontSizes, Spacing } from "../../utils/theme";
 
 interface FileTreeProps {

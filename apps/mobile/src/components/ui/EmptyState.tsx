@@ -1,9 +1,10 @@
+import type { LucideIcon } from "lucide-react-native";
 import type React from "react";
 import { StyleSheet, Text, View, type ViewStyle } from "react-native";
-import { BorderRadius, Colors, Spacing } from "../../utils/theme";
+import { BorderRadius, Colors, FontSizes, Spacing } from "../../utils/theme";
 
 interface EmptyStateProps {
-	icon?: string;
+	icon?: LucideIcon;
 	title: string;
 	description?: string;
 	action?: React.ReactNode;
@@ -11,7 +12,7 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({
-	icon,
+	icon: Icon,
 	title,
 	description,
 	action,
@@ -19,7 +20,11 @@ export function EmptyState({
 }: EmptyStateProps) {
 	return (
 		<View style={[styles.container, style]}>
-			{icon && <Text style={styles.icon}>{icon}</Text>}
+			{Icon && (
+				<View style={styles.iconWrapper}>
+					<Icon color={Colors.text.muted} size={48} strokeWidth={1.5} />
+				</View>
+			)}
 			<Text style={styles.title}>{title}</Text>
 			{description && <Text style={styles.description}>{description}</Text>}
 			{action && <View style={styles.action}>{action}</View>}
@@ -34,20 +39,19 @@ const styles = StyleSheet.create({
 		paddingVertical: Spacing["4xl"],
 		paddingHorizontal: Spacing.xl,
 	},
-	icon: {
-		fontSize: 48,
+	iconWrapper: {
 		marginBottom: Spacing.lg,
-		opacity: 0.5,
+		opacity: 0.6,
 	},
 	title: {
-		fontSize: 18,
+		fontSize: FontSizes.xl,
 		fontWeight: "600",
 		color: Colors.text.primary,
 		textAlign: "center",
 		marginBottom: Spacing.sm,
 	},
 	description: {
-		fontSize: 14,
+		fontSize: FontSizes.md,
 		color: Colors.text.secondary,
 		textAlign: "center",
 		marginBottom: Spacing.lg,

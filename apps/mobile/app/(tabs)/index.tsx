@@ -1,6 +1,7 @@
+import type { Repository } from "@git-insights/api";
 import * as Haptics from "expo-haptics";
-import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
+import { Search } from "lucide-react-native";
 import React, { useEffect, useState } from "react";
 import {
 	Platform,
@@ -13,7 +14,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "~/api/client";
-import type { Repository } from "@git-insights/api";
 import {
 	Badge,
 	Card,
@@ -25,7 +25,11 @@ import {
 import { useTopRepos } from "~/hooks";
 import { BorderRadius, Colors, FontSizes, Spacing } from "~/utils/theme";
 
+import { useTheme } from "~/components/Provider";
+import { LineRule } from "~/components/ui/LineRule";
+
 export default function HomeScreen() {
+	const { colors } = useTheme();
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
 	const { data: repos, isLoading, isFetching, refetch } = useTopRepos(20);
@@ -77,15 +81,19 @@ export default function HomeScreen() {
 			style={styles.container}
 		>
 			<View style={styles.header}>
-				<Text style={styles.title}>Git Insights</Text>
-				<Text style={styles.subtitle}>Developer Intelligence Platform</Text>
+				<Text style={[styles.title, { color: colors.text.primary }]}>Git Insights</Text>
+				<Text style={[styles.subtitle, { color: colors.text.muted }]}>Developer Intelligence Platform</Text>
 			</View>
+
+			<LineRule marginVertical={Spacing.md} />
 
 			<View style={styles.statsRow}>
 				<Stat label="Repos" value={repos?.length ?? 0} />
 				<Stat label="Stars" value={formatNumber(totalStars)} />
 				<Stat label="Analyzed" value={analyzedCount} />
 			</View>
+
+			<LineRule marginVertical={Spacing.md} variant="accent" />
 
 			<SearchInput
 				containerStyle={styles.search}
@@ -111,7 +119,7 @@ export default function HomeScreen() {
 							? "Try a different search term"
 							: "Analyze a repository to get started"
 					}
-					icon="🔍"
+					icon={Search}
 					title="No repositories found"
 				/>
 			) : (
@@ -130,22 +138,22 @@ export default function HomeScreen() {
 						>
 							<Card style={styles.repoCard}>
 								<View style={styles.repoHeader}>
-									<Text style={styles.repoName}>{repo.fullName}</Text>
+									<Text style={[styles.repoName, { color: colors.text.primary }]}>{repo.fullName}</Text>
 									<StatusBadge status={repo.analysisStatus} />
 								</View>
 								{repo.description && (
-									<Text numberOfLines={2} style={styles.repoDesc}>
+									<Text numberOfLines={2} style={[styles.repoDesc, { color: colors.text.secondary }]}>
 										{repo.description}
 									</Text>
 								)}
 								<View style={styles.repoMeta}>
-									<Text style={styles.metaItem}>
+									<Text style={[styles.metaItem, { color: colors.text.secondary }]}>
 										⭐ {formatNumber(repo.stars)}
 									</Text>
-									<Text style={styles.metaItem}>
+									<Text style={[styles.metaItem, { color: colors.text.secondary }]}>
 										🔀 {formatNumber(repo.forks)}
 									</Text>
-									<Text style={styles.metaItem}>
+									<Text style={[styles.metaItem, { color: colors.text.secondary }]}>
 										👥 {formatNumber(repo.contributorCount)}
 									</Text>
 									{repo.primaryLanguage && (
@@ -187,7 +195,7 @@ function formatNumber(num: number): string {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: Colors.background,
+		backgroundColor: "transparent",
 	},
 	header: {
 		paddingHorizontal: Spacing.lg,

@@ -1,4 +1,4 @@
-import type { GitInsightsApi } from "@git-insights/api/client";
+
 import { describe, expect, it, vi } from "vitest";
 import type {
 	AlertItem,
@@ -22,9 +22,10 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 	removeItem: vi.fn().mockResolvedValue(null),
 }));
 
+
 vi.mock("../api/client", async (importActual) => {
 	const actual = await importActual<typeof import("../api/client")>();
-	const mockApi: GitInsightsApi = {
+	const mockApi: Record<string, any> = {
 		getTopRepos: vi.fn().mockResolvedValue([]),
 		searchRepos: vi.fn().mockResolvedValue([]),
 		getDashboard: vi.fn(),

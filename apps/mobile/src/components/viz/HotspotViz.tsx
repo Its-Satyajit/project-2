@@ -1,14 +1,8 @@
+import type { HotspotData } from "@git-insights/api";
 import * as Haptics from "expo-haptics";
 import React, { useState } from "react";
-import {
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
-import Svg, { Circle, G, Line, Rect, Text as SvgText } from "react-native-svg";
-import type { HotspotData } from "@git-insights/api";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import RNSvg, { G, Rect, Text as RNSvgText } from "react-native-svg";
 import { BorderRadius, Colors, FontSizes, Spacing } from "../../utils/theme";
 
 interface HotspotVizProps {
@@ -31,7 +25,6 @@ export function HotspotViz({ data, width = 350 }: HotspotVizProps) {
 
 	const sorted = [...data].sort((a, b) => b.score - a.score).slice(0, 15);
 	const maxScore = Math.max(...sorted.map((d) => d.score), 1);
-	const maxChurn = Math.max(...sorted.map((d) => d.churn), 1);
 
 	const rowHeight = 48;
 	const totalHeight = sorted.length * rowHeight + 40;
@@ -41,11 +34,20 @@ export function HotspotViz({ data, width = 350 }: HotspotVizProps) {
 		setSelected(selected === index ? null : index);
 	};
 
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const Svg = RNSvg as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGText = RNSvgText as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGRect = Rect as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGG = G as any;
+
 	return (
 		<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 			<View style={{ width: width + 40 }}>
 				<Svg height={totalHeight} width={width + 40}>
-					<SvgText
+					<SVGText
 						fill={Colors.text.primary}
 						fontSize={12}
 						fontWeight="700"
@@ -53,53 +55,53 @@ export function HotspotViz({ data, width = 350 }: HotspotVizProps) {
 						y={24}
 					>
 						File Hotspot Analysis
-					</SvgText>
+					</SVGText>
 
 					{sorted.map((item, i) => {
 						const y = 40 + i * rowHeight;
 						const risk = getRiskLevel(item.score);
 						const barWidth = (item.score / maxScore) * BAR_MAX_WIDTH;
-						const churnWidth = (item.churn / maxChurn) * BAR_MAX_WIDTH;
 						const isSelected = selected === i;
 
 						return (
-							<G key={i} onPress={() => handlePress(i)}>
-								<Rect
+							<SVGG key={item.file}>
+								<SVGRect
 									fill={isSelected ? Colors.surfaceElevated : "transparent"}
 									height={rowHeight}
+									onPress={() => handlePress(i)}
 									rx={4}
 									width={width + 40}
 									x={0}
 									y={y - 4}
 								/>
 
-								<SvgText
+								<SVGText
 									fill={Colors.text.primary}
 									fontSize={10}
 									x={20}
 									y={y + 14}
 								>
 									{truncateFile(item.file, 20)}
-								</SvgText>
+								</SVGText>
 
-								<Rect
+								<SVGRect
 									fill={Colors.surfaceElevated}
 									height={6}
-									rx={3}
+									rx="3"
 									width={BAR_MAX_WIDTH}
 									x={20}
 									y={y + 22}
 								/>
-								<Rect
+								<SVGRect
 									fill={risk.color}
 									height={6}
-									rx={3}
+									rx="3"
 									width={barWidth}
 									x={20}
 									y={y + 22}
 								/>
 
-								<SvgText
+								<SVGText
 									fill={risk.color}
 									fontSize={9}
 									fontWeight="600"
@@ -107,9 +109,9 @@ export function HotspotViz({ data, width = 350 }: HotspotVizProps) {
 									y={y + 14}
 								>
 									{item.score}
-								</SvgText>
+								</SVGText>
 
-								<SvgText
+								<SVGText
 									fill={Colors.text.muted}
 									fontSize={8}
 									x={20}
@@ -117,8 +119,8 @@ export function HotspotViz({ data, width = 350 }: HotspotVizProps) {
 								>
 									Churn: {item.churn} · Lines: {item.lines} · Deps:{" "}
 									{item.dependencies}
-								</SvgText>
-							</G>
+								</SVGText>
+							</SVGG>
 						);
 					})}
 				</Svg>
@@ -135,7 +137,7 @@ export function HotspotList({ data }: { data: HotspotData[] }) {
 			{sorted.map((item, i) => {
 				const risk = getRiskLevel(item.score);
 				return (
-					<View key={i} style={styles.listItem}>
+					<View key={item.file} style={styles.listItem}>
 						<View style={styles.rankCircle}>
 							<Text style={styles.rankText}>{i + 1}</Text>
 						</View>
@@ -147,7 +149,7 @@ export function HotspotList({ data }: { data: HotspotData[] }) {
 							</Text>
 						</View>
 						<View
-							style={[styles.riskBadge, { backgroundColor: risk.color + "20" }]}
+							style={[styles.riskBadge, { backgroundColor: `${risk.color}20` }]}
 						>
 							<Text style={[styles.riskText, { color: risk.color }]}>
 								{risk.label}

@@ -1,15 +1,9 @@
+import type { TreemapFile } from "@git-insights/api";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useState } from "react";
-import {
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
-} from "react-native";
-import Svg, { G, Rect, Text as SvgText } from "react-native-svg";
-import type { TreemapFile } from "@git-insights/api";
-import { BorderRadius, Colors, FontSizes, Spacing } from "../../utils/theme";
+import { StyleSheet, Text, View } from "react-native";
+import RNSvg, { G, Rect, Text as RNSvgText } from "react-native-svg";
+import { Colors, FontSizes, Spacing } from "../../utils/theme";
 
 interface TreemapVizProps {
 	data: TreemapFile[];
@@ -112,10 +106,19 @@ export function TreemapViz({
 		[onFileSelect],
 	);
 
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const Svg = RNSvg as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGG = G as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGRect = Rect as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGText = RNSvgText as any;
+
 	return (
 		<View style={styles.container}>
 			<Svg height={height} width={width}>
-				{nodes.map((node, i) => {
+				{nodes.map((node) => {
 					const color =
 						LANG_COLORS[node.file.extension] ||
 						getScoreColor(node.file.hotspotScore);
@@ -123,10 +126,11 @@ export function TreemapViz({
 						selectedFile && selectedFile.path !== node.file.path ? 0.4 : 1;
 
 					return (
-						<G key={node.file.id || i} onPress={() => handlePress(node.file)}>
-							<Rect
+						<SVGG key={node.file.path}>
+							<SVGRect
 								fill={color}
 								height={Math.max(node.height - 2, 0)}
+								onPress={() => handlePress(node.file)}
 								opacity={opacity}
 								rx={2}
 								width={Math.max(node.width - 2, 0)}
@@ -134,7 +138,7 @@ export function TreemapViz({
 								y={node.y + 1}
 							/>
 							{node.width > 40 && node.height > 20 && (
-								<SvgText
+								<SVGText
 									fill="#fff"
 									fontSize={8}
 									fontWeight="600"
@@ -142,19 +146,19 @@ export function TreemapViz({
 									y={node.y + 14}
 								>
 									{truncatePath(node.file.path, Math.floor(node.width / 6))}
-								</SvgText>
+								</SVGText>
 							)}
 							{node.width > 40 && node.height > 30 && (
-								<SvgText
+								<SVGText
 									fill="rgba(255,255,255,0.7)"
 									fontSize={7}
 									x={node.x + 4}
 									y={node.y + 24}
 								>
 									{node.file.loc} LOC
-								</SvgText>
+								</SVGText>
 							)}
-						</G>
+						</SVGG>
 					);
 				})}
 			</Svg>

@@ -1,12 +1,23 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import type {
+	AlertItem,
+	AnalyzeResponse,
+	Contributor,
+	DashboardData,
+	FileContent,
+	HotspotData,
+	RepoStatus,
+	Repository,
+	TreemapData,
+} from "@git-insights/api";
 import { createEdenClient } from "@git-insights/api/client";
-import type { App } from "@git-insights/web/app/api/[[...slugs]]/route";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API_BASE_URL =
-	process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000/api";
+	process.env.EXPO_PUBLIC_API_URL?.replace(/\/api$/, "") ||
+	"http://localhost:3000";
 const AUTH_TOKEN_KEY = "auth_token";
 
-let _edenClient: ReturnType<typeof createEdenClient<App>> | null = null;
+let _edenClient: ReturnType<typeof createEdenClient<any>> | null = null;
 
 async function getToken(): Promise<string | null> {
 	try {
@@ -31,7 +42,7 @@ export async function setToken(token: string | null): Promise<void> {
 export async function getEdenClient() {
 	if (!_edenClient) {
 		const token = await getToken();
-		_edenClient = createEdenClient<App>({
+		_edenClient = createEdenClient<any>({
 			baseURL: API_BASE_URL,
 			token: token ?? undefined,
 		});
@@ -40,67 +51,80 @@ export async function getEdenClient() {
 }
 
 export const api = {
-	getTopRepos: async (limit = 10) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.repos.top.get({ query: { limit } });
+	getTopRepos: async (limit = 10): Promise<Repository[]> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api.repos.top.get({
+			query: { limit },
+		});
 		if (error) throw error;
-		return data;
+		return data as Repository[];
 	},
-	searchRepos: async (q: string, limit = 10) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.repos.search.get({ query: { q, limit } });
+	searchRepos: async (q: string, limit = 10): Promise<Repository[]> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api.repos.search.get({
+			query: { q, limit },
+		});
 		if (error) throw error;
-		return data;
+		return data as Repository[];
 	},
-	getDashboard: async (repoId: string) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.dashboard({ repoId }).get();
+	getDashboard: async (repoId: string): Promise<DashboardData> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api.dashboard({ repoId }).get();
 		if (error) throw error;
-		return data;
+		return data as DashboardData;
 	},
-	getStatus: async (repoId: string) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.dashboard({ repoId }).status.get();
+	getStatus: async (repoId: string): Promise<RepoStatus> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api.dashboard({ repoId }).status.get();
 		if (error) throw error;
-		return data;
+		return data as RepoStatus;
 	},
 	getContributors: async (
 		repoId: string,
 		sort: "contributions" | "newest" = "contributions",
 		limit = 100,
-	) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.repos({ repoId }).contributors.get({
-			query: { sort, limit },
-		});
+	): Promise<Contributor[]> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api
+			.repos({ repoId })
+			.contributors.get({
+				query: { sort, limit },
+			});
 		if (error) throw error;
-		return data;
+		return data as Contributor[];
 	},
-	getTreemap: async (repoId: string) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.dashboard({ repoId }).treemap.get();
+	getTreemap: async (repoId: string): Promise<TreemapData> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api
+			.dashboard({ repoId })
+			.treemap.get();
 		if (error) throw error;
-		return data;
+		return data as TreemapData;
 	},
-	getHotspots: async (repoId: string) => {
+	getHotspots: async (repoId: string): Promise<HotspotData[]> => {
 		return [];
 	},
-	getFileContent: async (repoId: string, path: string) => {
-		const client = await getEdenClient();
-		const { data, error } = await client["file-content"].get({
+	getFileContent: async (
+		repoId: string,
+		path: string,
+	): Promise<FileContent> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api["file-content"].get({
 			query: { repoId, path },
 		});
 		if (error) throw error;
-		return data;
+		return data as FileContent;
 	},
-	getAlerts: async (repoId?: string) => {
+	getAlerts: async (repoId?: string): Promise<AlertItem[]> => {
 		return [];
 	},
-	analyzeRepo: async (body: { githubUrl: string }) => {
-		const client = await getEdenClient();
-		const { data, error } = await client.analyze.post(body);
+	analyzeRepo: async (body: {
+		githubUrl: string;
+	}): Promise<AnalyzeResponse> => {
+		const client = (await getEdenClient()) as any;
+		const { data, error } = await client.api.analyze.post(body);
 		if (error) throw error;
-		return data;
+		return data as AnalyzeResponse;
 	},
 };
 
