@@ -1,4 +1,5 @@
 import type { Elysia } from "elysia";
+import { env } from "~/env";
 import { KeyGenerator } from "./key-generator";
 import { getRateLimitStore } from "./store";
 import type {
@@ -7,6 +8,8 @@ import type {
 	RateLimitHeaders,
 	WindowDuration,
 } from "./types";
+
+const isDev = env.NODE_ENV === "development";
 
 function parseWindow(window: WindowDuration): number {
 	if (typeof window === "number") {
@@ -48,6 +51,11 @@ export function rateLimit(config: RateLimitConfig) {
 
 	return (app: Elysia) =>
 		app.onBeforeHandle(async (context) => {
+			// Skip rate limiting in development mode
+			if (isDev) {
+				return;
+			}
+
 			if (skip?.(context)) {
 				return;
 			}

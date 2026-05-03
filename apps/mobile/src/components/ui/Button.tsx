@@ -11,7 +11,7 @@ import { BorderRadius, Colors, FontSizes, Spacing } from "../../utils/theme";
 interface ButtonProps {
 	onPress: () => void;
 	title: string;
-	variant?: "primary" | "secondary" | "ghost";
+	variant?: "primary" | "secondary" | "ghost" | "outline";
 	size?: "sm" | "md" | "lg";
 	disabled?: boolean;
 	loading?: boolean;
@@ -40,6 +40,10 @@ export function Button({
 			container: styles.ghostContainer,
 			text: styles.ghostText,
 		},
+		outline: {
+			container: styles.outlineContainer,
+			text: styles.outlineText,
+		},
 	};
 
 	const sizeStyles = {
@@ -50,7 +54,7 @@ export function Button({
 
 	return (
 		<TouchableOpacity
-			activeOpacity={0.7}
+			activeOpacity={0.8}
 			disabled={disabled || loading}
 			onPress={onPress}
 			style={[
@@ -63,7 +67,10 @@ export function Button({
 		>
 			{loading ? (
 				<ActivityIndicator
-					color={variant === "primary" ? "#000" : Colors.accent.primary}
+					color={
+						variant === "primary" ? Colors.text.primary : Colors.accent.primary
+					}
+					size="small"
 				/>
 			) : (
 				<Text
@@ -85,33 +92,53 @@ const styles = StyleSheet.create({
 		borderRadius: BorderRadius.md,
 		alignItems: "center",
 		justifyContent: "center",
+		flexDirection: "row",
 	},
 	primaryContainer: {
 		backgroundColor: Colors.accent.primary,
+		paddingVertical: Spacing.sm + 2,
+		paddingHorizontal: Spacing.lg,
+	},
+	primaryText: {
+		color: Colors.text.primary,
+		fontWeight: "600",
+		letterSpacing: 0.3,
 	},
 	secondaryContainer: {
 		backgroundColor: Colors.surfaceElevated,
-		borderWidth: 1,
-		borderColor: Colors.border,
-	},
-	ghostContainer: {
-		backgroundColor: "transparent",
-	},
-	primaryText: {
-		color: "#000",
+		paddingVertical: Spacing.sm + 2,
+		paddingHorizontal: Spacing.lg,
 	},
 	secondaryText: {
 		color: Colors.text.primary,
+		fontWeight: "500",
+	},
+	ghostContainer: {
+		backgroundColor: "transparent",
+		paddingVertical: Spacing.sm + 2,
+		paddingHorizontal: Spacing.lg,
 	},
 	ghostText: {
 		color: Colors.accent.primary,
+		fontWeight: "500",
+	},
+	outlineContainer: {
+		backgroundColor: "transparent",
+		borderWidth: 1,
+		borderColor: Colors.accent.primary,
+		paddingVertical: Spacing.sm + 2,
+		paddingHorizontal: Spacing.lg,
+	},
+	outlineText: {
+		color: Colors.accent.primary,
+		fontWeight: "500",
 	},
 	smContainer: {
-		paddingVertical: Spacing.xs,
+		paddingVertical: Spacing.xs + 2,
 		paddingHorizontal: Spacing.md,
 	},
 	mdContainer: {
-		paddingVertical: Spacing.sm,
+		paddingVertical: Spacing.sm + 2,
 		paddingHorizontal: Spacing.lg,
 	},
 	lgContainer: {
@@ -119,18 +146,21 @@ const styles = StyleSheet.create({
 		paddingHorizontal: Spacing.xl,
 	},
 	smText: {
-		fontSize: FontSizes.sm,
+		fontSize: FontSizes.sm - 1,
+		letterSpacing: 0.2,
 	},
 	mdText: {
 		fontSize: FontSizes.md,
+		letterSpacing: 0.3,
 	},
 	lgText: {
 		fontSize: FontSizes.lg,
+		letterSpacing: 0.3,
 	},
 	text: {
 		fontWeight: "600",
 	},
 	disabled: {
-		opacity: 0.5,
+		opacity: 0.4,
 	},
 });

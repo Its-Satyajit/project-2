@@ -1,422 +1,446 @@
+"use client";
+
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams } from "expo-router";
-import React, { useState } from "react";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-	RefreshControl,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	useWindowDimensions,
-	View,
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Contributor } from "@git-insights/api";
-import { Badge, Card, Skeleton, Stat } from "~/components/ui";
-import { ActivityHeatmap, ContributorChart } from "~/components/viz";
-import { useContributors, useDashboard, useTopRepos } from "~/hooks";
-import { BorderRadius, Colors, FontSizes, Spacing } from "~/utils/theme";
+import { BarChart3, ExternalLink } from "lucide-react-native";
+import type { Repository } from "@git-insights/api";
+import { Badge, EmptyState, Skeleton, Stat } from "~/components/ui";
+import { useTheme } from "~/components/Provider";
+import { useDashboard, useTopRepos } from "~/hooks";
+import { BorderRadius, FontSizes, Spacing } from "~/utils/theme";
 
 export default function AnalyticsScreen() {
-	const insets = useSafeAreaInsets();
-	const { width } = useWindowDimensions();
-	const params = useLocalSearchParams();
-	const repoId = (params.id as string) || undefined;
+  const { colors } = useTheme();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { data: repos, isLoading } = useTopRepos(50);
+  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null);
+  const [view, setView] = useState(0);
 
-	const { data: allRepos } = useTopRepos(10);
-	const selectedRepoId = repoId || allRepos?.[0]?.id;
+  useEffect(() => {
+    if (repos && repos.length > 0 && !selectedRepo) {
+      setSelectedRepo(repos[0]);
+    }
+  }, [repos, selectedRepo]);
 
-	const { data: dashboard, isFetching } = useDashboard(selectedRepoId ?? "");
-	const { data: contributors } = useContributors(
-		selectedRepoId ?? "contributions",
-		"contributions",
-		8,
-	);
+  const { data: dashboard, isLoading: dashboardLoading } = useDashboard(
+    selectedRepo?.id || ""
+  );
 
-	const [activeTab, setActiveTab] = useState<
-		"overview" | "contributors" | "activity"
-	>("overview");
+  const formatNum = (n?: number) =>
+    !n
+      ? "0"
+      : n >= 1000000
+        ? `${(n / 1000000).toFixed(1)}M`
+        : n >= 1000
+          ? `${(n / 1000).toFixed(1)}K`
+          : n.toString();
 
-	if (!selectedRepoId) {
-		return (
-			<View style={[styles.container, { paddingTop: insets.top + Spacing.lg }]}>
-				<Text style={styles.emptyText}>
-					Select a repository to view analytics
-				</Text>
-			</View>
-		);
-	}
+  const handleSelectRepo = (repo: Repository) => {
+    void Haptics.selectionAsync();
+    setSelectedRepo(repo);
+    router.push({ pathname: "/[owner]/[name]", params: { owner: repo.owner, name: repo.name } });
+  };
 
-	const chartWidth = width - Spacing.lg * 2;
+  const renderRepoSelector = () => (
+    <View style={styles.repoSelector}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.repoScroll}
+      >
+        {isLoading ? (
+          <Skeleton width={120} height={48} />
+        ) : (
+          repos?.slice(0, 10).map((repo) => (
+            <TouchableOpacity
+              key={repo.id}
+              onPress={() => handleSelectRepo(repo)}
+              style={[
+                styles.repoChip,
+                { backgroundColor: colors.surface },
+                selectedRepo?.id === repo.id && { backgroundColor: colors.accent.primary },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.repoChipText,
+                  { color: colors.text.secondary },
+                  selectedRepo?.id === repo.id && { color: colors.primary || colors.background, fontWeight: "700" },
+                ]}
+                numberOfLines={1}
+              >
+                {repo.name}
+              </Text>
+            </TouchableOpacity>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
 
-	return (
-		<ScrollView
-			contentContainerStyle={{
-				paddingTop: insets.top + Spacing.lg,
-				paddingBottom: insets.bottom + Spacing["4xl"],
-			}}
-			refreshControl={
-				<RefreshControl
-					onRefresh={() => {}}
-					refreshing={isFetching}
-					tintColor={Colors.accent.primary}
-				/>
-			}
-		>
-			<View style={styles.header}>
-				<Text style={styles.title}>
-					{dashboard?.owner}/{dashboard?.name ?? "Analytics"}
-				</Text>
-			</View>
+  const renderOverview = () => (
+    <View style={styles.contentSection}>
+      <Text style={[styles.sectionLabel, { color: colors.accent.primary }]}>Summary</Text>
+      <View style={styles.statsGrid}>
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.accent.primary }]}>{formatNum(dashboard?.stars)}</Text>
+          <Text style={[styles.statLabel, { color: colors.text.muted }]}>Stars</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.accent.primary }]}>{formatNum(dashboard?.forks)}</Text>
+          <Text style={[styles.statLabel, { color: colors.text.muted }]}>Forks</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.accent.primary }]}>
+            {formatNum(dashboard?.contributorCount)}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.text.muted }]}>Contributors</Text>
+        </View>
+      </View>
 
-			{isFetching ? (
-				<View style={styles.content}>
-					<Skeleton height={120} style={{ marginBottom: Spacing.md }} />
-					<Skeleton height={200} style={{ marginBottom: Spacing.md }} />
-					<Skeleton height={150} />
-				</View>
-			) : (
-				<>
-					<View style={styles.tabs}>
-						{(["overview", "contributors", "activity"] as const).map((tab) => (
-							<TouchableOpacity
-								key={tab}
-								onPress={() => {
-									void Haptics.selectionAsync();
-									setActiveTab(tab);
-								}}
-								style={[styles.tab, activeTab === tab && styles.tabActive]}
-							>
-								<Text
-									style={[
-										styles.tabText,
-										activeTab === tab && styles.tabTextActive,
-									]}
-								>
-									{tab.charAt(0).toUpperCase() + tab.slice(1)}
-								</Text>
-							</TouchableOpacity>
-						))}
-					</View>
+      <View style={styles.statsGrid}>
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.accent.primary }]}>{formatNum(dashboard?.totalFiles)}</Text>
+          <Text style={[styles.statLabel, { color: colors.text.muted }]}>Files</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.accent.primary }]}>
+            {formatNum(dashboard?.totalDirectories)}
+          </Text>
+          <Text style={[styles.statLabel, { color: colors.text.muted }]}>Directories</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.statValue, { color: colors.accent.primary }]}>{formatNum(dashboard?.totalLines)}</Text>
+          <Text style={[styles.statLabel, { color: colors.text.muted }]}>Lines</Text>
+        </View>
+      </View>
 
-					<View style={styles.content}>
-						{activeTab === "overview" && (
-							<>
-								<Card style={styles.card}>
-									<View style={styles.statsRow}>
-										<Stat
-											label="Files"
-											value={dashboard?.totalFiles ?? 0}
-										/>
-										<Stat
-											label="Dirs"
-											value={dashboard?.totalDirectories ?? 0}
-										/>
-										<Stat
-											label="Lines"
-											value={dashboard?.totalLines ?? 0}
-										/>
-									</View>
-								</Card>
+      {dashboard?.fileTypeBreakdown && (
+        <>
+          <Text style={[styles.sectionLabel, { color: colors.accent.primary }]}>Language Breakdown</Text>
+          <View style={[styles.chartCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            {Object.entries(dashboard.fileTypeBreakdown as Record<string, number>)
+              .sort(([, a], [, b]) => b - a)
+              .slice(0, 8)
+              .map(([ext, count]) => {
+                const total = dashboard?.totalFiles || 1;
+                const pct = Math.round((count / total) * 100);
+                return pct >= 1 ? (
+                  <View key={ext} style={styles.barRow}>
+                    <Text style={[styles.barExt, { color: colors.text.primary }]}>.{ext}</Text>
+                    <View style={[styles.barBg, { backgroundColor: colors.surfaceElevated }]}>
+                      <View
+                        style={[styles.barFill, { width: `${pct}%`, backgroundColor: colors.accent.primary }]}
+                      />
+                    </View>
+                    <Text style={styles.barPct}>{pct}%</Text>
+                  </View>
+                ) : null;
+              })}
+          </View>
+        </>
+      )}
+    </View>
+  );
 
-								<Card style={styles.card}>
-									<View style={styles.statsRow}>
-										<Stat label="Stars" value={dashboard?.stars ?? 0} />
-										<Stat label="Forks" value={dashboard?.forks ?? 0} />
-										<Stat
-											label="Contributors"
-											value={dashboard?.contributorCount ?? 0}
-										/>
-									</View>
-								</Card>
+  const renderData = () => {
+    if (!selectedRepo) {
+      return (
+        <EmptyState
+          icon={BarChart3}
+          title="No repository"
+          description="Select a repository to view insights"
+        />
+      );
+    }
 
-								{dashboard?.fileTypeBreakdown && (
-									<Card style={styles.card} title="File Types">
-										{Object.entries(dashboard.fileTypeBreakdown)
-											.sort(
-												(
-													[, a]: [string, number],
-													[, b]: [string, number],
-												) => b - a,
-											)
-											.slice(0, 8)
-											.map(([ext, count]: [string, number]) => (
-												<View key={ext} style={styles.fileTypeRow}>
-													<Text style={styles.fileTypeExt}>
-														.{ext}
-													</Text>
-													<View style={styles.fileTypeBar}>
-														<View
-															style={[
-																styles.fileTypeFill,
-																{
-																	width: `${(count / (dashboard.totalFiles ?? 1)) * 100}%`,
-																},
-															]}
-														/>
-													</View>
-													<Text style={styles.fileTypeCount}>
-														{count}
-													</Text>
-												</View>
-											))}
-									</Card>
-								)}
-							</>
-						)}
+    if (dashboardLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.accent.primary} />
+          <Text style={[styles.loadingText, { color: colors.text.muted }]}>Loading insights...</Text>
+        </View>
+      );
+    }
 
-						{activeTab === "contributors" && (
-							<Card style={styles.card} title="Top Contributors">
-								{contributors && contributors.length > 0 ? (
-									<>
-										<ContributorChart
-											contributors={contributors}
-											size={chartWidth - Spacing.lg * 2}
-										/>
-										<View style={styles.contribList}>
-											{contributors.slice(0, 5).map((c: Contributor, i: number) => (
-												<View key={c.id} style={styles.contribRow}>
-													<Text style={styles.contribRank}>{i + 1}</Text>
-													<View style={styles.contribInfo}>
-														<Text style={styles.contribName}>
-															{c.githubLogin}
-														</Text>
-														<Text style={styles.contribDate}>
-															{c.lastContributionAt
-																? `Last: ${new Date(c.lastContributionAt).toLocaleDateString()}`
-																: "No recent activity"}
-														</Text>
-													</View>
-													<Badge
-														label={`${c.contributions}`}
-														variant="info"
-													/>
-												</View>
-											))}
-										</View>
-									</>
-								) : (
-									<Text style={styles.emptyText}>
-										No contributor data available
-									</Text>
-								)}
-							</Card>
-						)}
+    switch (view) {
+      case 0:
+        return renderOverview();
+      default:
+        return (
+          <TouchableOpacity
+            style={[styles.viewOnWeb, { backgroundColor: colors.surface, borderColor: colors.accent.primary }]}
+              onPress={() =>
+                router.push({
+                  pathname: "/[owner]/[name]",
+                  params: { owner: selectedRepo.owner, name: selectedRepo.name },
+                })
+              }
+          >
+            <ExternalLink size={18} color={colors.accent.primary} />
+            <Text style={[styles.viewOnWebText, { color: colors.accent.primary }]}>
+              View full dashboard in browser
+            </Text>
+          </TouchableOpacity>
+        );
+    }
+  };
 
-						{activeTab === "activity" && (
-							<Card style={styles.card} title="Commit Activity">
-								{dashboard?.commits && dashboard.commits.length > 0 ? (
-									<>
-										<ActivityHeatmap
-											data={generateActivityData(dashboard.commits)}
-											cellSize={12}
-											gap={3}
-										/>
-										<View style={styles.activityLegend}>
-											<View style={styles.legendItem}>
-												<View
-													style={[
-														styles.legendDot,
-														{ backgroundColor: Colors.surfaceElevated },
-													]}
-												/>
-												<Text style={styles.legendText}>None</Text>
-											</View>
-											<View style={styles.legendItem}>
-												<View
-													style={[
-														styles.legendDot,
-														{ backgroundColor: "#0e4429" },
-													]}
-												/>
-												<Text style={styles.legendText}>Low</Text>
-											</View>
-											<View style={styles.legendItem}>
-												<View
-													style={[
-														styles.legendDot,
-														{ backgroundColor: "#166534" },
-													]}
-												/>
-												<Text style={styles.legendText}>Medium</Text>
-											</View>
-											<View style={styles.legendItem}>
-												<View
-													style={[
-														styles.legendDot,
-														{ backgroundColor: "#22c55e" },
-													]}
-												/>
-												<Text style={styles.legendText}>High</Text>
-											</View>
-										</View>
-									</>
-								) : (
-									<Text style={styles.emptyText}>
-										No commit activity data available
-									</Text>
-								)}
-							</Card>
-						)}
-					</View>
-				</>
-			)}
-		</ScrollView>
-	);
-}
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingTop: insets.top + Spacing.lg,
+          paddingBottom: insets.bottom + 100,
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text.primary }]}>Insights</Text>
+          <Text style={[styles.subtitle, { color: colors.text.muted }]}>
+            Repository analytics & metrics
+          </Text>
+        </View>
 
-function generateActivityData(commits: { date: string }[]): number[] {
-	const data = new Array(84).fill(0);
-	const now = new Date();
+        {renderRepoSelector()}
 
-	for (const commit of commits) {
-		const date = new Date(commit.date);
-		const daysAgo = Math.floor(
-			(now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-		);
-		if (daysAgo < 84 && daysAgo >= 0) {
-			data[83 - daysAgo]++;
-		}
-	}
+        {selectedRepo && (
+          <View style={styles.selectedRepoHeader}>
+            <Text style={[styles.selectedRepoName, { color: colors.text.primary }]}>
+              {selectedRepo.owner}/{selectedRepo.name}
+            </Text>
+            <Badge
+              label={selectedRepo.analysisStatus === "complete" ? "Ready" : "Analyzing"}
+              variant={selectedRepo.analysisStatus === "complete" ? "success" : "warning"}
+            />
+          </View>
+        )}
 
-	return data;
+        <View style={styles.viewTabs}>
+          {["Overview", "Files", "Deps"].map((v, i) => (
+            <TouchableOpacity
+              key={v}
+              onPress={() => {
+                void Haptics.selectionAsync();
+                setView(i);
+              }}
+              style={[styles.viewTab, { backgroundColor: colors.surface }, view === i && { backgroundColor: colors.accent.primary }]}
+            >
+              <Text
+                style={[
+                  styles.viewTabText,
+                  { color: colors.text.secondary },
+                  view === i && { color: colors.background, fontWeight: "600" },
+                ]}
+              >
+                {v}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {renderData()}
+
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.footerLink}
+            onPress={() => router.push("/about")}
+          >
+            <ExternalLink size={14} color={colors.text.muted} />
+            <Text style={[styles.footerLinkText, { color: colors.text.muted }]}>About</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.footerLink}
+            onPress={() => router.push("/legal")}
+          >
+            <Text style={[styles.footerLinkText, { color: colors.text.muted }]}>Privacy & Legal</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		backgroundColor: Colors.background,
-	},
-	header: {
-		paddingHorizontal: Spacing.lg,
-		marginBottom: Spacing.lg,
-	},
-	title: {
-		fontSize: FontSizes["2xl"],
-		fontWeight: "700",
-		color: Colors.text.primary,
-	},
-	tabs: {
-		flexDirection: "row",
-		paddingHorizontal: Spacing.lg,
-		marginBottom: Spacing.lg,
-		gap: Spacing.sm,
-	},
-	tab: {
-		paddingHorizontal: Spacing.lg,
-		paddingVertical: Spacing.sm,
-		borderRadius: BorderRadius.full,
-		backgroundColor: Colors.surface,
-		borderWidth: 1,
-		borderColor: Colors.border,
-	},
-	tabActive: {
-		backgroundColor: Colors.accent.primary,
-		borderColor: Colors.accent.primary,
-	},
-	tabText: {
-		fontSize: FontSizes.sm,
-		color: Colors.text.secondary,
-		fontWeight: "500",
-	},
-	tabTextActive: {
-		color: "#000",
-		fontWeight: "600",
-	},
-	content: {
-		paddingHorizontal: Spacing.lg,
-		gap: Spacing.lg,
-	},
-	card: {
-		marginBottom: 0,
-	},
-	statsRow: {
-		flexDirection: "row",
-		gap: Spacing.md,
-	},
-	fileTypeRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: Spacing.sm,
-	},
-	fileTypeExt: {
-		fontSize: FontSizes.sm,
-		color: Colors.text.primary,
-		width: 50,
-		fontWeight: "500",
-	},
-	fileTypeBar: {
-		flex: 1,
-		height: 8,
-		backgroundColor: Colors.surfaceElevated,
-		borderRadius: 4,
-		marginHorizontal: Spacing.sm,
-	},
-	fileTypeFill: {
-		height: "100%",
-		backgroundColor: Colors.accent.primary,
-		borderRadius: 4,
-	},
-	fileTypeCount: {
-		fontSize: FontSizes.sm,
-		color: Colors.text.secondary,
-		width: 30,
-		textAlign: "right",
-	},
-	contribList: {
-		marginTop: Spacing.lg,
-	},
-	contribRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingVertical: Spacing.sm,
-		borderBottomWidth: 1,
-		borderBottomColor: Colors.border,
-	},
-	contribRank: {
-		fontSize: FontSizes.md,
-		fontWeight: "700",
-		color: Colors.accent.primary,
-		width: 24,
-		textAlign: "center",
-	},
-	contribInfo: {
-		flex: 1,
-		marginLeft: Spacing.sm,
-	},
-	contribName: {
-		fontSize: FontSizes.md,
-		color: Colors.text.primary,
-		fontWeight: "500",
-	},
-	contribDate: {
-		fontSize: FontSizes.xs,
-		color: Colors.text.muted,
-	},
-	activityLegend: {
-		flexDirection: "row",
-		justifyContent: "center",
-		gap: Spacing.lg,
-		marginTop: Spacing.lg,
-	},
-	legendItem: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: Spacing.xs,
-	},
-	legendDot: {
-		width: 10,
-		height: 10,
-		borderRadius: 5,
-	},
-	legendText: {
-		fontSize: FontSizes.xs,
-		color: Colors.text.secondary,
-	},
-	emptyText: {
-		fontSize: FontSizes.md,
-		color: Colors.text.muted,
-		textAlign: "center",
-		paddingVertical: Spacing["4xl"],
-	},
+  container: {
+    flex: 1,
+    backgroundColor: "transparent",
+  },
+  header: {
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  title: {
+    fontSize: FontSizes["2xl"],
+    fontWeight: "700",
+    marginBottom: Spacing.xs,
+  },
+  subtitle: {
+    fontSize: FontSizes.sm,
+  },
+  repoSelector: {
+    marginBottom: Spacing.lg,
+    borderBottomWidth: 1,
+  },
+  repoScroll: {
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  repoChip: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.full,
+    maxWidth: 140,
+  },
+  repoChipActive: {
+  },
+  repoChipText: {
+    fontSize: 11, // ~0.6875rem
+    fontFamily: Platform.select({ ios: "Menlo", android: "monospace" }),
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: "500",
+  },
+  repoChipTextActive: {
+    fontWeight: "700",
+  },
+  selectedRepoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+  },
+  selectedRepoName: {
+    fontSize: FontSizes.lg,
+    fontWeight: "600",
+  },
+  viewTabs: {
+    flexDirection: "row",
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  viewTab: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+  },
+  viewTabActive: {
+  },
+  viewTabText: {
+    fontSize: FontSizes.sm,
+  },
+  viewTabTextActive: {
+    fontWeight: "600",
+  },
+  contentSection: {
+    paddingHorizontal: Spacing.xl,
+  },
+  sectionLabel: {
+    fontSize: FontSizes.xs,
+    textTransform: "uppercase",
+    letterSpacing: 2,
+    marginBottom: Spacing.md,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  statCard: {
+    flex: 1,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.md,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  statValue: {
+    fontSize: FontSizes.lg,
+    fontWeight: "700",
+    marginBottom: Spacing.xs,
+  },
+  statLabel: {
+    fontSize: FontSizes.xs,
+  },
+  chartCard: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    borderWidth: 1,
+  },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  barExt: {
+    width: 40,
+    fontSize: FontSizes.sm,
+  },
+  barBg: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: Spacing.sm,
+  },
+  barFill: {
+    height: "100%",
+    borderRadius: 4,
+  },
+  barPct: {
+    width: 35,
+    fontSize: FontSizes.sm,
+    textAlign: "right",
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: Spacing.xl * 2,
+  },
+  loadingText: {
+    marginTop: Spacing.md,
+    fontSize: FontSizes.sm,
+  },
+  viewOnWeb: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.sm,
+    marginTop: Spacing.xl,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+  },
+  viewOnWebText: {
+    fontSize: FontSizes.sm,
+    fontWeight: "600",
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingVertical: Spacing.xl,
+    gap: Spacing.xl,
+    marginTop: Spacing.xl,
+  },
+  footerLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.xs,
+  },
+  footerLinkText: {
+    fontSize: FontSizes.xs,
+  },
 });

@@ -1,7 +1,7 @@
+import type { Contributor } from "@git-insights/api";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import Svg, { Circle, G, Path, Text as SvgText } from "react-native-svg";
-import type { Contributor } from "@git-insights/api";
+import RNSvg, { Circle, Path, Text as RNSvgText } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../../utils/theme";
 
 interface ContributorChartProps {
@@ -61,14 +61,28 @@ export function ContributorChart({
 		return { path, color: CHART_COLORS[i % CHART_COLORS.length], contributor };
 	});
 
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const Svg = RNSvg as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGPath = Path as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGCircle = Circle as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGText = RNSvgText as any;
+
 	return (
 		<View style={styles.container}>
 			<Svg height={size} width={size}>
-				{slices.map((slice, i) => (
-					<Path d={slice.path} fill={slice.color} key={i} opacity={0.85} />
+				{slices.map((slice) => (
+					<SVGPath
+						d={slice.path}
+						fill={slice.color}
+						key={slice.contributor.githubLogin}
+						opacity={0.85}
+					/>
 				))}
-				<Circle cx={cx} cy={cy} fill={Colors.surface} r={innerRadius - 2} />
-				<SvgText
+				<SVGCircle cx={cx} cy={cy} fill={Colors.surface} r={innerRadius - 2} />
+				<SVGText
 					fill={Colors.text.primary}
 					fontSize={16}
 					fontWeight="700"
@@ -77,8 +91,8 @@ export function ContributorChart({
 					y={cy - 6}
 				>
 					{formatNumber(total)}
-				</SvgText>
-				<SvgText
+				</SVGText>
+				<SVGText
 					fill={Colors.text.muted}
 					fontSize={9}
 					textAnchor="middle"
@@ -86,7 +100,7 @@ export function ContributorChart({
 					y={cy + 12}
 				>
 					commits
-				</SvgText>
+				</SVGText>
 			</Svg>
 			<View style={styles.legend}>
 				{top.map((c, i) => (
@@ -130,16 +144,22 @@ export function ActivityHeatmap({
 		return "#22c55e";
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const Svg = RNSvg as any;
+	// biome-ignore lint/suspicious/noExplicitAny: React 19 / react-native-svg type conflict workaround
+	const SVGCircle = Circle as any;
+
 	return (
 		<Svg height={height} width={width}>
 			{data.map((value, i) => {
 				const week = Math.floor(i / 7);
 				const day = i % 7;
 				return (
-					<Circle
+					<SVGCircle
 						cx={week * (cellSize + gap) + cellSize / 2}
 						cy={day * (cellSize + gap) + cellSize / 2}
 						fill={getColor(value)}
+						// biome-ignore lint/suspicious/noArrayIndexKey: No other unique identifier for heatmap cells
 						key={i}
 						r={cellSize / 2}
 					/>

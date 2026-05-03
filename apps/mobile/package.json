@@ -23,6 +23,7 @@
     "@git-insights/api": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@tanstack/react-query": "^5.100.8",
+    "elysia": "1.4.28",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-device": "~8.0.10",

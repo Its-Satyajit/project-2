@@ -4,7 +4,8 @@
     "strict": true,
     "paths": {
       "~/*": ["./src/*"]
-    }
+    },
+    "jsx": "react-jsx"
   },
   "include": [
     "**/*.ts",
@@ -12,6 +13,7 @@
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "src/types/**/*.d.ts"
   ]
 }

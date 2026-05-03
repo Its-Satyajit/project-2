@@ -1,101 +1,83 @@
 import { Tabs } from "expo-router";
-import { Text, View } from "react-native";
-import { Colors } from "~/utils/theme";
+import { StyleSheet, View } from "react-native";
+import { Bell, Home, LayoutDashboard, User } from "lucide-react-native";
+import { Provider, useTheme } from "~/components/Provider";
 
-function TabIcon({
-	focused,
-	icon,
-	label,
-}: {
-	focused: boolean;
-	icon: string;
-	label: string;
-}) {
+function TabsLayoutContent() {
+	const { colors } = useTheme();
+
 	return (
-		<View style={{ alignItems: "center", justifyContent: "center" }}>
-			<Text style={{ fontSize: 22 }}>{icon}</Text>
-			<Text
-				style={{
-					fontSize: 10,
-					fontWeight: focused ? "600" : "400",
-					color: focused ? Colors.accent.primary : Colors.text.muted,
-					marginTop: 2,
+		<View style={[styles.container, { backgroundColor: "transparent" }]}>
+			<Tabs
+				screenOptions={{
+					headerShown: false,
+					tabBarStyle: {
+						backgroundColor: colors.surface,
+						borderTopColor: colors.border,
+						borderTopWidth: StyleSheet.hairlineWidth,
+						height: 80,
+						paddingBottom: 20,
+						paddingTop: 8,
+					},
+					tabBarActiveTintColor: colors.accent.primary,
+					tabBarInactiveTintColor: colors.text.muted,
+					tabBarLabelStyle: {
+						fontSize: 10,
+						fontWeight: "600",
+					},
 				}}
 			>
-				{label}
-			</Text>
+				<Tabs.Screen
+					name="index"
+					options={{
+						title: "Home",
+						tabBarIcon: ({ color }) => (
+							<Home size={24} color={color} strokeWidth={2} />
+						),
+					}}
+				/>
+				<Tabs.Screen
+					name="analytics"
+					options={{
+						title: "Insights",
+						tabBarIcon: ({ color }) => (
+							<LayoutDashboard size={24} color={color} strokeWidth={2} />
+						),
+					}}
+				/>
+				<Tabs.Screen
+					name="alerts"
+					options={{
+						title: "Alerts",
+						tabBarIcon: ({ color }) => (
+							<Bell size={24} color={color} strokeWidth={2} />
+						),
+					}}
+				/>
+				<Tabs.Screen
+					name="profile"
+					options={{
+						title: "Profile",
+						tabBarIcon: ({ color }) => (
+							<User size={24} color={color} strokeWidth={2} />
+						),
+					}}
+				/>
+			</Tabs>
 		</View>
 	);
 }
 
 export default function TabsLayout() {
 	return (
-		<Tabs
-			screenOptions={{
-				headerShown: false,
-				tabBarStyle: {
-					backgroundColor: Colors.surface,
-					borderTopColor: Colors.border,
-					borderTopWidth: 1,
-					height: 60,
-					paddingBottom: 8,
-					paddingTop: 8,
-				},
-				tabBarActiveTintColor: Colors.accent.primary,
-				tabBarInactiveTintColor: Colors.text.muted,
-			}}
-		>
-			<Tabs.Screen
-				name="index"
-				options={{
-					title: "Home",
-					tabBarIcon: ({ focused }) => (
-						<TabIcon focused={focused} icon="🏠" label="Home" />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="repos"
-				options={{
-					title: "Repos",
-					tabBarIcon: ({ focused }) => (
-						<TabIcon focused={focused} icon="📦" label="Repos" />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="analytics"
-				options={{
-					title: "Analytics",
-					tabBarIcon: ({ focused }) => (
-						<TabIcon focused={focused} icon="📊" label="Analytics" />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="hotspots"
-				options={{
-					title: "Hotspots",
-					tabBarIcon: ({ focused }) => (
-						<TabIcon focused={focused} icon="🔥" label="Hotspots" />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="alerts"
-				options={{
-					title: "Alerts",
-					tabBarIcon: ({ focused }) => (
-						<TabIcon focused={focused} icon="🔔" label="Alerts" />
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="repo"
-				options={{
-					href: null,
-				}}
-			/>
-		</Tabs>
+		<Provider>
+			<TabsLayoutContent />
+		</Provider>
 	);
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+});
