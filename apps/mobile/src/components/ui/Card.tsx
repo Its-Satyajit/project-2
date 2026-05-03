@@ -40,12 +40,7 @@ export function Card({
 			]}
 		>
 			{(title || subtitle || action) && (
-				<View
-					style={[
-						styles.header,
-						{ borderBottomColor: colors.border },
-					]}
-				>
+				<View style={[styles.header, { borderBottomColor: colors.border }]}>
 					<View style={styles.titleRow}>
 						{title && (
 							<Text style={[styles.title, { color: colors.text.primary }]}>

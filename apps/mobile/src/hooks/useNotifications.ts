@@ -1,5 +1,5 @@
-import { Platform } from "react-native";
 import { useCallback, useEffect, useRef } from "react";
+import { Platform } from "react-native";
 
 let Notifications: typeof import("expo-notifications") | null = null;
 
@@ -22,10 +22,12 @@ if (Platform.OS !== "web") {
 }
 
 export function useNotifications() {
-	const notificationListener =
-		useRef<import("expo-notifications").EventSubscription | null>(null);
-	const responseListener =
-		useRef<import("expo-notifications").EventSubscription | null>(null);
+	const notificationListener = useRef<
+		import("expo-notifications").EventSubscription | null
+	>(null);
+	const responseListener = useRef<
+		import("expo-notifications").EventSubscription | null
+	>(null);
 
 	const registerForPush = useCallback(async () => {
 		const notifications = Notifications;

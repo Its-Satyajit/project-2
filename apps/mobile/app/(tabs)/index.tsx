@@ -1,3 +1,4 @@
+
 import type { Repository } from "@git-insights/api";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -287,3 +288,4 @@ const styles = StyleSheet.create({
 		fontSize: FontSizes.sm,
 	},
 });
+

@@ -1,5 +1,3 @@
-
-import { describe, expect, it, vi } from "vitest";
 import type {
 	AlertItem,
 	Contributor,
@@ -10,6 +8,7 @@ import type {
 	Repository,
 	TreemapData,
 } from "@git-insights/api";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@react-native-async-storage/async-storage", () => ({
 	default: {
@@ -21,7 +20,6 @@ vi.mock("@react-native-async-storage/async-storage", () => ({
 	setItem: vi.fn().mockResolvedValue(null),
 	removeItem: vi.fn().mockResolvedValue(null),
 }));
-
 
 vi.mock("../api/client", async (importActual) => {
 	const actual = await importActual<typeof import("../api/client")>();
@@ -182,9 +180,9 @@ describe("API Client", () => {
 					lastContributionAt: "2024-01-01T00:00:00.000Z",
 				},
 			];
-			(
-				api.getContributors as ReturnType<typeof vi.fn>
-			).mockResolvedValueOnce(mockContributors);
+			(api.getContributors as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+				mockContributors,
+			);
 
 			const result = await api.getContributors("1", "contributions", 100);
 

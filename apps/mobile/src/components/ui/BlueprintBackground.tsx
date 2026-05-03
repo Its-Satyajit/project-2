@@ -1,6 +1,7 @@
-import React from "react";
+import type React from "react";
 import { StyleSheet, View } from "react-native";
-import Svg, { Defs, Line, Pattern, Rect } from "react-native-svg";
+// @ts-expect-error: react-native-svg components conflict with React 19 JSX types
+import Svg, { Defs, Line, Rect, Pattern as SvgPattern } from "react-native-svg";
 import { useTheme } from "../Provider";
 
 // react-native-svg components conflict with React 19 JSX types — cast to ComponentType
@@ -27,7 +28,7 @@ export function BlueprintBackground({
 
 	const SvgComp = Svg as unknown as AnyComp;
 	const DefsComp = Defs as unknown as AnyComp;
-	const PatternComp = Pattern as unknown as AnyComp;
+	const PatternComp = SvgPattern as unknown as AnyComp;
 	const LineComp = Line as unknown as AnyComp;
 	const RectComp = Rect as unknown as AnyComp;
 
