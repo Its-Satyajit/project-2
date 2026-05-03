@@ -166,9 +166,12 @@ export function SearchForm() {
 						)}
 					</form.Field>
 					<form.Subscribe
-						selector={(state) => [state.canSubmit, state.isSubmitting]}
+						selector={(state) => ({
+							canSubmit: state.canSubmit,
+							isSubmitting: state.isSubmitting,
+						})}
 					>
-						{([canSubmit, isSubmitting]: [boolean, boolean]) => (
+						{({ canSubmit, isSubmitting }: { canSubmit: boolean; isSubmitting: boolean }) => (
 							<Button
 								className="mr-2 h-11 bg-foreground px-6 font-mono text-background text-sm uppercase tracking-widest hover:bg-foreground/90"
 								disabled={!canSubmit}

@@ -5,6 +5,7 @@
     ".env.local",
     ".env.production"
   ],
+  "globalEnv": ["TMPDIR", "VERCEL_URL", "VERCEL_ENV"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
