@@ -180,7 +180,18 @@ function formatNumber(num: number): string {
 }
 
 export default async function Home() {
-	const stats = await getGlobalStats();
+	let stats: GlobalStats = {
+		repositoriesAnalyzed: 0,
+		totalFiles: 0,
+		totalLines: 0,
+		contributors: 0,
+	};
+
+	try {
+		stats = await getGlobalStats();
+	} catch (err) {
+		console.warn("[Build] Failed to fetch global stats:", err);
+	}
 
 	return (
 		<main className="blueprint-grid relative min-h-screen overflow-hidden bg-background">

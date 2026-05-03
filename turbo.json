@@ -27,7 +27,10 @@
         "INNGEST_EVENT_KEY",
         "INNGEST_SIGNING_KEY",
         "NEXT_PUBLIC_BASE_URL",
-        "NEXT_PUBLIC_AI_ENABLED"
+        "NEXT_PUBLIC_AI_ENABLED",
+        "TMPDIR",
+        "VERCEL_URL",
+        "VERCEL_ENV"
       ]
     },
     "dev": {
